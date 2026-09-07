@@ -12,4 +12,6 @@ test("provisional presentation at the start of a TXT is never classified as JSON
   assert.equal(isReaderJsonFile("song.txt", "text/plain"), false);
   assert.equal(isReaderJsonFile("song.json", "text/plain"), true);
   assert.equal(isReaderJsonFile("song", "application/json"), true);
+  assert.equal(isReaderJsonFile("", "", '{"content":"本文"}'), true);
+  assert.equal(isReaderJsonFile("", "", "[文字]{c=2}\n本文"), false);
 });

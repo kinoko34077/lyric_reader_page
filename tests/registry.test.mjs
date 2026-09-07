@@ -38,6 +38,8 @@ test("outline and gradient references resolve only through validated registry da
   const result = resolvePresentation({ style: { type: "style", name: "shout" } }, styled);
   assert.deepEqual(result.outline, { width: 2, color: "#00aaee" });
   assert.deepEqual(result.gradient, { direction: "to-right", stops: [{ position: 0, color: "#d02020" }, { position: 1, color: "#00aaee" }] });
+  const fontResult = resolvePresentation({ style: { type: "style", name: "fonted" } }, { ...styled, fonts: { jp: { type: "remote", url: "https://example.com/jp.woff2" } }, styles: { fonted: { font: "jp" } } });
+  assert.equal(fontResult.font.family, "ReaderFont-jp");
   assert.equal(validateRegistry({ palettes: { "0": "#111111" }, outlines: { bad: { width: 99, color: 0 } } }).valid, false);
 });
 

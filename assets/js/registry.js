@@ -77,6 +77,6 @@ export function resolvePresentation(presentation = {}, registry = {}) {
   const gradient = style?.gradient ? normalized.gradients[style.gradient] : null;
   if (gradient) resolved.gradient = { direction: gradient.direction, stops: gradient.stops.map(stop => ({ position: Number(stop.at), color: paletteValue(normalized.palettes, Number(stop.palette)) })).filter(stop => stop.color) };
   const font = style?.font ? normalized.fonts[style.font] : null;
-  if (font) resolved.font = { type: "remote", url: font.url };
+  if (font) resolved.font = { type: "remote", url: font.url, family: `ReaderFont-${style.font}` };
   return resolved;
 }

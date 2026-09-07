@@ -25,6 +25,7 @@ export function renderLyrics(element, source, options) {
       if (resolved.outline?.color) { wrapper.style.webkitTextStroke = `${resolved.outline.width}px ${resolved.outline.color}`; wrapper.style.textStroke = `${resolved.outline.width}px ${resolved.outline.color}`; }
       if (resolved.gradient?.stops?.length > 1) { const directions = { "to-right": "to right", "to-left": "to left", "to-top": "to top", "to-bottom": "to bottom", "to-inline-start": "to left", "to-inline-end": "to right" }; const stops = resolved.gradient.stops.map(stop => `${stop.color} ${stop.position * 100}%`).join(","); wrapper.style.backgroundImage = `linear-gradient(${directions[resolved.gradient.direction] || "to right"},${stops})`; wrapper.style.backgroundClip = "text"; wrapper.style.webkitBackgroundClip = "text"; if (globalThis.CSS?.supports?.("background-clip", "text") || globalThis.CSS?.supports?.("-webkit-background-clip", "text")) wrapper.style.color = "transparent"; }
       if (resolved.font?.url) wrapper.dataset.fontUrl = resolved.font.url;
+      if (resolved.font?.family) wrapper.style.fontFamily = `"${resolved.font.family}"`;
       if (resolved.glyphText) wrapper.dataset.glyphFallback = resolved.glyphText;
       renderNodes(node.children || [], sourceNode.children || [], wrapper);
       if (resolved.glyphText) wrapper.replaceChildren(document.createTextNode(resolved.glyphText));

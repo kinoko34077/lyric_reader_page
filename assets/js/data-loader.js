@@ -13,8 +13,13 @@ export function parseJsonText(text) {
 }
 
 /** '[' is valid Author Source, so local classification must not sniff JSON by first character. */
-export function isReaderJsonFile(fileName = "", mimeType = "") {
-  return /\.json$/i.test(String(fileName)) || /^(application\/json|application\/.*\+json)$/i.test(String(mimeType));
+export function isReaderJsonFile(fileName = "", mimeType = "", text = "") {
+  if (/\.txt$/i.test(String(fileName))) return false;
+  if (/\.json$/i.test(String(fileName)) || /^(application\/json|application\/.*\+json)$/i.test(String(mimeType))) return true;
+  if (!String(fileName) && !String(mimeType)) {
+    try { JSON.parse(String(text)); return true; } catch { return false; }
+  }
+  return false;
 }
 
 export async function fetchText(resource, base) {
