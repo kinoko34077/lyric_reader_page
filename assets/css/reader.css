@@ -43,6 +43,8 @@ h1[contenteditable="true"] { outline: 1px dashed color-mix(in srgb, var(--accent
 .lyrics.is-vertical { flex: 0 0 auto; width: auto; height: auto; max-width: none; writing-mode: vertical-rl; text-orientation: mixed; overflow: visible; padding-bottom: 1rem; }
 .lyrics.is-vertical p { margin: 0 1.7em 0 0; }
 .combine { text-combine-upright: all; }
+.source-presentation[data-palette] { --source-palette-index: attr(data-palette type(<number>)); }
+.source-presentation.has-glyph { display: inline; }
 .settings { position: fixed; z-index: 10; top: 3rem; right: clamp(.5rem, 2vw, 1.5rem); width: min(15rem, calc(100vw - 1rem)); pointer-events: none; }
 .settings-toggle { display: block; margin-left: auto; padding: .3rem .7rem; background: var(--paper); box-shadow: 0 2px 8px #00000012; font-size: .78rem; }
 .settings-panel { max-height: calc(100dvh - 4rem); overflow-y: auto; margin-top: .3rem; padding: .5rem; background: color-mix(in srgb, var(--paper) 96%, white); border: 1px solid var(--rule); box-shadow: 0 5px 20px #0002; font-size: .78rem; scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--accent) 48%, transparent) transparent; pointer-events: auto; }

@@ -1,4 +1,4 @@
-import { MAX_SOURCE_BYTES, MAX_SOURCE_CHARS } from "./config.js?v=20260908-012";
+import { MAX_SOURCE_BYTES, MAX_SOURCE_CHARS } from "./config.js?v=20260908-013";
 
 const allowedUrl = (value, base = location.href) => {
   const url = new URL(value, base);
