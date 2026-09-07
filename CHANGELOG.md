@@ -4,6 +4,14 @@
 
 現在の`main`（`4ad3d8f`）までの変更履歴です。正式なPresentation構文は未確定のため、以下の`[] {}`記法はv0.xの暫定実装です。
 
+### 監査後の安定化
+
+- スクロール位置保存・復元の対象を実際の`reader-shell`スクロール領域へ修正。
+- 不正Registryを含むReader JSONを文書状態へ反映する前に検証し、現在文書を保持するよう修正。
+- Rubyの部分選択で読み情報を失わないよう、Rubyを不可分な単位として保持。
+- 5000行の長文、2000件の連続Presentation、Ruby混在Projectionを含む大規模回帰テストを追加。
+- 全文コピーの表示名を実際のPortable Text出力に合わせて修正。
+
 ### Reader基盤
 
 - 外部TXT / JSON / Reader JSONをブラウザ上で読み込む静的Readerを追加。

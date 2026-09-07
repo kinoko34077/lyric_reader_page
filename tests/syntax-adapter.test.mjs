@@ -45,3 +45,10 @@ test("clearing a range unwraps presentation without changing source text", () =>
   assert.equal(serializeSource(cleared), "A如何《どう》B");
   assert.equal(toPortableText(cleared), "A如何《どう》B");
 });
+
+test("partial Ruby selection keeps the Ruby node intact", () => {
+  const document = parseSource("如何《どう》");
+  const edited = applyPresentation(document, { start: 0, end: 1 }, { combine: true });
+  assert.equal(serializeSource(edited), "[如何《どう》]{combine}");
+  assert.equal(toPortableText(edited), "如何《どう》");
+});

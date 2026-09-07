@@ -82,8 +82,8 @@ function nodeLength(node) {
 function sliceNode(node, from, to) {
   if (node.type === "span") return node;
   if (node.type === "ruby") {
-    if (from === 0 && to === nodeLength(node)) return node;
-    return { type: "text", value: [...node.base].slice(from, to).join("") };
+    // A Ruby is an indivisible semantic unit. Keep it intact rather than losing its reading.
+    return node;
   }
   return { type: "text", value: [...node.value].slice(from, to).join("") };
 }
@@ -98,6 +98,7 @@ export function applyPresentation(document, range, presentation) {
     if (nodeEnd <= start) before.push(node);
     else if (offset >= end) after.push(node);
     else {
+      if (node.type === "ruby") { selected.push(node); offset = nodeEnd; continue; }
       if (offset < start) before.push(sliceNode(node, 0, start - offset));
       selected.push(offset < start || nodeEnd > end ? sliceNode(node, Math.max(0, start - offset), Math.min(length, end - offset)) : node);
       if (nodeEnd > end) after.push(sliceNode(node, end - offset, length));
