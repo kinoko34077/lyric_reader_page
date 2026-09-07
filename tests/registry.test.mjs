@@ -25,3 +25,10 @@ test("registry normalization drops unsupported containers without executing them
   const result = normalizeRegistry({ palettes: { "0": "#111111" }, scripts: "alert(1)", html: "<style>" });
   assert.deepEqual(result, { palettes: { "0": "#111111" }, styles: {}, glyphs: {}, fonts: {}, gradients: {}, outlines: {} });
 });
+
+test("registry references stay data-only and can be restored as a history value", () => {
+  const source = { registry: { palettes: { "1": "#d02020" } } };
+  const snapshot = structuredClone(source);
+  source.registry.palettes["1"] = "#000000";
+  assert.equal(snapshot.registry.palettes["1"], "#d02020");
+});
