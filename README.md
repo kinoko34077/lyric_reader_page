@@ -20,3 +20,7 @@ manifest内の相対URLはmanifest自身のURLを基準に解決します。外�
 - `data/demo/`: ローカルで動作確認できるmanifestとサンプル本文
 
 本番公開時は、`assets/css/reader.css` と `assets/js/app.js` のクエリにある `BUILD_ID` を更新してください。
+
+## GitHub Pages
+
+`main` へpushすると `.github/workflows/deploy-pages.yml` が静的サイトをGitHub Pagesへ公開します。GitHubリポジトリの Settings → Pages で、Sourceを「GitHub Actions」に設定してください。
