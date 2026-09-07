@@ -1,3 +1,3 @@
-export const BUILD_ID = "20260907-003";
+export const BUILD_ID = "20260907-004";
 export const MAX_SOURCE_BYTES = 2_000_000;
 export const MAX_SOURCE_CHARS = 500_000;
