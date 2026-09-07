@@ -39,6 +39,27 @@
           <input id="size-range" type="range" min="14" max="32" step="1" value="20" aria-label="文字サイズ">
         </fieldset>
         <fieldset>
+          <legend>配色</legend>
+          <label><span>背景色</span><input id="background-color" type="color" value="#f5f0e6" aria-label="背景色"></label>
+          <label><span>本文色</span><input id="text-color" type="color" value="#272522" aria-label="本文色"></label>
+          <label><span>ルビ色</span><input id="ruby-color" type="color" value="#716b60" aria-label="ルビ色"></label>
+        </fieldset>
+        <fieldset>
+          <legend>フォント</legend>
+          <label><span>書体</span><select id="font-family" aria-label="書体">
+            <option value="serif">明朝</option>
+            <option value="sans">ゴシック</option>
+            <option value="mono">等幅</option>
+            <option value="yu-mincho">游明朝</option>
+            <option value="noto-serif">Noto Serif JP</option>
+            <option value="noto-sans">Noto Sans JP</option>
+            <option value="nishiki-teki">Nishiki-teki</option>
+            <option value="custom">外部フォント</option>
+          </select></label>
+          <label class="font-url-row"><span>フォントURL</span><input id="font-url" type="url" inputmode="url" placeholder="https://…/font.woff2" aria-label="外部フォントURL"></label>
+          <button class="action-button" id="font-load-button" type="button">外部フォントを適用</button>
+        </fieldset>
+        <fieldset>
           <legend>操作</legend>
           <button class="action-button" id="copy-button" type="button">原文記法でコピー</button>
           <button class="action-button" id="download-button" type="button">本文を下載</button>
