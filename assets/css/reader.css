@@ -46,6 +46,8 @@ select { max-width: 8.5rem; padding: .18rem .3rem; font-size: .75rem; }
 .font-url-row span { display: block; margin-bottom: .25rem; }
 .font-url-row input[type="url"] { width: 100%; min-width: 0; padding: .2rem .3rem; border: 1px solid var(--rule); border-radius: .25rem; background: transparent; color: inherit; font-size: .72rem; }
 input[type="color"] { width: 2.2rem; height: 1.5rem; padding: 0; border: 1px solid var(--rule); border-radius: .25rem; background: transparent; }
+.annotation-color { justify-content: space-between; margin-top: .6rem; }
+.source-char, .source-ruby { border-radius: .08em; }
 .check-row { justify-content: flex-start; }
 .size-controls { display: flex; align-items: center; justify-content: space-between; gap: .4rem; }
 .size-controls button, .action-button { width: 100%; padding: .25rem .4rem; }
