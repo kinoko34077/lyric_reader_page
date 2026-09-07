@@ -21,6 +21,8 @@ manifest内の相対URLはmanifest自身のURLを基準に解決します。外�
 
 表示設定では、横書き / 縦書き、旧字 / 新字体、歴史的仮名 / 現代仮名、ルビ、文字サイズ、背景色、本文色、ルビ色、標準フォントを切り替えられます。manifestの`theme`で初期テーマを指定でき、`theme.font`に`{"type":"remote","url":"https://example.com/font.woff2"}`を指定すると、CORSを許可した外部Webフォントを直接読み込みます。Readerは任意CSSを読み込みません。
 
+ローカルのTXTは本文上部へドロップするか、貼り付け欄からブラウザ内だけで読み込めます。ローカル本文はサーバーへ送信・保存しません。
+
 本番公開時は、`assets/css/reader.css` と `assets/js/app.js` のクエリにある `BUILD_ID` を更新してください。
 
 ## GitHub Pages

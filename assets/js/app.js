@@ -36,6 +36,8 @@ async function loadRemoteFont(url) { if (!/^https?:\/\//i.test(url)) throw new E
 function currentSource() { return state.kana === "modern" ? state.data.modern.text : state.data.historical.text; }
 function render() { state.nodes = renderLyrics($("lyrics"), currentSource(), state); }
 function setStatus(text) { $("source-status").textContent = text; }
+function setLocalSource(text, name = "ローカル本文") { state.data = { manifest: { title: name.replace(/\.txt$/i, "") || "ローカル本文", description: "この本文はブラウザ内だけで読み込んでいます。", content: { format: "narou" } }, historical: { text, url: "local:" }, modern: { text, url: "local:" } }; applyManifest(state.data.manifest); applyAppearance(); render(); setStatus("ローカル本文を表示中"); }
+async function readLocalFile(file) { if (!file) return; setLocalSource(await file.text(), file.name); }
 function bind() {
   $("settings-toggle").addEventListener("click", () => { const open = $("settings-panel").hidden; $("settings-panel").hidden = !open; $("settings-toggle").setAttribute("aria-expanded", String(open)); });
   $("kana-mode").addEventListener("change", e => { state.kana = e.target.value; render(); }); $("kanji-mode").addEventListener("change", e => { state.kanji = e.target.value; render(); });
@@ -47,6 +49,9 @@ function bind() {
   $("size-range").addEventListener("input", e => updateSize(e.target.value)); $("size-decrease").addEventListener("click", () => updateSize(state.size - 1)); $("size-increase").addEventListener("click", () => updateSize(state.size + 1));
   $("copy-button").addEventListener("click", async () => { await navigator.clipboard.writeText(rawText(state.nodes)); setStatus("原文記法をコピーしました"); setTimeout(() => setStatus("読み込み済み"), 1800); });
   $("download-button").addEventListener("click", () => { const blob = new Blob([rawText(state.nodes)], { type: "text/plain;charset=utf-8" }); const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "lyrics.txt"; a.click(); URL.revokeObjectURL(a.href); });
+  const dropZone = $("drop-zone"); const sourceFile = $("source-file"); sourceFile.addEventListener("change", () => readLocalFile(sourceFile.files?.[0]));
+  ["dragenter", "dragover"].forEach(type => dropZone.addEventListener(type, event => { event.preventDefault(); dropZone.classList.add("is-dragover"); })); ["dragleave", "drop"].forEach(type => dropZone.addEventListener(type, event => { event.preventDefault(); dropZone.classList.remove("is-dragover"); })); dropZone.addEventListener("drop", event => readLocalFile(event.dataTransfer.files?.[0]));
+  $("source-text-button").addEventListener("click", () => { const text = $("source-text").value; if (text.trim()) setLocalSource(text); });
   let timer; $("lyrics").addEventListener("scroll", () => { document.body.classList.add("is-scrolling"); clearTimeout(timer); timer = setTimeout(() => document.body.classList.remove("is-scrolling"), 450); }, { passive: true });
 }
 async function start() { bind(); try { state.data = await loadInput(); applyManifest(state.data.manifest); applyAppearance(); if (state.font === "custom" && state.fontUrl) await loadRemoteFont(state.fontUrl); render(); setStatus("読み込み済み"); } catch (error) { $("reader-error").hidden = false; $("reader-error").textContent = error instanceof Error ? error.message : "読み込みに失敗しました。"; setStatus("読み込み失敗"); } }

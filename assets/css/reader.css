@@ -17,6 +17,13 @@ body.is-scrolling .site-header, body.is-scrolling .site-footer { opacity: .18; }
 .reader-shell.is-vertical .reader-heading { max-width: none; min-height: 16rem; margin: 0 0 2rem; padding: 0 0 1rem; border-bottom: 0; border-left: 1px solid var(--rule); }
 .reader-shell.is-vertical .reader-heading h1 { margin-inline: 0 .8em; }
 .reader-shell.is-vertical .lyrics { writing-mode: vertical-rl; }
+.source-input { max-width: 58rem; margin: 0 0 1.5rem; }
+.drop-zone { display: flex; align-items: center; justify-content: space-between; gap: .8rem; padding: .65rem .8rem; border: 1px dashed var(--rule); color: var(--muted); cursor: pointer; font-size: .78rem; }
+.drop-zone:hover, .drop-zone.is-dragover { border-color: var(--accent); background: color-mix(in srgb, var(--paper) 88%, var(--accent)); }
+.drop-zone small { margin-left: auto; }
+.drop-zone input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.paste-source { margin-top: .5rem; color: var(--muted); font-size: .78rem; }
+.paste-source textarea { display: block; width: 100%; margin: .4rem 0; padding: .5rem; border: 1px solid var(--rule); background: transparent; color: inherit; font: inherit; resize: vertical; }
 .eyebrow, .song-description { margin: 0; color: var(--muted); font-size: .82rem; }
 h1 { margin: .1rem 0; font-size: clamp(1.35rem, 3vw, 2.3rem); font-weight: 500; }
 .lyrics { max-width: 58rem; white-space: pre-wrap; overflow-wrap: anywhere; font-size: var(--reader-size); line-height: 2.05; letter-spacing: .04em; outline: none; }

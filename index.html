@@ -19,6 +19,10 @@
         <h1 id="song-title">歌詞リーダー</h1>
         <p class="song-description" id="song-description"></p>
       </section>
+      <section class="source-input" id="source-input" aria-label="ローカル本文を読む">
+        <label class="drop-zone" id="drop-zone" for="source-file"><span>TXTをここへドロップ</span><small>またはファイルを選択</small><input id="source-file" type="file" accept=".txt,text/plain"></label>
+        <details class="paste-source"><summary>本文を貼り付ける</summary><textarea id="source-text" rows="4" placeholder="なろう式ルビを含む本文を貼り付け"></textarea><button class="action-button" id="source-text-button" type="button">貼り付けた本文を表示</button></details>
+      </section>
       <article class="lyrics" id="lyrics" tabindex="0" aria-label="歌詞本文"></article>
       <p class="reader-error" id="reader-error" role="alert" hidden></p>
     </main>
