@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="description" content="外部の歌詞テキストを読むための静的リーダー">
     <title>歌詞リーダー</title>
-    <link rel="stylesheet" href="assets/css/reader.css?v=20260907-004">
+    <link rel="stylesheet" href="assets/css/reader.css?v=20260907-005">
   </head>
   <body>
     <header class="site-header" id="site-header">
       <a class="site-title" href="./">歌詞リーダー</a>
-      <p class="source-status" id="source-status" aria-live="polite">読み込み中…</p>
+      <div class="header-tools"><p class="source-status" id="source-status" aria-live="polite">読み込み中…</p><a class="mode-switch" id="mode-switch" href="?mode=writer">編集</a></div>
     </header>
 
     <main class="reader-shell" id="reader-shell">
@@ -19,12 +19,12 @@
         <h1 id="song-title">歌詞リーダー</h1>
         <p class="song-description" id="song-description"></p>
       </section>
-      <details class="source-input" id="source-input">
-        <summary>ローカル本文を開く</summary>
-        <label class="drop-zone" id="drop-zone" for="source-file"><span>TXT / JSONをここへドロップ</span><small>またはファイルを選択</small><input id="source-file" type="file" accept=".txt,.json,text/plain,application/json"></label>
-        <label class="drop-zone reader-file-zone" for="reader-file"><span>Reader JSONを読み込む</span><small>保存した文書を復元</small><input id="reader-file" type="file" accept=".json,application/json"></label>
-        <details class="paste-source"><summary>本文を貼り付ける</summary><textarea id="source-text" rows="4" placeholder="なろう式ルビを含む本文を貼り付け"></textarea><button class="action-button" id="source-text-button" type="button">貼り付けた本文を表示</button></details>
-      </details>
+      <section class="writer-panel" id="writer-panel" hidden aria-label="本文編集">
+        <div class="writer-toolbar"><button class="action-button" id="open-file-button" type="button">ファイルを開く</button><input id="source-file" type="file" accept=".txt,.json,text/plain,application/json" hidden><span>TXT / JSONを読み込み、本文を直接編集できます</span></div>
+        <label class="writer-title"><span>タイトル</span><input id="writer-title" type="text" autocomplete="off"></label>
+        <label class="writer-content"><span>本文</span><textarea id="source-text" spellcheck="false" placeholder="なろう式ルビを含む本文を入力"></textarea></label>
+        <button class="action-button" id="source-text-button" type="button">編集内容を表示</button>
+      </section>
       <article class="lyrics" id="lyrics" tabindex="0" aria-label="歌詞本文"></article>
       <p class="reader-error" id="reader-error" role="alert" hidden></p>
     </main>
@@ -48,8 +48,7 @@
           <legend>配色</legend>
           <label><span>背景色</span><input id="background-color" type="color" value="#f5f0e6" aria-label="背景色"></label>
           <label><span>文字色</span><input id="text-color" type="color" value="#272522" aria-label="文字色"></label>
-          <label><span>ルビ色</span><input id="ruby-color" type="color" value="#716b60" aria-label="ルビ色"></label>
-          <label class="check-row"><input id="ruby-color-toggle" type="checkbox" checked><span>ルビ色を分ける</span></label>
+          <label class="color-check-row"><input id="ruby-color-toggle" type="checkbox" checked><span>ルビ色</span><input id="ruby-color" type="color" value="#716b60" aria-label="ルビ色"></label>
         </fieldset>
         <fieldset>
           <legend>フォント</legend>
@@ -68,7 +67,6 @@
         </fieldset>
         <fieldset>
           <legend>操作</legend>
-          <button class="action-button" id="copy-button" type="button">原文記法でコピー</button>
           <button class="action-button" id="download-button" type="button">本文TXTを保存</button>
           <button class="action-button" id="download-reader-button" type="button">Reader文書を保存</button>
           <label class="annotation-color"><span>選択範囲の色</span><input id="annotation-color" type="color" value="#d02020" aria-label="選択範囲の色"></label>
@@ -80,6 +78,6 @@
 
     <footer class="site-footer" id="site-footer"><span>外部データをブラウザ上で読み込んで表示しています</span><nav class="footer-links" id="footer-links" aria-label="楽曲リンク"></nav></footer>
     <div class="drop-overlay" id="drop-overlay" hidden><strong>TXT / Reader JSONをドロップ</strong><span>画面のどこに置いても本文を開けます</span></div>
-    <script type="module" src="assets/js/app.js?v=20260907-004"></script>
+    <script type="module" src="assets/js/app.js?v=20260907-005"></script>
   </body>
 </html>

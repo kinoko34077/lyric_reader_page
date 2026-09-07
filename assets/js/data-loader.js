@@ -1,4 +1,4 @@
-import { BUILD_ID, MAX_SOURCE_BYTES, MAX_SOURCE_CHARS } from "./config.js?v=20260907-004";
+import { BUILD_ID, MAX_SOURCE_BYTES, MAX_SOURCE_CHARS } from "./config.js?v=20260907-005";
 
 const allowedUrl = (value, base = location.href) => {
   const url = new URL(value, base);
