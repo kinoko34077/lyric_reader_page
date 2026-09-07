@@ -28,12 +28,12 @@ body.is-scrolling .site-header, body.is-scrolling .site-footer { opacity: .18; }
 .paste-source textarea { display: block; width: 100%; margin: .4rem 0; padding: .5rem; border: 1px solid var(--rule); background: transparent; color: inherit; font: inherit; resize: vertical; }
 .eyebrow, .song-description { margin: 0; color: var(--muted); font-size: .82rem; }
 h1 { margin: .1rem 0; font-size: clamp(1.35rem, 3vw, 2.3rem); font-weight: 500; }
-.lyrics { flex: 1; min-height: 0; max-width: 58rem; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font-size: var(--reader-size); line-height: 2.05; letter-spacing: .04em; outline: none; scrollbar-gutter: stable; }
+.lyrics { flex: 1 1 auto; height: 0; min-height: 0; max-width: 58rem; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; white-space: pre-wrap; overflow-wrap: anywhere; font-size: var(--reader-size); line-height: 2.05; letter-spacing: .04em; outline: none; scrollbar-gutter: stable; }
 .lyrics:focus-visible { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent); }
 .lyrics p { margin: 0 0 1.7em; }
 .lyrics ruby { ruby-position: over; }
 .lyrics rt { color: var(--ruby); font-size: .48em; letter-spacing: 0; line-height: 1; }
-.lyrics.is-vertical { flex: 1; max-width: none; min-height: 0; writing-mode: vertical-rl; text-orientation: mixed; overflow-x: auto; overflow-y: hidden; padding-bottom: 1rem; }
+.lyrics.is-vertical { flex: 1 1 auto; width: 0; height: auto; max-width: none; min-height: 0; writing-mode: vertical-rl; text-orientation: mixed; overflow-x: auto; overflow-y: hidden; padding-bottom: 1rem; }
 .lyrics.is-vertical p { margin: 0 1.7em 0 0; }
 .combine { text-combine-upright: all; }
 .settings { position: fixed; z-index: 10; top: 3rem; right: clamp(.5rem, 2vw, 1.5rem); width: min(15rem, calc(100vw - 1rem)); }
