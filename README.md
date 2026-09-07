@@ -18,6 +18,18 @@ manifest内の相対URLはmanifest自身のURLを基準に解決します。外�
 - `assets/js/reader-view.js`: DOM描画と原文記法への復元
 - `assets/js/syntax-adapter.js`: Author Sourceの構文とReader Coreの境界。現行は青空文庫系Ruby Adapterを提供し、Portable Text / Plain Text / validationの契約を分離します。
 - `assets/js/registry.js`: Palette / Style / Glyph等の許可済みRegistryを検証・解決します。外部定義から任意CSSやHTMLは受け付けず、未登録Glyphは原文へフォールバックします。
+
+Writerでは、次の仮Presentation記法をAuthor Sourceへ保存できます。正式構文は未確定のため、Syntax Adapter交換を前提としたv0.x仕様です。
+
+```text
+[文字]{c=2}
+[文字]{style=shout}
+[文字]{glyph=hare-special}
+[12]{combine}
+[如何《どう》]{style=title,c=2}
+```
+
+全文CopyはPresentationを除去し、本文とRubyだけをPortable Textとして出力します。回帰テストは`node --test tests/*.test.mjs`で実行できます。
 - `assets/js/app.js`: UI状態と各責務の接続
 - `data/demo/`: ローカルで動作確認できるmanifestとサンプル本文
 
