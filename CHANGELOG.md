@@ -2,7 +2,7 @@
 
 ## [Unreleased] - 2026-09-08
 
-現在の`main`（`4ad3d8f`）までの変更履歴です。正式なPresentation構文は未確定のため、以下の`[] {}`記法はv0.xの暫定実装です。
+現在の`main`までの変更履歴です。正式なPresentation構文は未確定のため、以下の`[] {}`記法はv0.xの暫定実装です。
 
 ### 監査後の安定化
 
@@ -170,3 +170,4 @@ node --test tests/*.test.mjs
 | `13a4546` | Source中心Presentation編集 |
 | `fa4ee80` | Style / Glyph / Combine編集操作 |
 | `4ad3d8f` | 暫定Presentation記法の文書化 |
+| `1350722` | Source移行安定化・大規模回帰テスト |

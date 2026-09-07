@@ -6,6 +6,12 @@ const allowedUrl = (value, base = location.href) => {
   return url;
 };
 
+export function parseJsonText(text) {
+  if (typeof text !== "string") throw new Error("JSON本文が文字列ではありません。");
+  if (text.length > MAX_SOURCE_CHARS || new TextEncoder().encode(text).byteLength > MAX_SOURCE_BYTES) throw new Error("JSON文書が大きすぎます。");
+  try { return JSON.parse(text); } catch { throw new Error("JSON文書の形式が不正です。"); }
+}
+
 export async function fetchText(resource, base) {
   const url = allowedUrl(resource, base);
   const response = await fetch(url, { cache: "no-store" });
@@ -25,7 +31,7 @@ export async function loadInput(hash = location.hash) {
     const manifestUrl = allowedUrl(manifestRef);
     const response = await fetch(manifestUrl, { cache: "no-store" });
     if (!response.ok) throw new Error(`Manifestを取得できませんでした (${response.status})。`);
-    const manifest = await response.json();
+    const manifest = parseJsonText(await response.text());
     const source = manifest.content?.["historical"] || manifest.content?.src || manifest.lyrics?.historical;
     if (!source) throw new Error("Manifestに本文URLがありません。");
     const historical = await fetchText(source, manifestUrl.href);
@@ -40,7 +46,7 @@ export async function loadInput(hash = location.hash) {
   }
   const fallback = await fetchText("data/demo/reader.json");
   const manifestUrl = new URL("data/demo/reader.json", location.href);
-  const manifest = JSON.parse(fallback.text);
+  const manifest = parseJsonText(fallback.text);
   const historical = await fetchText(manifest.content.historical, manifestUrl.href);
   const modern = manifest.content.modern ? await fetchText(manifest.content.modern, manifestUrl.href) : historical;
   return { manifest, historical, modern, modernAvailable: Boolean(manifest.content.modern), sourceUrl: manifestUrl.href };
