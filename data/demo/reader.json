@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "id": "demo",
+  "title": "晴々撥条",
+  "artist": "KiNoTch.",
+  "description": "外部manifestから読み込んだデモ本文です。",
+  "content": { "historical": "./lyrics-historical.txt", "modern": "./lyrics-modern.txt", "format": "narou" },
+  "defaults": { "kana": "historical", "kanji": "original", "ruby": true, "writingMode": "horizontal" },
+  "links": { "YouTube": "https://www.youtube.com/", "ニコニコ": "https://www.nicovideo.jp/" }
+}

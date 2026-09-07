@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="description" content="外部の歌詞テキストを読むための静的リーダー">
+    <title>歌詞リーダー</title>
+    <link rel="stylesheet" href="assets/css/reader.css?v=20260907-001">
+  </head>
+  <body>
+    <header class="site-header" id="site-header">
+      <a class="site-title" href="./">歌詞リーダー</a>
+      <p class="source-status" id="source-status" aria-live="polite">読み込み中…</p>
+    </header>
+
+    <main class="reader-shell">
+      <section class="reader-heading" aria-labelledby="song-title">
+        <p class="eyebrow" id="song-artist"></p>
+        <h1 id="song-title">歌詞リーダー</h1>
+        <p class="song-description" id="song-description"></p>
+      </section>
+      <article class="lyrics" id="lyrics" tabindex="0" aria-label="歌詞本文"></article>
+      <p class="reader-error" id="reader-error" role="alert" hidden></p>
+    </main>
+
+    <aside class="settings" id="settings" aria-label="表示設定">
+      <button class="settings-toggle" id="settings-toggle" type="button" aria-expanded="false" aria-controls="settings-panel">表示設定</button>
+      <div class="settings-panel" id="settings-panel" hidden>
+        <fieldset>
+          <legend>本文</legend>
+          <label><span>仮名</span><select id="kana-mode"><option value="historical">歴史的仮名遣</option><option value="modern">現代仮名</option></select></label>
+          <label><span>字体</span><select id="kanji-mode"><option value="original">原字</option><option value="shinjitai">新字体</option></select></label>
+          <label class="check-row"><input id="ruby-toggle" type="checkbox" checked><span>ルビを表示</span></label>
+          <label class="check-row"><input id="vertical-toggle" type="checkbox"><span>縦書き</span></label>
+        </fieldset>
+        <fieldset>
+          <legend>文字サイズ</legend>
+          <div class="size-controls"><button id="size-decrease" type="button" aria-label="文字を小さく">A−</button><output id="size-value">20px</output><button id="size-increase" type="button" aria-label="文字を大きく">A＋</button></div>
+          <input id="size-range" type="range" min="14" max="32" step="1" value="20" aria-label="文字サイズ">
+        </fieldset>
+        <fieldset>
+          <legend>操作</legend>
+          <button class="action-button" id="copy-button" type="button">原文記法でコピー</button>
+          <button class="action-button" id="download-button" type="button">本文を下載</button>
+        </fieldset>
+        <nav class="song-links" id="song-links" aria-label="楽曲リンク"></nav>
+      </div>
+    </aside>
+
+    <footer class="site-footer" id="site-footer"><span>外部データをブラウザ上で読み込んで表示しています</span></footer>
+    <script type="module" src="assets/js/app.js?v=20260907-001"></script>
+  </body>
+</html>
