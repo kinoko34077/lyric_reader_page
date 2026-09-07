@@ -60,4 +60,8 @@ input[type="color"] { width: 2.2rem; height: 1.5rem; padding: 0; border: 1px sol
 .footer-links { display: flex; gap: .7rem; }
 .footer-links a { color: inherit; }
 .reader-error { padding: .8rem; border: 1px solid #b66; color: #833; background: #fff5f5; }
+.drop-overlay { position: fixed; z-index: 20; inset: 0; display: grid; place-content: center; gap: .25rem; text-align: center; background: color-mix(in srgb, var(--paper) 82%, var(--accent)); border: .35rem solid var(--accent); color: var(--ink); pointer-events: none; }
+.drop-overlay strong { font-size: clamp(1.2rem, 4vw, 2rem); font-weight: 500; }
+.drop-overlay span { color: var(--muted); font-size: .85rem; }
+.drop-overlay[hidden] { display: none; }
 @media (max-width: 600px) { .reader-shell { width: calc(100% - 1rem); padding-top: 4.6rem; } .site-header, .site-footer { padding-inline: .7rem; } .site-footer { gap: .5rem; font-size: .64rem; } .source-status { max-width: 48%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .settings { top: 2.6rem; right: .45rem; } .settings-panel { max-height: calc(100dvh - 3.3rem); overflow-y: auto; } .lyrics { line-height: 1.85; } .reader-shell.is-vertical .reader-heading { min-height: 12rem; } }

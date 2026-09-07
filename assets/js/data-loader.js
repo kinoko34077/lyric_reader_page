@@ -38,7 +38,7 @@ export async function loadInput(hash = location.hash) {
   }
   if (sourceRef) {
     const source = await fetchText(sourceRef);
-    return { manifest: { title: "外部本文", content: { format: "narou" } }, historical: source, modern: source, sourceUrl: source.url };
+    return { manifest: { title: "外部本文", autoTitle: true, content: { format: "narou" } }, historical: source, modern: source, sourceUrl: source.url };
   }
   const fallback = await fetchText("data/demo/reader.json");
   const manifestUrl = new URL("data/demo/reader.json", location.href);
