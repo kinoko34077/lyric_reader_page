@@ -1,8 +1,8 @@
-import { parseRuby, serializeRuby } from "./ruby-parser.js";
+import { parseSource, serializeSource } from "./syntax-adapter.js";
 import { transformNodes } from "./transformer.js";
 
 export function renderLyrics(element, source, options) {
-  const sourceNodes = parseRuby(source);
+  const sourceNodes = parseSource(source).nodes;
   const nodes = transformNodes(sourceNodes, options.kanji);
   element.replaceChildren();
   const fragment = document.createDocumentFragment();
@@ -12,7 +12,7 @@ export function renderLyrics(element, source, options) {
     const node = nodes[index];
     const sourceNode = sourceNodes[index];
     if (node.type === "text") { const sourceChars = [...sourceNode.value]; for (let charIndex = 0; charIndex < [...node.value].length; charIndex += 1) { const span = document.createElement("span"); span.className = "source-char"; span.dataset.sourceStart = offset; span.dataset.sourceEnd = offset + 1; span.dataset.sourceRaw = sourceChars[charIndex] || [...node.value][charIndex]; span.textContent = [...node.value][charIndex]; Object.assign(span.style, annotationStyle(offset, offset + 1)); fragment.append(span); offset += 1; } continue; }
-    const end = offset + [...node.base].length; const wrapper = document.createElement("span"); wrapper.className = "source-ruby"; wrapper.dataset.sourceStart = offset; wrapper.dataset.sourceEnd = end; wrapper.dataset.sourceRaw = serializeRuby([sourceNode]); wrapper.dataset.sourceBase = node.base; wrapper.dataset.sourceExplicit = String(sourceNode.explicit); Object.assign(wrapper.style, annotationStyle(offset, end));
+    const end = offset + [...node.base].length; const wrapper = document.createElement("span"); wrapper.className = "source-ruby"; wrapper.dataset.sourceStart = offset; wrapper.dataset.sourceEnd = end; wrapper.dataset.sourceRaw = serializeSource({ type: "document", nodes: [sourceNode] }); wrapper.dataset.sourceBase = node.base; wrapper.dataset.sourceExplicit = String(sourceNode.explicit); Object.assign(wrapper.style, annotationStyle(offset, end));
     if (options.ruby) { const ruby = document.createElement("ruby"); ruby.append(document.createTextNode(node.base)); const rt = document.createElement("rt"); rt.textContent = node.ruby; ruby.append(rt); wrapper.append(ruby); } else wrapper.textContent = node.base;
     fragment.append(wrapper); offset = end;
   }
@@ -22,7 +22,7 @@ export function renderLyrics(element, source, options) {
 }
 
 export function rawText(nodes, range = null) {
-  if (!range) return serializeRuby(nodes);
+  if (!range) return serializeSource({ type: "document", nodes });
   const selected = [];
   let offset = 0;
   for (const node of nodes) {
@@ -36,5 +36,5 @@ export function rawText(nodes, range = null) {
     } else selected.push(node);
     offset = end;
   }
-  return serializeRuby(selected);
+  return serializeSource({ type: "document", nodes: selected });
 }
