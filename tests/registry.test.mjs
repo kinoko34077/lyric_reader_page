@@ -20,3 +20,8 @@ test("missing glyph falls back without throwing", () => {
   const result = resolvePresentation({ glyph: { type: "glyph", name: "missing" } }, normalizeRegistry({}));
   assert.equal(result.glyphText, null);
 });
+
+test("registry normalization drops unsupported containers without executing them", () => {
+  const result = normalizeRegistry({ palettes: { "0": "#111111" }, scripts: "alert(1)", html: "<style>" });
+  assert.deepEqual(result, { palettes: { "0": "#111111" }, styles: {}, glyphs: {}, fonts: {}, gradients: {}, outlines: {} });
+});

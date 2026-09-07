@@ -73,3 +73,53 @@ export function serializeSource(document, adapter = narouTextAdapter) { return a
 export function toPortableText(document, adapter = narouTextAdapter) { return adapter.toPortableText(document); }
 export function toPlainText(document, adapter = narouTextAdapter) { return adapter.toPlainText(document); }
 export function validateSource(source, adapter = narouTextAdapter) { return adapter.validate(source); }
+
+function nodeLength(node) {
+  if (node.type === "span") return (node.children || []).reduce((sum, child) => sum + nodeLength(child), 0);
+  return [...(node.type === "ruby" ? node.base : node.value)].length;
+}
+
+function sliceNode(node, from, to) {
+  if (node.type === "span") return node;
+  if (node.type === "ruby") {
+    if (from === 0 && to === nodeLength(node)) return node;
+    return { type: "text", value: [...node.base].slice(from, to).join("") };
+  }
+  return { type: "text", value: [...node.value].slice(from, to).join("") };
+}
+
+/** Apply semantic Presentation to a source range, keeping Source as the only edited document. */
+export function applyPresentation(document, range, presentation) {
+  const start = Math.max(0, Number(range?.start) || 0); const end = Math.max(start, Number(range?.end) || 0);
+  if (start === end) return document;
+  const before = []; const selected = []; const after = []; let offset = 0;
+  for (const node of document?.nodes || []) {
+    const length = nodeLength(node); const nodeEnd = offset + length;
+    if (nodeEnd <= start) before.push(node);
+    else if (offset >= end) after.push(node);
+    else {
+      if (offset < start) before.push(sliceNode(node, 0, start - offset));
+      selected.push(offset < start || nodeEnd > end ? sliceNode(node, Math.max(0, start - offset), Math.min(length, end - offset)) : node);
+      if (nodeEnd > end) after.push(sliceNode(node, end - offset, length));
+    }
+    offset = nodeEnd;
+  }
+  if (!selected.length) return document;
+  return { ...document, nodes: [...before, { type: "span", children: selected, presentation: structuredClone(presentation || {}) }, ...after] };
+}
+
+/** Remove any Presentation crossing a source range; plain Source children remain intact. */
+export function clearPresentation(document, range) {
+  const start = Math.max(0, Number(range?.start) || 0); const end = Math.max(start, Number(range?.end) || 0); let offset = 0;
+  const clear = nodes => nodes.flatMap(node => {
+    const length = nodeLength(node); const nodeStart = offset; const nodeEnd = offset + length; offset = nodeEnd;
+    if (node.type === "span" && nodeEnd > start && nodeStart < end) {
+      offset = nodeStart;
+      const children = clear(node.children || []);
+      offset = nodeEnd;
+      return children;
+    }
+    return [node];
+  });
+  return { ...document, nodes: clear(document?.nodes || []) };
+}

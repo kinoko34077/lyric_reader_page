@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { parseSource, serializeSource, toPlainText, toPortableText, validateSource } from "../assets/js/syntax-adapter.js";
+import { applyPresentation, clearPresentation, parseSource, serializeSource, toPlainText, toPortableText, validateSource } from "../assets/js/syntax-adapter.js";
 
 test("provisional markup becomes typed presentation IR", () => {
   const document = parseSource("[如何《どう》]{c=2,style=title}\n[12]{combine}\n[晴]{glyph=hare-special}");
@@ -30,4 +30,18 @@ test("plain ruby and text remain compatible", () => {
   const document = parseSource("如何《どう》\n通常文");
   assert.equal(serializeSource(document), "如何《どう》\n通常文");
   assert.equal(toPortableText(document), "如何《どう》\n通常文");
+});
+
+test("presentation editing changes Author Source while Portable Text stays semantic", () => {
+  const document = parseSource("如何《どう》\n本文");
+  const edited = applyPresentation(document, { start: 0, end: 3 }, { color: { type: "palette", index: 2 } });
+  assert.equal(serializeSource(edited), "[如何《どう》\n]{c=2}本文");
+  assert.equal(toPortableText(edited), "如何《どう》\n本文");
+});
+
+test("clearing a range unwraps presentation without changing source text", () => {
+  const document = parseSource("A[如何《どう》]{c=2}B");
+  const cleared = clearPresentation(document, { start: 1, end: 3 });
+  assert.equal(serializeSource(cleared), "A如何《どう》B");
+  assert.equal(toPortableText(cleared), "A如何《どう》B");
 });
