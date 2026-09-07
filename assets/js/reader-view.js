@@ -1,5 +1,6 @@
 import { parseSource, serializeSource, toPortableText } from "./syntax-adapter.js";
 import { transformNodes } from "./transformer.js";
+import { resolvePresentation } from "./registry.js";
 
 export function renderLyrics(element, source, options) {
   const sourceNodes = parseSource(source).nodes;
@@ -18,7 +19,11 @@ export function renderLyrics(element, source, options) {
       if (node.presentation?.glyph) { wrapper.classList.add("has-glyph"); wrapper.dataset.glyph = node.presentation.glyph.name; }
       if (node.presentation?.style) { wrapper.classList.add("has-style"); wrapper.dataset.style = node.presentation.style.name; }
       if (node.presentation?.color) wrapper.dataset.palette = String(node.presentation.color.index);
+      const resolved = resolvePresentation(node.presentation, options.registry);
+      if (resolved.color) wrapper.style.color = resolved.color;
+      if (resolved.glyphText) wrapper.dataset.glyphFallback = resolved.glyphText;
       renderNodes(node.children || [], sourceNode.children || [], wrapper);
+      if (resolved.glyphText) wrapper.replaceChildren(document.createTextNode(resolved.glyphText));
       wrapper.dataset.sourceEnd = offset; Object.assign(wrapper.style, annotationStyle(start, offset)); parent.append(wrapper); return;
     }
     if (node.type === "text") { const sourceChars = [...(sourceNode.value || node.value)]; for (let charIndex = 0; charIndex < [...node.value].length; charIndex += 1) { const span = document.createElement("span"); span.className = "source-char"; span.dataset.sourceStart = offset; span.dataset.sourceEnd = offset + 1; span.dataset.sourceRaw = sourceChars[charIndex] || [...node.value][charIndex]; span.textContent = [...node.value][charIndex]; Object.assign(span.style, annotationStyle(offset, offset + 1)); parent.append(span); offset += 1; } return; }

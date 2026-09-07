@@ -17,6 +17,7 @@ manifest内の相対URLはmanifest自身のURLを基準に解決します。外�
 - `assets/js/transformer.js`: 旧字体から新字体への変換
 - `assets/js/reader-view.js`: DOM描画と原文記法への復元
 - `assets/js/syntax-adapter.js`: Author Sourceの構文とReader Coreの境界。現行は青空文庫系Ruby Adapterを提供し、Portable Text / Plain Text / validationの契約を分離します。
+- `assets/js/registry.js`: Palette / Style / Glyph等の許可済みRegistryを検証・解決します。外部定義から任意CSSやHTMLは受け付けず、未登録Glyphは原文へフォールバックします。
 - `assets/js/app.js`: UI状態と各責務の接続
 - `data/demo/`: ローカルで動作確認できるmanifestとサンプル本文
 

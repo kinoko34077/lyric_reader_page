@@ -24,6 +24,7 @@ function parsePresentation(source) {
     else if (key === "style" && /^[\w-]+$/.test(value)) presentation.style = { type: "style", name: value };
     else if (key === "glyph" && /^[\w-]+$/.test(value)) presentation.glyph = { type: "glyph", name: value };
     else if (key === "combine" && !value) presentation.combine = true;
+    else throw new Error(`未対応または不正なPresentation指定です: ${part}`);
   }
   return presentation;
 }
