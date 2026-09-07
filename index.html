@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="description" content="外部の歌詞テキストを読むための静的リーダー">
     <title>歌詞リーダー</title>
-    <link rel="stylesheet" href="assets/css/reader.css?v=20260907-008">
+    <link rel="stylesheet" href="assets/css/reader.css?v=20260907-011">
   </head>
   <body>
     <header class="site-header" id="site-header">
@@ -32,6 +32,7 @@
           <label><span>字体</span><select id="kanji-mode"><option value="original">原字</option><option value="shinjitai">新字体</option></select></label>
           <label class="check-row"><input id="ruby-toggle" type="checkbox" checked><span>ルビを表示</span></label>
           <label class="check-row"><input id="vertical-toggle" type="checkbox"><span>縦書き</span></label>
+          <button class="action-button" id="document-defaults-button" type="button">作品既定に戻す</button>
         </fieldset>
         <fieldset>
           <legend>文字サイズ</legend>
@@ -68,8 +69,9 @@
           <label class="url-row"><span>Source URL</span><input id="source-url" type="url" inputmode="url" placeholder="https://…/lyrics.txt" aria-label="Source URL"></label>
           <button class="action-button" id="source-copy-button" type="button">Source URLをコピー</button>
           <button class="action-button" id="url-open-button" type="button">URL本文を開く</button>
+          <button class="action-button" id="reload-source-button" type="button">現在のSourceを再読込</button>
         </fieldset>
-        <fieldset>
+        <fieldset id="editing-actions">
           <legend>編集操作</legend>
           <button class="action-button" id="undo-button" type="button" disabled>元に戻す</button>
           <button class="action-button" id="redo-button" type="button" disabled>やり直す</button>
@@ -83,6 +85,6 @@
 
     <footer class="site-footer" id="site-footer"><span>外部データをブラウザ上で読み込んで表示しています</span><nav class="footer-links" id="footer-links" aria-label="楽曲リンク"></nav></footer>
     <div class="drop-overlay" id="drop-overlay" hidden><strong>TXT / Reader JSONをドロップ</strong><span>画面のどこに置いても本文を開けます</span></div>
-    <script type="module" src="assets/js/app.js?v=20260907-008"></script>
+    <script type="module" src="assets/js/app.js?v=20260907-011"></script>
   </body>
 </html>

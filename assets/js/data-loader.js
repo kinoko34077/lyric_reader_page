@@ -1,4 +1,4 @@
-import { BUILD_ID, MAX_SOURCE_BYTES, MAX_SOURCE_CHARS } from "./config.js?v=20260907-008";
+import { MAX_SOURCE_BYTES, MAX_SOURCE_CHARS } from "./config.js?v=20260907-011";
 
 const allowedUrl = (value, base = location.href) => {
   const url = new URL(value, base);
@@ -6,10 +6,8 @@ const allowedUrl = (value, base = location.href) => {
   return url;
 };
 
-const bust = (url) => { const copy = new URL(url); copy.searchParams.set("_reader", BUILD_ID); return copy; };
-
 export async function fetchText(resource, base) {
-  const url = bust(allowedUrl(resource, base));
+  const url = allowedUrl(resource, base);
   const response = await fetch(url, { cache: "no-store" });
   if (!response.ok) throw new Error(`本文を取得できませんでした (${response.status})。配信元のCORS設定も確認してください。`);
   const length = Number(response.headers.get("content-length") || 0);
@@ -25,7 +23,7 @@ export async function loadInput(hash = location.hash) {
   const sourceRef = params.get("src");
   if (manifestRef) {
     const manifestUrl = allowedUrl(manifestRef);
-    const response = await fetch(bust(manifestUrl), { cache: "no-store" });
+    const response = await fetch(manifestUrl, { cache: "no-store" });
     if (!response.ok) throw new Error(`Manifestを取得できませんでした (${response.status})。`);
     const manifest = await response.json();
     const source = manifest.content?.["historical"] || manifest.content?.src || manifest.lyrics?.historical;
