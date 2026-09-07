@@ -1,0 +1,3 @@
+[晴々]{glyph=hare,style=title}
+[ABCDE]{style=styled}
+通常本文

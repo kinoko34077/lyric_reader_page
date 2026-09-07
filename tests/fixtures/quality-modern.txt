@@ -1,0 +1,3 @@
+[晴々]{style=title}
+[ABCDE]{style=styled}
+通常本文

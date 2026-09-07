@@ -6,6 +6,8 @@
 
 ### 監査後の安定化
 
+- 監査時点のQuality Gate実行結果：27 tests passed / 0 failed。JS構文検査とUnit/Integration testをCIで実行し、成功時のみPagesをDeployする構成へ変更。
+
 - スクロール位置保存・復元の対象を実際の`reader-shell`スクロール領域へ修正。
 - 不正Registryを含むReader JSONを文書状態へ反映する前に検証し、現在文書を保持するよう修正。
 - Rubyの部分選択で読み情報を失わないよう、Rubyを不可分な単位として保持。
@@ -70,12 +72,12 @@
 
 ### Draft / History
 
-- 文書識別子ごとのDraft保存・復元・破棄。
+- 文書識別子ごとのDraft保存・復元・破棄（Variant、Registry、metadataを含むv2形式）。
 - Draft復元後も未保存状態を維持。
 - historical / modern Variantを区別したDraft・History。
-- 文書切替時に前文書のHistoryを新文書へ適用しない構成。
-- Undo / Redoで本文、タイトル、Registryを復元。
-- IME・通常入力欄の標準Undo慣習をできる限り維持。
+- 文書切替時にHistoryを必ず初期化し、前文書のsnapshotを新文書へ適用しない構成。
+- Undo / Redoで本文、Variant、タイトル、Registryを復元。
+- IME・通常入力欄ではReader独自Undoを横取りしない。
 
 ### Reader JSON / Registry
 
@@ -136,7 +138,7 @@
 node --test tests/*.test.mjs
 ```
 
-直近の結果：11 tests passed / 0 failed。
+直近の結果：27 tests passed / 0 failed。
 
 ## 既知の未完了項目
 
@@ -146,8 +148,8 @@ node --test tests/*.test.mjs
 - GlyphのSVG・Font asset解決と安全な表示。
 - Nishiki-tekiのライセンス確認・self-host対応。
 - Range Annotationの互換読込を含む完全廃止。
-- Parser候補比較と正式Syntax仕様の確定。
-- Typed IRの型検査・Schema validator導入。
+- Parser候補比較と正式Syntax仕様の確定（暫定Adapterの境界と理由はADRで固定済み）。
+- JSDoc IR型の導入は完了。CIでの静的checkJs実行とSchema validator導入は未完了。
 - `app.js`のDocument State / Editor / I/O / View Preference分割。
 
 ## 主なコミット

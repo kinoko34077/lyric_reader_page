@@ -1,9 +1,10 @@
-import { parseSource, serializeSource, toPortableText } from "./syntax-adapter.js";
+import { getSyntaxAdapter, parseSource, serializeSource, toPortableText } from "./syntax-adapter.js";
 import { transformNodes } from "./transformer.js";
 import { resolvePresentation } from "./registry.js";
 
 export function renderLyrics(element, source, options) {
-  const sourceNodes = parseSource(source).nodes;
+  const adapter = options.adapter || getSyntaxAdapter(options.format || "narou-text");
+  const sourceNodes = parseSource(source, adapter).nodes;
   const nodes = transformNodes(sourceNodes, options.kanji);
   element.replaceChildren();
   const fragment = document.createDocumentFragment();
@@ -14,20 +15,23 @@ export function renderLyrics(element, source, options) {
     if (node.type === "span") {
       const start = offset; const wrapper = document.createElement("span");
       wrapper.className = "source-presentation"; wrapper.dataset.sourceStart = start;
-      wrapper.dataset.sourceRaw = serializeSource({ type: "document", nodes: [sourceNode] });
+      wrapper.dataset.sourceRaw = serializeSource({ type: "document", nodes: [sourceNode] }, adapter);
       if (node.presentation?.combine) wrapper.classList.add("combine");
       if (node.presentation?.glyph) { wrapper.classList.add("has-glyph"); wrapper.dataset.glyph = node.presentation.glyph.name; }
       if (node.presentation?.style) { wrapper.classList.add("has-style"); wrapper.dataset.style = node.presentation.style.name; }
       if (node.presentation?.color) wrapper.dataset.palette = String(node.presentation.color.index);
       const resolved = resolvePresentation(node.presentation, options.registry);
       if (resolved.color) wrapper.style.color = resolved.color;
+      if (resolved.outline?.color) { wrapper.style.webkitTextStroke = `${resolved.outline.width}px ${resolved.outline.color}`; wrapper.style.textStroke = `${resolved.outline.width}px ${resolved.outline.color}`; }
+      if (resolved.gradient?.stops?.length > 1) { const directions = { "to-right": "to right", "to-left": "to left", "to-top": "to top", "to-bottom": "to bottom", "to-inline-start": "to left", "to-inline-end": "to right" }; const stops = resolved.gradient.stops.map(stop => `${stop.color} ${stop.position * 100}%`).join(","); wrapper.style.backgroundImage = `linear-gradient(${directions[resolved.gradient.direction] || "to right"},${stops})`; wrapper.style.backgroundClip = "text"; wrapper.style.webkitBackgroundClip = "text"; if (globalThis.CSS?.supports?.("background-clip", "text") || globalThis.CSS?.supports?.("-webkit-background-clip", "text")) wrapper.style.color = "transparent"; }
+      if (resolved.font?.url) wrapper.dataset.fontUrl = resolved.font.url;
       if (resolved.glyphText) wrapper.dataset.glyphFallback = resolved.glyphText;
       renderNodes(node.children || [], sourceNode.children || [], wrapper);
       if (resolved.glyphText) wrapper.replaceChildren(document.createTextNode(resolved.glyphText));
       wrapper.dataset.sourceEnd = offset; Object.assign(wrapper.style, annotationStyle(start, offset)); parent.append(wrapper); return;
     }
-    if (node.type === "text") { const sourceChars = [...(sourceNode.value || node.value)]; for (let charIndex = 0; charIndex < [...node.value].length; charIndex += 1) { const span = document.createElement("span"); span.className = "source-char"; span.dataset.sourceStart = offset; span.dataset.sourceEnd = offset + 1; span.dataset.sourceRaw = sourceChars[charIndex] || [...node.value][charIndex]; span.textContent = [...node.value][charIndex]; Object.assign(span.style, annotationStyle(offset, offset + 1)); parent.append(span); offset += 1; } return; }
-    const end = offset + [...node.base].length; const wrapper = document.createElement("span"); wrapper.className = "source-ruby"; wrapper.dataset.sourceStart = offset; wrapper.dataset.sourceEnd = end; wrapper.dataset.sourceRaw = serializeSource({ type: "document", nodes: [sourceNode] }); wrapper.dataset.sourceBase = node.base; wrapper.dataset.sourceExplicit = String(sourceNode.explicit); Object.assign(wrapper.style, annotationStyle(offset, end));
+    if (node.type === "text") { const sourceValue = sourceNode.value || node.value; const start = offset; const end = start + [...sourceValue].length; const span = document.createElement("span"); span.className = "source-text"; span.dataset.sourceStart = start; span.dataset.sourceEnd = end; span.dataset.sourceRaw = sourceValue; span.textContent = node.value; Object.assign(span.style, annotationStyle(start, end)); parent.append(span); offset = end; return; }
+    const end = offset + [...node.base].length; const wrapper = document.createElement("span"); wrapper.className = "source-ruby"; wrapper.dataset.sourceStart = offset; wrapper.dataset.sourceEnd = end; wrapper.dataset.sourceRaw = serializeSource({ type: "document", nodes: [sourceNode] }, adapter); wrapper.dataset.sourceBase = node.base; wrapper.dataset.sourceExplicit = String(sourceNode.explicit); Object.assign(wrapper.style, annotationStyle(offset, end));
     if (options.ruby) { const ruby = document.createElement("ruby"); ruby.append(document.createTextNode(node.base)); const rt = document.createElement("rt"); rt.textContent = node.ruby; ruby.append(rt); wrapper.append(ruby); } else wrapper.textContent = node.base;
     parent.append(wrapper); offset = end;
   });

@@ -12,6 +12,11 @@ export function parseJsonText(text) {
   try { return JSON.parse(text); } catch { throw new Error("JSON文書の形式が不正です。"); }
 }
 
+/** '[' is valid Author Source, so local classification must not sniff JSON by first character. */
+export function isReaderJsonFile(fileName = "", mimeType = "") {
+  return /\.json$/i.test(String(fileName)) || /^(application\/json|application\/.*\+json)$/i.test(String(mimeType));
+}
+
 export async function fetchText(resource, base) {
   const url = allowedUrl(resource, base);
   const response = await fetch(url, { cache: "no-store" });

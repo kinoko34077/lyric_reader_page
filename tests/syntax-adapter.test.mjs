@@ -52,3 +52,22 @@ test("partial Ruby selection keeps the Ruby node intact", () => {
   assert.equal(serializeSource(edited), "[如何《どう》]{combine}");
   assert.equal(toPortableText(edited), "如何《どう》");
 });
+
+test("partial presentation application splits a span without duplicating source", () => {
+  const edited = applyPresentation(parseSource("[ABCDE]{c=2}"), { start: 1, end: 3 }, { style: { type: "style", name: "x" } });
+  assert.equal(serializeSource(edited), "[A]{c=2}[BC]{style=x}[DE]{c=2}");
+  assert.equal(toPlainText(edited), "ABCDE");
+  assert.equal((toPlainText(edited).match(/A|B|C|D|E/g) || []).length, 5);
+});
+
+test("partial presentation clearing preserves the untouched presentation sides", () => {
+  const cleared = clearPresentation(parseSource("[ABCDE]{c=2}"), { start: 1, end: 3 });
+  assert.equal(serializeSource(cleared), "[A]{c=2}BC[DE]{c=2}");
+  assert.equal(toPortableText(cleared), "ABCDE");
+});
+
+test("adapter router rejects unknown formats explicitly", async () => {
+  const { getSyntaxAdapter } = await import("../assets/js/syntax-adapter.js");
+  assert.equal(getSyntaxAdapter("narou-text").id, "narou-text");
+  assert.throws(() => getSyntaxAdapter("unknown-format"), /未対応の本文format/);
+});

@@ -1,0 +1,17 @@
+{
+  "version": 2,
+  "id": "quality-fixture",
+  "title": "検証用",
+  "artist": "Quality Gate",
+  "description": "厳格テスト用Reader文書",
+  "autoTitle": true,
+  "content": { "historical": "./quality-historical.txt", "modern": "./quality-modern.txt", "format": "narou-text" },
+  "registry": {
+    "palettes": { "0": "#272522", "2": "#b52d2d", "3": "#236ca3" },
+    "styles": { "title": { "color": 2, "outline": "thin", "gradient": "title-gradient" }, "styled": { "color": 3 } },
+    "glyphs": { "hare": { "text": "晴々" } },
+    "outlines": { "thin": { "width": 1, "color": 3 } },
+    "gradients": { "title-gradient": { "direction": "to-right", "stops": [{ "at": 0, "palette": 2 }, { "at": 1, "palette": 3 }] } }
+  },
+  "defaults": { "ruby": true, "writingMode": "horizontal" }
+}

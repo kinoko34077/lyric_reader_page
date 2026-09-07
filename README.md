@@ -31,11 +31,11 @@ Writerでは、次の仮Presentation記法をAuthor Sourceへ保存できます�
 [如何《どう》]{style=title,c=2}
 ```
 
-全文CopyはPresentationを除去し、本文とRubyだけをPortable Textとして出力します。回帰テストは`node --test tests/*.test.mjs`で実行できます。
+全文CopyはPresentationを除去し、本文とRubyだけをPortable Textとして出力します。WriterのPalette操作は「Slot色の更新」と「選択範囲へSlotを適用」を分離しています。回帰テストは`node --test tests/*.test.mjs`で実行できます。
 - `assets/js/app.js`: UI状態と各責務の接続
 - `data/demo/`: ローカルで動作確認できるmanifestとサンプル本文
 
-表示設定では、横書き / 縦書き、旧字 / 新字体、歴史的仮名 / 現代仮名、ルビ、文字サイズ、背景色、文字色、ルビ色、標準フォントを切り替えられます。「作品既定に戻す」でmanifestの既定表示へ戻せます。Readerは原文記法のSourceを正本として保持し、閲覧モードと`?mode=writer`の編集モードを同一ページ内で切り替えます。TXT / Reader JSONの読込、本文の直接編集、全文コピー、TXT / Reader JSON保存、Draft復元にも対応します。Reader JSONはhistorical / modernの両Variantを保持します。manifestの`theme`で初期テーマを指定でき、`theme.font`に`{"type":"remote","url":"https://example.com/font.woff2"}`を指定すると、CORSを許可した外部Webフォントを直接読み込めます。Readerは任意CSSを読み込みません。
+表示設定では、横書き / 縦書き、旧字 / 新字体、歴史的仮名 / 現代仮名、ルビ、文字サイズ、背景色、文字色、ルビ色、標準フォントを切り替えられます。「作品既定に戻す」でmanifestの既定表示へ戻せます。Readerは原文記法のSourceを正本として保持し、閲覧モードと`?mode=writer`の編集モードを同一ページ内で切り替えます。TXT / Reader JSONの読込、本文の直接編集、全文コピー、TXT / Reader JSON保存、Draft復元にも対応します。Reader JSONはhistorical / modernの両Variantを保持し、version 1をversion 2へ移行、未知の将来versionは拒否します。manifestの`theme`で初期テーマを指定でき、`theme.font`に`{"type":"remote","url":"https://example.com/font.woff2"}`を指定すると、CORSを許可した外部Webフォントを直接読み込めます。RegistryのNamed StyleはPalette、Outline、Gradientを参照できます。Readerは任意CSS/HTML/Scriptを読み込みません。
 
 ローカルのTXT / Reader JSONは画面全体へドロップするか、ヘッダーの「開く」からブラウザ内だけで読み込めます。編集モードではタイトルと本文をその場で編集でき、入力元の原文記法を正本として保持します。ローカル本文はサーバーへ送信・保存しません。
 

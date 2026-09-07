@@ -1,9 +1,18 @@
+// @ts-check
 import { parseRuby } from "./ruby-parser.js";
+
+/** @typedef {{type: "text", value: string}} TextNode */
+/** @typedef {{type: "ruby", base: string, ruby: string, explicit: boolean}} RubyNode */
+/** @typedef {{type: "span", children: ReaderNode[], presentation: Presentation}} SpanNode */
+/** @typedef {TextNode|RubyNode|SpanNode} ReaderNode */
+/** @typedef {{color?: {type: "palette", index: number}, style?: {type: "style", name: string}, glyph?: {type: "glyph", name: string}, combine?: boolean}} Presentation */
+/** @typedef {{type: "document", nodes: ReaderNode[]}} ReaderDocument */
 
 /** Syntax-independent boundary between Author Source and Reader Core. */
 export const narouTextAdapter = Object.freeze({
   id: "narou-text",
   capabilities: Object.freeze({ ruby: true, presentationMarkup: true, provisionalSyntax: true }),
+  /** @returns {ReaderDocument} */
   parse(source) { return { type: "document", nodes: parseProvisional(String(source)) }; },
   serialize(document) { return serializeAuthor(document?.nodes || []); },
   toPortableText(document) { return serializePortable(document?.nodes || []); },
@@ -15,6 +24,14 @@ export const narouTextAdapter = Object.freeze({
   }
 });
 
+const syntaxAdapters = Object.freeze({ "narou": narouTextAdapter, "narou-text": narouTextAdapter });
+export function getSyntaxAdapter(format = "narou-text") {
+  const adapter = syntaxAdapters[String(format || "narou-text")];
+  if (!adapter) throw new Error(`未対応の本文formatです: ${format}`);
+  return adapter;
+}
+
+/** @returns {Presentation} */
 function parsePresentation(source) {
   const presentation = {};
   for (const part of source.split(",").map(value => value.trim()).filter(Boolean)) {
@@ -29,6 +46,7 @@ function parsePresentation(source) {
   return presentation;
 }
 
+/** @returns {ReaderNode[]} */
 function parseProvisional(source) {
   const nodes = [];
   const pattern = /\[([^\]\n]+)\]\{([^{}\n]*)\}/gu;
@@ -74,53 +92,63 @@ export function toPortableText(document, adapter = narouTextAdapter) { return ad
 export function toPlainText(document, adapter = narouTextAdapter) { return adapter.toPlainText(document); }
 export function validateSource(source, adapter = narouTextAdapter) { return adapter.validate(source); }
 
-function nodeLength(node) {
+export function nodeLength(node) {
   if (node.type === "span") return (node.children || []).reduce((sum, child) => sum + nodeLength(child), 0);
   return [...(node.type === "ruby" ? node.base : node.value)].length;
 }
 
-function sliceNode(node, from, to) {
-  if (node.type === "span") return node;
+function wrap(nodes, presentation) { return nodes.length ? [{ type: "span", children: nodes, presentation: structuredClone(presentation || {}) }] : []; }
+
+/** Partition one node into before/selected/after without ever duplicating source characters. */
+function partitionNode(node, start, end, unwrapSelected = true) {
+  const length = nodeLength(node);
+  if (end <= 0) return { before: [], selected: [], after: [node] };
+  if (start >= length) return { before: [node], selected: [], after: [] };
   if (node.type === "ruby") {
-    // A Ruby is an indivisible semantic unit. Keep it intact rather than losing its reading.
-    return node;
+    // A Ruby is an indivisible semantic unit; a partial selection selects the whole Ruby.
+    return { before: [], selected: [node], after: [] };
   }
-  return { type: "text", value: [...node.value].slice(from, to).join("") };
+  if (node.type === "text") {
+    const chars = [...node.value]; const from = Math.max(0, start); const to = Math.min(length, end);
+    return {
+      before: from ? [{ type: "text", value: chars.slice(0, from).join("") }] : [],
+      selected: to > from ? [{ type: "text", value: chars.slice(from, to).join("") }] : [],
+      after: to < length ? [{ type: "text", value: chars.slice(to).join("") }] : []
+    };
+  }
+  const before = []; const selected = []; const after = []; let offset = 0;
+  for (const child of node.children || []) {
+    const childLength = nodeLength(child); const part = partitionNode(child, start - offset, end - offset, unwrapSelected);
+    before.push(...part.before); selected.push(...part.selected); after.push(...part.after); offset += childLength;
+  }
+  const presentation = node.presentation;
+  return {
+    before: wrap(before, presentation),
+    selected: unwrapSelected ? selected : wrap(selected, presentation),
+    after: wrap(after, presentation)
+  };
+}
+
+function partitionDocument(document, range) {
+  const start = Math.max(0, Number(range?.start) || 0); const end = Math.max(start, Number(range?.end) || 0);
+  const before = []; const selected = []; const after = []; let offset = 0;
+  for (const node of document?.nodes || []) {
+    const length = nodeLength(node); const part = partitionNode(node, start - offset, end - offset);
+    before.push(...part.before); selected.push(...part.selected); after.push(...part.after); offset += length;
+  }
+  return { before, selected, after, start, end };
 }
 
 /** Apply semantic Presentation to a source range, keeping Source as the only edited document. */
 export function applyPresentation(document, range, presentation) {
-  const start = Math.max(0, Number(range?.start) || 0); const end = Math.max(start, Number(range?.end) || 0);
-  if (start === end) return document;
-  const before = []; const selected = []; const after = []; let offset = 0;
-  for (const node of document?.nodes || []) {
-    const length = nodeLength(node); const nodeEnd = offset + length;
-    if (nodeEnd <= start) before.push(node);
-    else if (offset >= end) after.push(node);
-    else {
-      if (node.type === "ruby") { selected.push(node); offset = nodeEnd; continue; }
-      if (offset < start) before.push(sliceNode(node, 0, start - offset));
-      selected.push(offset < start || nodeEnd > end ? sliceNode(node, Math.max(0, start - offset), Math.min(length, end - offset)) : node);
-      if (nodeEnd > end) after.push(sliceNode(node, end - offset, length));
-    }
-    offset = nodeEnd;
-  }
-  if (!selected.length) return document;
-  return { ...document, nodes: [...before, { type: "span", children: selected, presentation: structuredClone(presentation || {}) }, ...after] };
+  const parts = partitionDocument(document, range);
+  if (parts.start === parts.end || !parts.selected.length) return document;
+  return { ...document, nodes: [...parts.before, { type: "span", children: parts.selected, presentation: structuredClone(presentation || {}) }, ...parts.after] };
 }
 
 /** Remove any Presentation crossing a source range; plain Source children remain intact. */
 export function clearPresentation(document, range) {
-  const start = Math.max(0, Number(range?.start) || 0); const end = Math.max(start, Number(range?.end) || 0); let offset = 0;
-  const clear = nodes => nodes.flatMap(node => {
-    const length = nodeLength(node); const nodeStart = offset; const nodeEnd = offset + length; offset = nodeEnd;
-    if (node.type === "span" && nodeEnd > start && nodeStart < end) {
-      offset = nodeStart;
-      const children = clear(node.children || []);
-      offset = nodeEnd;
-      return children;
-    }
-    return [node];
-  });
-  return { ...document, nodes: clear(document?.nodes || []) };
+  const parts = partitionDocument(document, range);
+  if (parts.start === parts.end) return document;
+  return { ...document, nodes: [...parts.before, ...parts.selected, ...parts.after] };
 }

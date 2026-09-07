@@ -75,8 +75,10 @@
           <legend>編集操作</legend>
           <button class="action-button" id="undo-button" type="button" disabled>元に戻す</button>
           <button class="action-button" id="redo-button" type="button" disabled>やり直す</button>
-          <label class="annotation-color"><span>選択範囲の色</span><input id="annotation-color" type="color" value="#d02020" aria-label="選択範囲の色"></label>
-          <button class="action-button" id="annotate-button" type="button">選択範囲を着色</button>
+          <label><span>Palette Slot</span><select id="palette-slot" aria-label="Palette Slot"><option value="0">Slot 0</option><option value="1">Slot 1</option><option value="2">Slot 2</option><option value="3">Slot 3</option></select></label>
+          <label><span>Slot色</span><input id="palette-color" type="color" value="#d02020" aria-label="Palette Slotの色"></label>
+          <button class="action-button" id="palette-save-button" type="button">Palette Slotを更新</button>
+          <button class="action-button" id="annotate-button" type="button">選択範囲へSlotを適用</button>
           <label><span>Style名</span><input id="style-name" type="text" value="shout" pattern="[A-Za-z0-9_-]+" aria-label="Style名"></label>
           <button class="action-button" id="style-button" type="button">選択範囲にStyle</button>
           <label><span>Glyph名</span><input id="glyph-name" type="text" value="hare-special" pattern="[A-Za-z0-9_-]+" aria-label="Glyph名"></label>
