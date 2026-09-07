@@ -2,6 +2,8 @@
 
 外部のTXT / JSONをブラウザから直接読み込んで表示する、静的な歌詞Readerです。Reader側は歌詞本文を保存しません。
 
+詳細な実装履歴は[`CHANGELOG.md`](./CHANGELOG.md)を参照してください。
+
 ## 使い方
 
 - デモ: `index.html`
