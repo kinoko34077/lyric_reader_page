@@ -19,11 +19,12 @@
         <h1 id="song-title">歌詞リーダー</h1>
         <p class="song-description" id="song-description"></p>
       </section>
-      <section class="source-input" id="source-input" aria-label="ローカル本文を読む">
+      <details class="source-input" id="source-input">
+        <summary>ローカル本文を開く</summary>
         <label class="drop-zone" id="drop-zone" for="source-file"><span>TXTをここへドロップ</span><small>またはファイルを選択</small><input id="source-file" type="file" accept=".txt,text/plain"></label>
         <label class="drop-zone reader-file-zone" for="reader-file"><span>Reader JSONを読み込む</span><small>保存した文書を復元</small><input id="reader-file" type="file" accept=".json,application/json"></label>
         <details class="paste-source"><summary>本文を貼り付ける</summary><textarea id="source-text" rows="4" placeholder="なろう式ルビを含む本文を貼り付け"></textarea><button class="action-button" id="source-text-button" type="button">貼り付けた本文を表示</button></details>
-      </section>
+      </details>
       <article class="lyrics" id="lyrics" tabindex="0" aria-label="歌詞本文"></article>
       <p class="reader-error" id="reader-error" role="alert" hidden></p>
     </main>
@@ -76,7 +77,7 @@
       </div>
     </aside>
 
-    <footer class="site-footer" id="site-footer"><span>外部データをブラウザ上で読み込んで表示しています</span></footer>
+    <footer class="site-footer" id="site-footer"><span>外部データをブラウザ上で読み込んで表示しています</span><nav class="footer-links" id="footer-links" aria-label="楽曲リンク"></nav></footer>
     <script type="module" src="assets/js/app.js?v=20260907-001"></script>
   </body>
 </html>

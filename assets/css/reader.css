@@ -1,23 +1,24 @@
 :root { color-scheme: light; --reader-size: 20px; --paper: #f5f0e6; --ink: #272522; --ruby: #716b60; --muted: #716b60; --rule: #d8d0c1; --accent: #675544; --reader-font: "Noto Serif JP", "Yu Mincho", YuMincho, serif; }
 * { box-sizing: border-box; }
-html, body { margin: 0; min-height: 100%; }
-body { background: var(--paper); color: var(--ink); font-family: var(--reader-font); line-height: 1.9; transition: background-color .2s ease, color .2s ease; }
+html, body { margin: 0; min-height: 100%; height: 100%; }
+body { overflow: hidden; background: var(--paper); color: var(--ink); font-family: var(--reader-font); line-height: 1.9; transition: background-color .2s ease, color .2s ease; }
 button, select, input { font: inherit; }
 button, select { color: inherit; background: transparent; border: 1px solid var(--rule); border-radius: .25rem; }
 button { cursor: pointer; }
 .site-header, .site-footer { position: fixed; z-index: 5; left: 0; right: 0; display: flex; align-items: center; padding: .55rem clamp(1rem, 4vw, 4rem); background: color-mix(in srgb, var(--paper) 86%, transparent); backdrop-filter: blur(5px); transition: opacity .2s ease; }
 .site-header { top: 0; border-bottom: 1px solid var(--rule); justify-content: space-between; }
-.site-footer { bottom: 0; border-top: 1px solid var(--rule); justify-content: center; color: var(--muted); font-size: .72rem; }
+.site-footer { bottom: 0; border-top: 1px solid var(--rule); justify-content: space-between; color: var(--muted); font-size: .72rem; }
 body.is-scrolling .site-header, body.is-scrolling .site-footer { opacity: .18; }
 .site-title { color: inherit; text-decoration: none; font-size: .85rem; letter-spacing: .12em; }
 .source-status { margin: 0; color: var(--muted); font-size: .7rem; }
-.reader-shell { width: min(100% - 2rem, 72rem); min-height: 100dvh; margin: 0 auto; padding: 5.5rem clamp(.25rem, 4vw, 3rem) 5rem; }
+.reader-shell { width: min(100% - 2rem, 72rem); height: 100dvh; margin: 0 auto; padding: 5.5rem clamp(.25rem, 4vw, 3rem) 5rem; display: flex; flex-direction: column; overflow: hidden; }
 .reader-heading { max-width: 58rem; margin: 0 0 2rem; padding-bottom: 1rem; border-bottom: 1px solid var(--rule); }
 .reader-shell.is-vertical { writing-mode: vertical-rl; }
 .reader-shell.is-vertical .reader-heading { max-width: none; min-height: 16rem; margin: 0 0 2rem; padding: 0 0 1rem; border-bottom: 0; border-left: 1px solid var(--rule); }
 .reader-shell.is-vertical .reader-heading h1 { margin-inline: 0 .8em; }
 .reader-shell.is-vertical .lyrics { writing-mode: vertical-rl; }
-.source-input { max-width: 58rem; margin: 0 0 1.5rem; }
+.source-input { max-width: 58rem; margin: 0 0 1rem; color: var(--muted); font-size: .78rem; }
+.source-input summary { cursor: pointer; }
 .drop-zone { display: flex; align-items: center; justify-content: space-between; gap: .8rem; padding: .65rem .8rem; border: 1px dashed var(--rule); color: var(--muted); cursor: pointer; font-size: .78rem; }
 .drop-zone:hover, .drop-zone.is-dragover { border-color: var(--accent); background: color-mix(in srgb, var(--paper) 88%, var(--accent)); }
 .drop-zone small { margin-left: auto; }
@@ -27,12 +28,12 @@ body.is-scrolling .site-header, body.is-scrolling .site-footer { opacity: .18; }
 .paste-source textarea { display: block; width: 100%; margin: .4rem 0; padding: .5rem; border: 1px solid var(--rule); background: transparent; color: inherit; font: inherit; resize: vertical; }
 .eyebrow, .song-description { margin: 0; color: var(--muted); font-size: .82rem; }
 h1 { margin: .1rem 0; font-size: clamp(1.35rem, 3vw, 2.3rem); font-weight: 500; }
-.lyrics { max-width: 58rem; white-space: pre-wrap; overflow-wrap: anywhere; font-size: var(--reader-size); line-height: 2.05; letter-spacing: .04em; outline: none; }
+.lyrics { flex: 1; min-height: 0; max-width: 58rem; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font-size: var(--reader-size); line-height: 2.05; letter-spacing: .04em; outline: none; scrollbar-gutter: stable; }
 .lyrics:focus-visible { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent); }
 .lyrics p { margin: 0 0 1.7em; }
 .lyrics ruby { ruby-position: over; }
 .lyrics rt { color: var(--ruby); font-size: .48em; letter-spacing: 0; line-height: 1; }
-.lyrics.is-vertical { max-width: none; min-height: calc(100dvh - 11rem); writing-mode: vertical-rl; text-orientation: mixed; overflow-x: auto; overflow-y: hidden; padding-bottom: 1rem; }
+.lyrics.is-vertical { flex: 1; max-width: none; min-height: 0; writing-mode: vertical-rl; text-orientation: mixed; overflow-x: auto; overflow-y: hidden; padding-bottom: 1rem; }
 .lyrics.is-vertical p { margin: 0 1.7em 0 0; }
 .combine { text-combine-upright: all; }
 .settings { position: fixed; z-index: 10; top: 3rem; right: clamp(.5rem, 2vw, 1.5rem); width: min(15rem, calc(100vw - 1rem)); }
@@ -56,5 +57,7 @@ input[type="color"] { width: 2.2rem; height: 1.5rem; padding: 0; border: 1px sol
 .action-button { margin-top: .35rem; }
 .song-links { display: flex; flex-wrap: wrap; gap: .5rem; }
 .song-links a { color: var(--accent); font-size: .78rem; }
+.footer-links { display: flex; gap: .7rem; }
+.footer-links a { color: inherit; }
 .reader-error { padding: .8rem; border: 1px solid #b66; color: #833; background: #fff5f5; }
-@media (max-width: 600px) { .reader-shell { width: calc(100% - 1rem); padding-top: 4.6rem; } .site-header, .site-footer { padding-inline: .7rem; } .source-status { max-width: 48%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .settings { top: 2.6rem; right: .45rem; } .settings-panel { max-height: calc(100dvh - 3.3rem); overflow-y: auto; } .lyrics { line-height: 1.85; } .reader-shell.is-vertical { min-height: calc(100dvh - 5rem); } .reader-shell.is-vertical .reader-heading { min-height: 12rem; } }
+@media (max-width: 600px) { .reader-shell { width: calc(100% - 1rem); padding-top: 4.6rem; } .site-header, .site-footer { padding-inline: .7rem; } .site-footer { gap: .5rem; font-size: .64rem; } .source-status { max-width: 48%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .settings { top: 2.6rem; right: .45rem; } .settings-panel { max-height: calc(100dvh - 3.3rem); overflow-y: auto; } .lyrics { line-height: 1.85; } .reader-shell.is-vertical .reader-heading { min-height: 12rem; } }
