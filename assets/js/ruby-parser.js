@@ -1,10 +1,11 @@
-const BASE_CHARS = /[一-龯々〆〇ヶヵ]/;
-const BASE_RUN = /[一-龯々〆〇ヶヵ]+$/;
+const HAN = "\\p{Script=Han}";
+const BASE_CHARS = new RegExp(`[${HAN}々〆〇ヶヵ]`, "u");
+const BASE_RUN = new RegExp(`[${HAN}々〆〇ヶヵ]+$`, "u");
 
 export function parseRuby(source) {
   const nodes = [];
   let cursor = 0;
-  const pattern = /(?:｜([^《\n]+)|([一-龯々〆〇ヶヵ]+))《([^》\n]+)》/g;
+  const pattern = new RegExp(`(?:｜([^《\\n]+)|([${HAN}々〆〇ヶヵ]+))《([^》\\n]+)》`, "gu");
   for (const match of source.matchAll(pattern)) {
     if (match.index > cursor) nodes.push({ type: "text", value: source.slice(cursor, match.index) });
     const base = match[1] || match[2];

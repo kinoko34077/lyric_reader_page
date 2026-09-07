@@ -19,13 +19,13 @@ manifest内の相対URLはmanifest自身のURLを基準に解決します。外�
 - `assets/js/app.js`: UI状態と各責務の接続
 - `data/demo/`: ローカルで動作確認できるmanifestとサンプル本文
 
-表示設定では、横書き / 縦書き、旧字 / 新字体、歴史的仮名 / 現代仮名、ルビ、文字サイズ、背景色、本文色、ルビ色、標準フォントを切り替えられます。manifestの`theme`で初期テーマを指定でき、`theme.font`に`{"type":"remote","url":"https://example.com/font.woff2"}`を指定すると、CORSを許可した外部Webフォントを直接読み込みます。Readerは任意CSSを読み込みません。
+表示設定では、横書き / 縦書き、旧字 / 新字体、歴史的仮名 / 現代仮名、ルビ、文字サイズ、背景色、文字色、ルビ色、標準フォントを切り替えられます。Readerは原文記法のSourceを正本として保持し、閲覧モードと`?mode=writer`の編集モードを同一ページ内で切り替えます。TXT / Reader JSONの読込、本文の直接編集、全文コピー、TXT / Reader JSON保存、Draft復元にも対応します。manifestの`theme`で初期テーマを指定でき、`theme.font`に`{"type":"remote","url":"https://example.com/font.woff2"}`を指定すると、CORSを許可した外部Webフォントを直接読み込めます。Readerは任意CSSを読み込みません。
 
-ローカルのTXTは本文上部へドロップするか、貼り付け欄からブラウザ内だけで読み込めます。ローカル本文はサーバーへ送信・保存しません。
+ローカルのTXT / Reader JSONは画面全体へドロップするか、ヘッダーの「開く」からブラウザ内だけで読み込めます。編集モードではタイトルと本文をその場で編集でき、入力元の原文記法を正本として保持します。ローカル本文はサーバーへ送信・保存しません。
 
 「Reader文書を保存」では、本文・メタデータ・テーマ・表示状態・リンクを`reader.reader.json`として保存できます。同ファイルは「Reader JSONを読み込む」からブラウザ内へ復元できます。
 
-本番公開時は、`assets/css/reader.css` と `assets/js/app.js` のクエリにある `BUILD_ID` を更新してください。
+本番公開時は、`index.html` のCSS / JSクエリと `assets/js/config.js`・`assets/js/data-loader.js` のビルドIDを揃えて更新してください。
 
 ## GitHub Pages
 

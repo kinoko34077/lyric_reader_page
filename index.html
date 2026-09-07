@@ -5,32 +5,26 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="description" content="外部の歌詞テキストを読むための静的リーダー">
     <title>歌詞リーダー</title>
-    <link rel="stylesheet" href="assets/css/reader.css?v=20260907-005">
+    <link rel="stylesheet" href="assets/css/reader.css?v=20260907-008">
   </head>
   <body>
     <header class="site-header" id="site-header">
       <a class="site-title" href="./">歌詞リーダー</a>
-      <div class="header-tools"><p class="source-status" id="source-status" aria-live="polite">読み込み中…</p><a class="mode-switch" id="mode-switch" href="?mode=writer">編集</a></div>
+      <div class="header-tools"><button class="header-button" id="open-file-button" type="button">開く</button><input id="source-file" type="file" accept=".txt,.json,text/plain,application/json" hidden><button class="header-button" id="reload-button" type="button">再読込</button><p class="source-status" id="source-status" aria-live="polite">読み込み中…</p><button class="header-button" id="settings-toggle" type="button" aria-expanded="false" aria-controls="settings-panel">表示設定</button><button class="header-button" id="mode-switch" type="button">編集</button></div>
     </header>
 
     <main class="reader-shell" id="reader-shell">
       <section class="reader-heading" aria-labelledby="song-title">
         <p class="eyebrow" id="song-artist"></p>
-        <h1 id="song-title">歌詞リーダー</h1>
+        <h1 id="song-title" contenteditable="false">歌詞リーダー</h1>
         <p class="song-description" id="song-description"></p>
       </section>
-      <section class="writer-panel" id="writer-panel" hidden aria-label="本文編集">
-        <div class="writer-toolbar"><button class="action-button" id="open-file-button" type="button">ファイルを開く</button><input id="source-file" type="file" accept=".txt,.json,text/plain,application/json" hidden><span>TXT / JSONを読み込み、本文を直接編集できます</span></div>
-        <label class="writer-title"><span>タイトル</span><input id="writer-title" type="text" autocomplete="off"></label>
-        <label class="writer-content"><span>本文</span><textarea id="source-text" spellcheck="false" placeholder="なろう式ルビを含む本文を入力"></textarea></label>
-        <button class="action-button" id="source-text-button" type="button">編集内容を表示</button>
-      </section>
+      <div class="draft-notice" id="draft-notice" hidden role="status"><span>未保存の編集があります</span><button class="action-button" id="draft-restore" type="button">復元</button><button class="action-button" id="draft-discard" type="button">破棄</button></div>
       <article class="lyrics" id="lyrics" tabindex="0" aria-label="歌詞本文"></article>
       <p class="reader-error" id="reader-error" role="alert" hidden></p>
     </main>
 
     <aside class="settings" id="settings" aria-label="表示設定">
-      <button class="settings-toggle" id="settings-toggle" type="button" aria-expanded="false" aria-controls="settings-panel">表示設定</button>
       <div class="settings-panel" id="settings-panel" hidden>
         <fieldset>
           <legend>本文</legend>
@@ -66,11 +60,22 @@
           <button class="action-button" id="font-load-button" type="button">外部フォントを適用</button>
         </fieldset>
         <fieldset>
-          <legend>操作</legend>
+          <legend>文書操作</legend>
+          <button class="action-button" id="copy-all-button" type="button">全文を原文記法でコピー</button>
           <button class="action-button" id="download-button" type="button">本文TXTを保存</button>
           <button class="action-button" id="download-reader-button" type="button">Reader文書を保存</button>
+          <button class="action-button" id="share-button" type="button">共有リンクをコピー</button>
+          <label class="url-row"><span>Source URL</span><input id="source-url" type="url" inputmode="url" placeholder="https://…/lyrics.txt" aria-label="Source URL"></label>
+          <button class="action-button" id="source-copy-button" type="button">Source URLをコピー</button>
+          <button class="action-button" id="url-open-button" type="button">URL本文を開く</button>
+        </fieldset>
+        <fieldset>
+          <legend>編集操作</legend>
+          <button class="action-button" id="undo-button" type="button" disabled>元に戻す</button>
+          <button class="action-button" id="redo-button" type="button" disabled>やり直す</button>
           <label class="annotation-color"><span>選択範囲の色</span><input id="annotation-color" type="color" value="#d02020" aria-label="選択範囲の色"></label>
           <button class="action-button" id="annotate-button" type="button">選択範囲を着色</button>
+          <button class="action-button" id="clear-annotation-button" type="button">選択範囲の装飾を解除</button>
         </fieldset>
         <nav class="song-links" id="song-links" aria-label="楽曲リンク"></nav>
       </div>
@@ -78,6 +83,6 @@
 
     <footer class="site-footer" id="site-footer"><span>外部データをブラウザ上で読み込んで表示しています</span><nav class="footer-links" id="footer-links" aria-label="楽曲リンク"></nav></footer>
     <div class="drop-overlay" id="drop-overlay" hidden><strong>TXT / Reader JSONをドロップ</strong><span>画面のどこに置いても本文を開けます</span></div>
-    <script type="module" src="assets/js/app.js?v=20260907-005"></script>
+    <script type="module" src="assets/js/app.js?v=20260907-008"></script>
   </body>
 </html>

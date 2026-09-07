@@ -1,4 +1,4 @@
-import { BUILD_ID, MAX_SOURCE_BYTES, MAX_SOURCE_CHARS } from "./config.js?v=20260907-005";
+import { BUILD_ID, MAX_SOURCE_BYTES, MAX_SOURCE_CHARS } from "./config.js?v=20260907-008";
 
 const allowedUrl = (value, base = location.href) => {
   const url = new URL(value, base);
@@ -34,16 +34,16 @@ export async function loadInput(hash = location.hash) {
     let modern = historical;
     const modernRef = manifest.content?.modern || manifest.lyrics?.modern;
     if (modernRef) modern = await fetchText(modernRef, manifestUrl.href);
-    return { manifest, historical, modern, sourceUrl: manifestUrl.href };
+    return { manifest, historical, modern, modernAvailable: Boolean(modernRef), sourceUrl: manifestUrl.href };
   }
   if (sourceRef) {
     const source = await fetchText(sourceRef);
-    return { manifest: { title: "外部本文", autoTitle: true, content: { format: "narou" } }, historical: source, modern: source, sourceUrl: source.url };
+    return { manifest: { title: "外部本文", autoTitle: true, content: { format: "narou" } }, historical: source, modern: source, modernAvailable: false, sourceUrl: source.url };
   }
   const fallback = await fetchText("data/demo/reader.json");
   const manifestUrl = new URL("data/demo/reader.json", location.href);
   const manifest = JSON.parse(fallback.text);
   const historical = await fetchText(manifest.content.historical, manifestUrl.href);
   const modern = manifest.content.modern ? await fetchText(manifest.content.modern, manifestUrl.href) : historical;
-  return { manifest, historical, modern, sourceUrl: manifestUrl.href };
+  return { manifest, historical, modern, modernAvailable: Boolean(manifest.content.modern), sourceUrl: manifestUrl.href };
 }
