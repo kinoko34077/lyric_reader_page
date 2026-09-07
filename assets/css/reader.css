@@ -22,6 +22,7 @@ body.is-scrolling .site-header, body.is-scrolling .site-footer { opacity: .18; }
 .drop-zone:hover, .drop-zone.is-dragover { border-color: var(--accent); background: color-mix(in srgb, var(--paper) 88%, var(--accent)); }
 .drop-zone small { margin-left: auto; }
 .drop-zone input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.reader-file-zone { margin-top: .45rem; }
 .paste-source { margin-top: .5rem; color: var(--muted); font-size: .78rem; }
 .paste-source textarea { display: block; width: 100%; margin: .4rem 0; padding: .5rem; border: 1px solid var(--rule); background: transparent; color: inherit; font: inherit; resize: vertical; }
 .eyebrow, .song-description { margin: 0; color: var(--muted); font-size: .82rem; }

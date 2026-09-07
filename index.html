@@ -21,6 +21,7 @@
       </section>
       <section class="source-input" id="source-input" aria-label="ローカル本文を読む">
         <label class="drop-zone" id="drop-zone" for="source-file"><span>TXTをここへドロップ</span><small>またはファイルを選択</small><input id="source-file" type="file" accept=".txt,text/plain"></label>
+        <label class="drop-zone reader-file-zone" for="reader-file"><span>Reader JSONを読み込む</span><small>保存した文書を復元</small><input id="reader-file" type="file" accept=".json,application/json"></label>
         <details class="paste-source"><summary>本文を貼り付ける</summary><textarea id="source-text" rows="4" placeholder="なろう式ルビを含む本文を貼り付け"></textarea><button class="action-button" id="source-text-button" type="button">貼り付けた本文を表示</button></details>
       </section>
       <article class="lyrics" id="lyrics" tabindex="0" aria-label="歌詞本文"></article>
@@ -67,6 +68,7 @@
           <legend>操作</legend>
           <button class="action-button" id="copy-button" type="button">原文記法でコピー</button>
           <button class="action-button" id="download-button" type="button">本文を下載</button>
+          <button class="action-button" id="download-reader-button" type="button">Reader文書を保存</button>
         </fieldset>
         <nav class="song-links" id="song-links" aria-label="楽曲リンク"></nav>
       </div>

@@ -23,6 +23,8 @@ manifest内の相対URLはmanifest自身のURLを基準に解決します。外�
 
 ローカルのTXTは本文上部へドロップするか、貼り付け欄からブラウザ内だけで読み込めます。ローカル本文はサーバーへ送信・保存しません。
 
+「Reader文書を保存」では、本文・メタデータ・テーマ・表示状態・リンクを`reader.reader.json`として保存できます。同ファイルは「Reader JSONを読み込む」からブラウザ内へ復元できます。
+
 本番公開時は、`assets/css/reader.css` と `assets/js/app.js` のクエリにある `BUILD_ID` を更新してください。
 
 ## GitHub Pages
