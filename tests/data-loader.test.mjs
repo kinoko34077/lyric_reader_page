@@ -94,6 +94,7 @@ test("manifest loading keeps generic Variant metadata and rejects duplicate IDs"
   const originalLocation = globalThis.location;
   const manifestUrl = "https://reader.example.test/manifest.json";
   const manifestBody = JSON.stringify({
+    futureManifestField: { mode: "v2" },
     content: {
       format: "narou-text",
       titleSource: "meta",
@@ -116,6 +117,7 @@ test("manifest loading keeps generic Variant metadata and rejects duplicate IDs"
     assert.equal(loaded.sourceMetadata.artist, "Source artist");
     assert.equal(loaded.links[0].id, "link-1");
     assert.equal(loaded.variantOverrides.b["link-1"].color.index, 2);
+    assert.deepEqual(loaded.documentExtensions.futureManifestField, { mode: "v2" });
     responses.set(manifestUrl, { body: JSON.stringify({ content: { variants: [{ id: "same", source: { text: "A" } }, { id: "same", source: { text: "B" } }] } }) });
     await assert.rejects(loadInput(`#m=${encodeURIComponent(manifestUrl)}`), /Variant IDが重複/);
   } finally {

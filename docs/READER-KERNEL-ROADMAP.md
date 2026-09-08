@@ -43,7 +43,7 @@ Portable / Plain / Author Projection
 - RendererのSource非破壊、Glyph失敗時の元文字Fallback
 - 欠損Registry参照・Asset失敗の表示用Warning marker（Copy / Author Source投影から除外）
 - Reader Documentの未知versionは理解可能な本文を現行形式へBest-effort変換し、未知version警告を保持
-- Reader Documentの未知トップレベルFieldは不活性拡張として保持し、Draft / History経由のCanonical保存でも消さない
+- Reader JSON / Manifestの未知トップレベルFieldは不活性拡張として保持し、Draft / History経由のCanonical保存でも消さない
 - Registryの未知Fieldは不活性拡張として保持し、既知のAllowlist外の処理を実行しない
 - Registry Fontの未ロード時は標準FontへFallbackし、表示用Warning markerを残す
 - 旧Range Annotationは保存互換だけを残し、Rendererでは描画せずAuthor Source / IR Presentationとの二重適用を防ぐ

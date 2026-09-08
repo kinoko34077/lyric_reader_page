@@ -1,5 +1,6 @@
 import { MAX_MANIFEST_JSON_BYTES, MAX_MANIFEST_JSON_CHARS, MAX_READER_DOCUMENT_JSON_BYTES, MAX_READER_DOCUMENT_JSON_CHARS, MAX_SOURCE_BYTES, MAX_SOURCE_CHARS } from "./config.js";
 import { normalizeActiveVariantId } from "./document-model.js";
+import { readerDocumentExtensions } from "./document-state.js";
 import { containerToReaderDocument, isLyricContainerText, parseLyricContainer } from "./lyric-container.js";
 import { detectSyntaxAdapter } from "./syntax-adapter.js";
 
@@ -112,7 +113,8 @@ function manifestDocumentFields(manifest, variants, activeVariantId) {
     links: Array.isArray(content.links) ? content.links : [],
     variantOverrides: content.variantOverrides && typeof content.variantOverrides === "object" ? content.variantOverrides : {},
     titleSource: content.titleSource || manifest.titleSource || "first-line",
-    sourceMetadata: manifestMetadata && Object.keys(manifestMetadata).length ? manifestMetadata : (contentMetadata || manifestMetadata || {})
+    sourceMetadata: manifestMetadata && Object.keys(manifestMetadata).length ? manifestMetadata : (contentMetadata || manifestMetadata || {}),
+    documentExtensions: readerDocumentExtensions(manifest)
   };
 }
 
