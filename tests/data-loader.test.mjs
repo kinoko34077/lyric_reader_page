@@ -89,6 +89,12 @@ test("direct remote TXT detects legacy syntax when no manifest format is provide
   }
 });
 
+test("Reader JSON without an explicit format detects the legacy Adapter from its Source", () => {
+  const legacyJson = JSON.stringify({ version: 3, content: { variants: [{ id: "original", source: { text: "題\n[文字]{c=2}" } }] } });
+  const loaded = parseLocalInput(legacyJson, "legacy.json", "application/json");
+  assert.equal(loaded.document.content.format, "narou-legacy");
+});
+
 test("manifest loading keeps generic Variant metadata and rejects duplicate IDs", async () => {
   const originalFetch = globalThis.fetch;
   const originalLocation = globalThis.location;

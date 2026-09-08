@@ -65,15 +65,35 @@ export function isReaderJsonFile(fileName = "", mimeType = "", text = "") {
   return false;
 }
 
+function documentSourceForSyntax(document) {
+  const content = document?.content && typeof document.content === "object" ? document.content : document;
+  const variant = Array.isArray(content?.variants) ? content.variants.find(candidate => typeof candidate?.source?.text === "string" || typeof candidate?.text === "string") : null;
+  if (typeof variant?.source?.text === "string") return variant.source.text;
+  if (typeof variant?.text === "string") return variant.text;
+  if (typeof content?.text === "string") return content.text;
+  if (typeof content?.historical === "string") return content.historical;
+  if (typeof content?.historical?.text === "string") return content.historical.text;
+  return "";
+}
+
+function detectDocumentFormat(document) {
+  if (!document || typeof document !== "object" || Array.isArray(document)) return document;
+  const content = document.content && typeof document.content === "object" && !Array.isArray(document.content) ? document.content : {};
+  if (content.format || document.format) return document;
+  const source = documentSourceForSyntax(document);
+  if (!source) return document;
+  return { ...document, content: { ...content, format: detectSyntaxAdapter(source).id } };
+}
+
 export function parseLocalInput(text, fileName = "", mimeType = "") {
   const value = String(text);
   const isContainer = /\.lyric\.txt$/i.test(String(fileName)) || isLyricContainerText(value);
   if (isContainer) {
     const container = parseLyricContainer(value);
     validateSourceText(container.source);
-    return { kind: "reader-document", document: containerToReaderDocument(container), warnings: container.warnings || [] };
+    return { kind: "reader-document", document: detectDocumentFormat(containerToReaderDocument(container)), warnings: container.warnings || [] };
   }
-  if (isReaderJsonFile(fileName, mimeType, value)) return { kind: "reader-document", document: parseJsonText(value, "reader-document"), warnings: [] };
+  if (isReaderJsonFile(fileName, mimeType, value)) return { kind: "reader-document", document: detectDocumentFormat(parseJsonText(value, "reader-document")), warnings: [] };
   const source = validateSourceText(value);
   return { kind: "source", source, format: detectSyntaxAdapter(source).id, warnings: [] };
 }
@@ -104,10 +124,12 @@ async function loadManifestVariants(manifest, base) {
 
 function manifestDocumentFields(manifest, variants, activeVariantId) {
   const content = manifest.content || manifest.lyrics || {};
+  const detectedFormat = content.format || manifest.format || variants.find(variant => variant.source?.format)?.source.format || detectSyntaxAdapter(variants[0]?.source?.text || "").id;
+  const normalizedManifest = { ...manifest, content: { ...content, format: detectedFormat } };
   const manifestMetadata = manifest.sourceMetadata && typeof manifest.sourceMetadata === "object" && !Array.isArray(manifest.sourceMetadata) ? manifest.sourceMetadata : null;
   const contentMetadata = content.sourceMetadata && typeof content.sourceMetadata === "object" && !Array.isArray(content.sourceMetadata) ? content.sourceMetadata : null;
   return {
-    manifest,
+    manifest: normalizedManifest,
     variants,
     activeVariantId,
     links: Array.isArray(content.links) ? content.links : [],

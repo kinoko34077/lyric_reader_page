@@ -28,7 +28,7 @@ Author Sourceを本文・Title・Ruby・局所Presentationの正本として扱�
 [如何《どう》:base-range=0-1,base-c=3]
 ```
 
-既定のvNext Adapterは`[対象:指定]`形式です。旧`[対象]{指定}`形式は`narou-legacy`（旧`narou` alias）Adapterで読み込みます。ローカルTXTでは旧記法を自動検出し、Reader Documentへ保持したうえで、保存時は読み込んだAdapterの形式を使います。Parser、Serializer、Portable Text、Plain Text、Editor操作は[`assets/js/syntax-adapter.js`](assets/js/syntax-adapter.js)の交換可能な境界に閉じ込めています。
+既定のvNext Adapterは`[対象:指定]`形式です。旧`[対象]{指定}`形式は`narou-legacy`（旧`narou` alias）Adapterで読み込みます。ローカルTXT、直接URL、format未指定のReader JSON / Container / Manifestでは旧記法を自動検出し、Reader Documentへ保持したうえで、保存時は読み込んだAdapterの形式を使います。明示されたformatは自動判定より優先します。Parser、Serializer、Portable Text、Plain Text、Editor操作は[`assets/js/syntax-adapter.js`](assets/js/syntax-adapter.js)の交換可能な境界に閉じ込めています。
 
 Backslash U+005Cで`[ ] : { } ｜ 《》`等をescapeできます。Presentationは複数属性、Nested、改行跨ぎ、RubyのBase/Reading個別範囲に対応し、Writerが生成したSourceは同じAdapterで再読込できることを検証します。
 

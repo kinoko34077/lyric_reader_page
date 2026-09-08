@@ -17,6 +17,7 @@
 - `.lyric.txt`のCanonical Container書き出しUIを追加し、既存のTXT / Reader JSON / Portable Copy操作を維持。
 - ローカルTXTの入力時に現行Syntaxと旧`[対象]{指定}`Syntaxを自動判定し、旧文書をLegacy Adapterのまま読込・編集できるようにした。
 - format未指定の直接TXT URLもローカルTXTと同じSyntax自動判定を通し、Legacy本文をvNextとして誤解釈しないようにした。
+- format未指定のReader JSON / Container / ManifestもSourceからAdapterを検出し、明示formatを優先するRead-many入力境界へ揃えた。
 - Reader JSONの未知トップレベルFieldを不活性な拡張として保持し、Document state・Draft・Historyを経由したCanonical保存でも消さないようにした。
 - URL Manifest読込でも同じ未知トップレベルField保持を適用し、入力経路による情報欠落をなくした。
 - 欠損Style / Palette / Glyph / Font / Assetを本文表示継続のまま`⚠` Warning markerへ統一し、markerをPortable Copy・Author Source投影から除外。
