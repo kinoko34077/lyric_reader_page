@@ -52,6 +52,7 @@ git diff --check
 - 「表示設定」は単独で開閉し、縦書き切替後に`#song-title`と`#lyrics`がともに`is-vertical` / `vertical-rl`となることを確認。
 - これはDesktop Chromiumのlocal smokeであり、Mobile / WebKit / 実配信PagesのPASS証跡ではない。
 - 今回の監査ターンでは既存Chrome local tabの再接続を試みたが、CDPが`Debugger unattached`を返し、別tabもtimeoutしたため、新しいBrowser PASS証跡は追加していない。
+- 今回は新規Chrome tabの`http://127.0.0.1:4173/?mode=viewer`で現行Demoを再確認した。Reader Smoke本文・欠損Asset警告付きの継続表示、表示設定Panelの単独展開と内部スクロール、縦書き時のTitle/本文同期、Variantの原文→現代表記切替をAX treeと画面で確認した。
 
 ## Stage A — Baseline / semantic model
 

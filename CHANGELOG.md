@@ -36,6 +36,7 @@
 - Writer系の正本をReader優先方針へ同期し、`K1`（文書OpenのUndo）と`K6`（Tab単位Draft分離）をWriter BetaのDeferred要件として明記した。現行Readerの文書単位History・暫定Tab警告とは混同しない。
 - Parser generator / Schema validatorを一度比較し、Static PagesのNo-build配布、独自Projection、Fail-soft Registry policyを理由に現行bounded local実装をv0.xでfreezeした。判断を[`docs/adr/0004-reader-kernel-library-freeze.md`](docs/adr/0004-reader-kernel-library-freeze.md)へ記録した。
 - 公開Demoの実作品本文末尾へReader SmokeセクションとRegistry定義を追加し、Palette/Bank、Style、Outline、Combine、Glyph、missing Asset/Font、Variantの実入力経路を`tests/demo-smoke.test.mjs`で回帰確認するようにした。
+- 現行Demoを新規Desktop Chrome tabで再確認し、Reader Smoke、設定Panel単独スクロール、縦書きTitle/本文同期、Variant切替、欠損Asset時の本文継続を観測した。iPhone Safari / Android Chromeは実行環境外として未検証のまま記録した。
 - 詳細は[`docs/READER-KERNEL-ROADMAP.md`](docs/READER-KERNEL-ROADMAP.md)を参照。
 
 ## [Unreleased] — 2026-09-08
