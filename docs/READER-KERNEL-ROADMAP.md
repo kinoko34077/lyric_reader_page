@@ -62,7 +62,7 @@ Portable / Plain / Author Projection
 
 ### 現在地
 
-既存のAdapter、IR、Projection、Registry、Renderer、Fallbackに加え、実作品相当の長文Golden Fixtureを追加済み。Variant、Remote Font、Asset failure、未知Registry extension、欠損Style / Font参照もfixtureへ含め、現段階はKernel Gateの回帰を継続しながらReader実用化へ進める状態。
+既存のAdapter、IR、Projection、Registry、Renderer、Fallbackに加え、実作品相当の長文Golden Fixtureを追加済み。Variant、Remote Font、Asset failure、未知Registry extension、欠損Style / Font参照もfixtureへ含め、現段階はKernel Gateの回帰を継続しながらReader実用化へ進める状態。Parser / Registry libraryは比較の結果、現行のbounded local実装をv0.xでfreezeした（[`ADR 0004`](adr/0004-reader-kernel-library-freeze.md)）。
 
 ## Stage 2 — 最低限のPresentation
 

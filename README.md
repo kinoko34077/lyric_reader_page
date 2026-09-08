@@ -30,7 +30,7 @@ Author Sourceを本文・Title・Ruby・局所Presentationの正本として扱�
 
 既定のvNext Adapterは`[対象:指定]`形式です。旧`[対象]{指定}`形式は`narou-legacy`（旧`narou` alias）Adapterで読み込みます。ローカルTXT、直接URL、format未指定のReader JSON / Container / Manifestでは旧記法を自動検出し、Reader Documentへ保持したうえで、保存時は読み込んだAdapterの形式を使います。明示されたformatは自動判定より優先します。Parser、Serializer、Portable Text、Plain Text、Editor操作は[`assets/js/syntax-adapter.js`](assets/js/syntax-adapter.js)の交換可能な境界に閉じ込めています。
 
-Backslash U+005Cで`[ ] : { } ｜ 《》`等をescapeできます。Presentationは複数属性、Nested、改行跨ぎ、RubyのBase/Reading個別範囲に対応し、Writerが生成したSourceは同じAdapterで再読込できることを検証します。
+Backslash U+005Cで`[ ] : { } ｜ 《》`等をescapeできます。Presentationは複数属性、Nested、改行跨ぎ、RubyのBase/Reading個別範囲に対応し、Writerが生成したSourceは同じAdapterで再読込できることを検証します。Parser / Registry libraryは現行のbounded local実装をv0.xでfreezeしており、比較理由は[`docs/adr/0004-reader-kernel-library-freeze.md`](docs/adr/0004-reader-kernel-library-freeze.md)に記録しています。
 
 ## Title・Metadata・Variant
 
