@@ -1,5 +1,7 @@
 /** JSON-safe identity and draft primitives shared by the Writer state boundary. */
 import { DOCUMENT_MODEL_VERSION, migrateLegacyContent, normalizeActiveVariantId, normalizeDocumentData, normalizeVariants } from "./document-model.js";
+const READER_DOCUMENT_FIELDS = new Set(["version", "content", "meta", "sourceMetadata", "theme", "defaults", "registry", "annotations", "links", "warnings", "format", "title", "text", "source", "historical", "modern", "modernAvailable", "lyrics"]);
+const RESERVED_EXTENSION_KEYS = new Set(["__proto__", "prototype", "constructor"]);
 export function documentIdentity(data = {}) {
   const manifestId = data.manifest?.id || data.manifest?.meta?.id || "";
   return [manifestId, data.sourceIdentity || "", data.sourceUrl || "", data.sourceName || ""].join("|");
@@ -26,6 +28,12 @@ export function clone(value) {
   return value == null ? value : structuredClone(value);
 }
 
+/** Keep unknown JSON fields inert so canonical save does not erase readable extensions. */
+export function readerDocumentExtensions(value = {}) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return Object.fromEntries(Object.entries(value).filter(([key]) => !READER_DOCUMENT_FIELDS.has(key) && !RESERVED_EXTENSION_KEYS.has(key)).map(([key, field]) => [key, clone(field)]));
+}
+
 export function documentPayload(data, title, annotations = [], activeVariant = null) {
   const normalized = normalizeDocumentData(data);
   const activeVariantId = normalizeActiveVariantId(normalized.variants, activeVariant || normalized.activeVariantId);
@@ -41,6 +49,7 @@ export function documentPayload(data, title, annotations = [], activeVariant = n
     sourceIdentity: String(data?.sourceIdentity || ""),
     titleSource: data?.titleSource || "first-line",
     manifest: clone(data?.manifest || {}),
+    documentExtensions: clone(data?.documentExtensions || {}) || {},
     annotations: clone(annotations) || []
   };
 }

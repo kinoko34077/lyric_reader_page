@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { boundedHistory, documentIdentity, documentPayload, draftDiffers, draftPayload, localSourceIdentity, migrateReaderDocument, normalizeDraft } from "../assets/js/document-state.js";
+import { boundedHistory, documentIdentity, documentPayload, draftDiffers, draftPayload, localSourceIdentity, migrateReaderDocument, normalizeDraft, readerDocumentExtensions } from "../assets/js/document-state.js";
 
 const data = {
   manifest: { id: "song-a", registry: { palettes: { "2": "#d02020" } } },
@@ -47,6 +47,12 @@ test("Reader Document versions migrate explicitly and future versions load best-
   assert.equal(future.content.variants[0].source.text, "本文");
   assert.deepEqual(future.content.futureField, { keep: true });
   assert.equal(future.warnings.includes("unknown-version"), true);
+});
+
+test("unknown Reader Document fields are retained separately from canonical fields", () => {
+  const extensions = readerDocumentExtensions({ version: 4, content: {}, meta: {}, futureScalar: "keep", futureObject: { mode: "v2" }, futureArray: ["x"] });
+  assert.deepEqual(extensions, { futureScalar: "keep", futureObject: { mode: "v2" }, futureArray: ["x"] });
+  assert.equal(Object.hasOwn(extensions, "content"), false);
 });
 
 test("local identity separates same-name files when metadata or content differs", () => {
