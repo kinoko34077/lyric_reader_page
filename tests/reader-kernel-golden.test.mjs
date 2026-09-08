@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { parseSource, serializeSource, toPlainText, toPortableText, validateSource } from "../assets/js/syntax-adapter.js";
 import { normalizeRegistry, resolvePresentation, validateRegistry } from "../assets/js/registry.js";
+import { glyphFallbackText } from "../assets/js/reader-view.js";
 
 const fixture = fs.readFileSync(path.join(process.cwd(), "tests", "fixtures", "reader-kernel-golden.txt"), "utf8");
 const registry = {
@@ -41,4 +42,9 @@ test("Kernel rejects executable Registry input and malformed Source without hang
   assert.throws(() => parseSource("[x:style=\"<script>\"]"), /不正|Literal|Source|属性/);
   const hostile = `[${"[".repeat(40)}x${"]".repeat(40)}:style=x]`;
   assert.doesNotThrow(() => parseSource(hostile));
+});
+
+test("Glyph fallback preserves Ruby meaning instead of dropping the reading", () => {
+  const node = parseSource("[如何《どう》:glyph=missing]").nodes[0];
+  assert.equal(glyphFallbackText(node), "如何《どう》");
 });

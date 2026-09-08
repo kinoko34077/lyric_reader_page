@@ -93,8 +93,8 @@ function decoratedRubyPart(value, decorations, part, sourceStart, rubyIndex, reg
   return fragment;
 }
 
-function glyphFallbackText(sourceNode) {
-  return toPlainText({ type: "document", nodes: sourceNode?.children || [] }) || "";
+export function glyphFallbackText(sourceNode) {
+  return toPortableText({ type: "document", nodes: sourceNode?.children || [] }) || "";
 }
 
 function fontGlyphText(value) {
