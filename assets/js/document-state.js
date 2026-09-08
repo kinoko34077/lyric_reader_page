@@ -1,4 +1,5 @@
 /** JSON-safe identity and draft primitives shared by the Writer state boundary. */
+import { DOCUMENT_MODEL_VERSION, migrateLegacyContent, normalizeActiveVariantId, normalizeDocumentData, normalizeVariants } from "./document-model.js";
 export function documentIdentity(data = {}) {
   const manifestId = data.manifest?.id || data.manifest?.meta?.id || "";
   return [manifestId, data.sourceIdentity || "", data.sourceUrl || "", data.sourceName || ""].join("|");
@@ -25,34 +26,43 @@ export function clone(value) {
   return value == null ? value : structuredClone(value);
 }
 
-export function documentPayload(data, title, annotations = [], activeVariant = "historical") {
+export function documentPayload(data, title, annotations = [], activeVariant = null) {
+  const normalized = normalizeDocumentData(data);
+  const activeVariantId = normalizeActiveVariantId(normalized.variants, activeVariant || normalized.activeVariantId);
   return {
-    activeVariant,
+    version: DOCUMENT_MODEL_VERSION,
+    activeVariantId,
     title: String(title || "無題"),
-    historical: clone(data?.historical || { text: "" }),
-    modern: clone(data?.modern || { text: "" }),
-    modernAvailable: Boolean(data?.modernAvailable),
+    variants: clone(normalized.variants),
+    links: clone(normalized.links),
+    variantOverrides: clone(normalized.variantOverrides),
+    metadata: clone(normalized.metadata),
     sourceIdentity: String(data?.sourceIdentity || ""),
-    titleSource: data?.titleSource || "meta",
+    titleSource: data?.titleSource || "first-line",
     manifest: clone(data?.manifest || {}),
     annotations: clone(annotations) || []
   };
 }
 
 export function draftPayload(data, title, annotations, activeVariant) {
-  return { version: 2, document: documentPayload(data, title, annotations, activeVariant), savedAt: Date.now() };
+  return { version: DOCUMENT_MODEL_VERSION, document: documentPayload(data, title, annotations, activeVariant), savedAt: Date.now() };
 }
 
 export function normalizeDraft(value) {
   if (!value || typeof value !== "object") return null;
-  if (value.version === 2 && value.document?.historical) return value;
+  if (value.version === DOCUMENT_MODEL_VERSION && Array.isArray(value.document?.variants)) return value;
+  if (value.document && (value.version === 1 || value.version === 2)) {
+    const legacy = value.document;
+    const migrated = migrateLegacyContent(legacy);
+    return { ...value, version: DOCUMENT_MODEL_VERSION, document: { ...legacy, ...migrated, version: DOCUMENT_MODEL_VERSION, titleSource: legacy.titleSource || "first-line" } };
+  }
   if (typeof value.raw !== "string") return null;
-  const historical = { text: value.raw, url: "draft:" };
+  const migrated = migrateLegacyContent({ historical: { text: value.raw, url: "draft:" } });
   return {
-    version: 2,
+    version: DOCUMENT_MODEL_VERSION,
     document: {
-      activeVariant: "historical", title: String(value.title || "無題"), historical, modern: historical,
-      modernAvailable: false, titleSource: "meta", manifest: { registry: clone(value.registry || {}) },
+      version: DOCUMENT_MODEL_VERSION, activeVariantId: migrated.activeVariantId, title: String(value.title || "無題"), ...migrated,
+      titleSource: "first-line", manifest: { registry: clone(value.registry || {}) },
       annotations: clone(value.annotations || [])
     },
     savedAt: value.savedAt || 0
@@ -66,6 +76,9 @@ export function draftDiffers(draft, current) {
 export function migrateReaderDocument(value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Reader文書の形式が不正です。");
   const version = value.version == null ? 1 : Number(value.version);
-  if (!Number.isInteger(version) || version < 1 || version > 2) throw new Error("未対応のReader文書versionです。");
-  return { ...value, version: 2 };
+  if (!Number.isInteger(version) || version < 1 || version > DOCUMENT_MODEL_VERSION) throw new Error("未対応のReader文書versionです。");
+  if (version === DOCUMENT_MODEL_VERSION && Array.isArray(value.content?.variants)) return { ...value, version: DOCUMENT_MODEL_VERSION };
+  const content = typeof value.content === "object" && value.content ? value.content : value;
+  const migrated = migrateLegacyContent(content);
+  return { ...value, version: DOCUMENT_MODEL_VERSION, content: { ...content, ...migrated, format: content.format || value.format || "narou-text" } };
 }

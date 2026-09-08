@@ -1,6 +1,6 @@
-import { getSyntaxAdapter, graphemes, nodeLength, parseSource, serializeSource, toPortableText } from "./syntax-adapter.js?v=20260908-015";
-import { transformNodes } from "./transformer.js?v=20260908-015";
-import { resolvePresentation } from "./registry.js?v=20260908-015";
+import { getSyntaxAdapter, graphemes, nodeLength, parseSource, serializeSource, toPortableText } from "./syntax-adapter.js?v=20260908-016";
+import { transformNodes } from "./transformer.js?v=20260908-016";
+import { resolvePresentation } from "./registry.js?v=20260908-016";
 
 export function renderLyrics(element, source, options) {
   const adapter = options.adapter || getSyntaxAdapter(options.format || "narou-text");

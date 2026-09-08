@@ -11,9 +11,9 @@ const data = {
 test("document identity and payload keep variants, registry, and active variant together", () => {
   assert.equal(documentIdentity(data), "song-a||reader:|a.reader.json");
   const payload = documentPayload(data, "題", [{ range: { start: 0, end: 1 } }], "modern");
-  assert.equal(payload.activeVariant, "modern");
-  assert.equal(payload.historical.text, "古い");
-  assert.equal(payload.modern.text, "現代");
+  assert.equal(payload.activeVariantId, "modern");
+  assert.equal(payload.variants[0].source.text, "古い");
+  assert.equal(payload.variants[1].source.text, "現代");
   assert.equal(payload.manifest.registry.palettes["2"], "#d02020");
 });
 
@@ -30,15 +30,17 @@ test("draft round-trip detects registry-only and variant-only changes", () => {
 
 test("legacy draft shape is migrated without losing its source", () => {
   const migrated = normalizeDraft({ raw: "[文字]{c=2}", title: "題", registry: { palettes: { "2": "#f00" } } });
-  assert.equal(migrated.version, 2);
-  assert.equal(migrated.document.historical.text, "[文字]{c=2}");
+  assert.equal(migrated.version, 3);
+  assert.equal(migrated.document.variants[0].source.text, "[文字]{c=2}");
   assert.equal(migrated.document.manifest.registry.palettes["2"], "#f00");
 });
 
 test("Reader Document versions migrate explicitly and future versions fail closed", () => {
-  assert.equal(migrateReaderDocument({ content: { text: "本文" } }).version, 2);
-  assert.equal(migrateReaderDocument({ version: 1, content: { text: "本文" } }).version, 2);
-  assert.throws(() => migrateReaderDocument({ version: 3, content: { text: "本文" } }), /未対応のReader文書version/);
+  const migrated = migrateReaderDocument({ content: { text: "本文" } });
+  assert.equal(migrated.version, 3);
+  assert.equal(migrated.content.variants[0].source.text, "本文");
+  assert.equal(migrateReaderDocument({ version: 2, content: { historical: "古", modern: "新" } }).content.variants.length, 2);
+  assert.throws(() => migrateReaderDocument({ version: 4, content: { text: "本文" } }), /未対応のReader文書version/);
 });
 
 test("local identity separates same-name files when metadata or content differs", () => {

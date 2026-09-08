@@ -1,5 +1,5 @@
 // @ts-check
-import { parseRuby } from "./ruby-parser.js?v=20260908-015";
+import { parseRuby } from "./ruby-parser.js?v=20260908-016";
 
 /** @typedef {{type: "text", value: string}} TextNode */
 /** @typedef {{type: "ruby", base: string, ruby: string, explicit: boolean}} RubyNode */

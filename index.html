@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="description" content="外部の歌詞テキストを読むための静的リーダー">
     <title>歌詞リーダー</title>
-    <link rel="stylesheet" href="assets/css/reader.css?v=20260908-015">
+    <link rel="stylesheet" href="assets/css/reader.css?v=20260908-016">
   </head>
   <body>
     <header class="site-header" id="site-header">
@@ -28,7 +28,7 @@
       <div class="settings-panel" id="settings-panel" hidden>
         <fieldset>
           <legend>本文</legend>
-          <label><span>仮名</span><select id="kana-mode"><option value="historical">歴史的仮名遣</option><option value="modern">現代仮名</option></select></label>
+          <label><span>Variant</span><select id="variant-mode" aria-label="Variant"><option value="variant-A">Variant A</option></select></label>
           <label><span>字体</span><select id="kanji-mode"><option value="original">原字</option><option value="shinjitai">新字体</option></select></label>
           <label class="check-row"><input id="ruby-toggle" type="checkbox" checked><span>ルビを表示</span></label>
           <label class="check-row"><input id="vertical-toggle" type="checkbox"><span>縦書き</span></label>
@@ -93,6 +93,6 @@
 
     <footer class="site-footer" id="site-footer"><span>外部データをブラウザ上で読み込んで表示しています</span><nav class="footer-links" id="footer-links" aria-label="楽曲リンク"></nav></footer>
     <div class="drop-overlay" id="drop-overlay" hidden><strong>TXT / Reader JSONをドロップ</strong><span>画面のどこに置いても本文を開けます</span></div>
-    <script type="module" src="assets/js/app.js?v=20260908-015"></script>
+    <script type="module" src="assets/js/app.js?v=20260908-016"></script>
   </body>
 </html>

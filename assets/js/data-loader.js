@@ -1,4 +1,5 @@
-import { MAX_MANIFEST_JSON_BYTES, MAX_MANIFEST_JSON_CHARS, MAX_READER_DOCUMENT_JSON_BYTES, MAX_READER_DOCUMENT_JSON_CHARS, MAX_SOURCE_BYTES, MAX_SOURCE_CHARS } from "./config.js?v=20260908-015";
+import { MAX_MANIFEST_JSON_BYTES, MAX_MANIFEST_JSON_CHARS, MAX_READER_DOCUMENT_JSON_BYTES, MAX_READER_DOCUMENT_JSON_CHARS, MAX_SOURCE_BYTES, MAX_SOURCE_CHARS } from "./config.js?v=20260908-016";
+import { normalizeActiveVariantId } from "./document-model.js";
 
 const allowedUrl = (value, base = location.href) => {
   const url = new URL(value, base);
@@ -33,6 +34,26 @@ export function isReaderJsonFile(fileName = "", mimeType = "", text = "") {
   return false;
 }
 
+async function loadManifestVariants(manifest, base) {
+  const content = manifest.content || manifest.lyrics || {};
+  if (Array.isArray(content.variants) && content.variants.length) {
+    const variants = [];
+    for (const [index, raw] of content.variants.entries()) {
+      if (!raw || typeof raw !== "object") throw new Error("ManifestのVariant定義が不正です。");
+      const id = String(raw.id || `variant-${String.fromCharCode(65 + index)}`);
+      const source = typeof raw.text === "string" ? { text: validateSourceText(raw.text), url: "manifest:" } : await fetchText(raw.src || raw.url || raw.source, base);
+      variants.push({ id, label: String(raw.label || raw.name || id), role: raw.role == null ? "" : String(raw.role), source });
+    }
+    return variants;
+  }
+  const firstRef = content.historical || content.src;
+  if (!firstRef) throw new Error("Manifestに本文URLがありません。");
+  const first = await fetchText(firstRef, base);
+  const variants = [{ id: "historical", label: "歴史的仮名遣", role: "historical", source: first }];
+  if (content.modern) variants.push({ id: "modern", label: "現代仮名", role: "modern", source: await fetchText(content.modern, base) });
+  return variants;
+}
+
 export async function fetchText(resource, base) {
   const url = allowedUrl(resource, base);
   const response = await fetch(url, { cache: "no-store" });
@@ -52,22 +73,17 @@ export async function loadInput(hash = location.hash) {
     const response = await fetch(manifestUrl, { cache: "no-store" });
     if (!response.ok) throw new Error(`Manifestを取得できませんでした (${response.status})。`);
     const manifest = parseJsonText(await response.text());
-    const source = manifest.content?.["historical"] || manifest.content?.src || manifest.lyrics?.historical;
-    if (!source) throw new Error("Manifestに本文URLがありません。");
-    const historical = await fetchText(source, manifestUrl.href);
-    let modern = historical;
-    const modernRef = manifest.content?.modern || manifest.lyrics?.modern;
-    if (modernRef) modern = await fetchText(modernRef, manifestUrl.href);
-    return { manifest, historical, modern, modernAvailable: Boolean(modernRef), sourceUrl: manifestUrl.href };
+    const variants = await loadManifestVariants(manifest, manifestUrl.href);
+    return { manifest, variants, activeVariantId: normalizeActiveVariantId(variants, manifest.defaults?.variantId || manifest.activeVariantId), sourceUrl: manifestUrl.href };
   }
   if (sourceRef) {
     const source = await fetchText(sourceRef);
-    return { manifest: { title: "外部本文", autoTitle: true, content: { format: "narou" } }, historical: source, modern: source, modernAvailable: false, sourceUrl: source.url };
+    const variants = [{ id: "variant-A", label: "Variant A", role: "", source }];
+    return { manifest: { title: "外部本文", autoTitle: true, content: { format: "narou" } }, variants, activeVariantId: variants[0].id, sourceUrl: source.url };
   }
   const fallback = await fetchText("data/demo/reader.json");
   const manifestUrl = new URL("data/demo/reader.json", location.href);
   const manifest = parseJsonText(fallback.text);
-  const historical = await fetchText(manifest.content.historical, manifestUrl.href);
-  const modern = manifest.content.modern ? await fetchText(manifest.content.modern, manifestUrl.href) : historical;
-  return { manifest, historical, modern, modernAvailable: Boolean(manifest.content.modern), sourceUrl: manifestUrl.href };
+  const variants = await loadManifestVariants(manifest, manifestUrl.href);
+  return { manifest, variants, activeVariantId: normalizeActiveVariantId(variants, manifest.defaults?.variantId || manifest.activeVariantId), sourceUrl: manifestUrl.href };
 }

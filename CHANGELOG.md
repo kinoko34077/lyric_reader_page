@@ -193,3 +193,15 @@ node --test tests/*.test.mjs
 | `fa4ee80` | Style / Glyph / Combine編集操作 |
 | `4ad3d8f` | 暫定Presentation記法の文書化 |
 | `1350722` | Source移行安定化・大規模回帰テスト |
+# Changelog
+
+## Unreleased — Gate 1 semantic document model
+
+- 添付の確定要件・監査仕様を基準仕様として追跡する`docs/REQUIREMENTS-MATRIX.md`を追加。
+- Author Source優先のMetadata/Title意味モデルを追加。第1行Titleと明示複数行Titleの表現を分離。
+- `historical` / `modern`固定をReader Coreから外し、Generic Variant Set・文書定義label・active Variantを導入。
+- Variant LinkをID/anchorで保持し、共有PresentationとVariant単位Overrideを追加。文字offsetを対応関係の正本にしない。
+- Reader Document/Draftをversion 3へ移行。旧versionは明示変換し、未知versionはfail-closed。
+- Gate 0/1の受入条件、未確定HOLD、次Gateの未実装範囲を記録。
+
+> この段階ではGate 2以降のSyntax vNext、Ruby部分編集、Palette Bank、Style継承、Glyph/Combine等を完了扱いにしていない。
