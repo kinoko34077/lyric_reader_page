@@ -11,6 +11,7 @@
 - URL / ManifestのFetch本文をストリーム単位でサイズ制限し、`Content-Length`が無い過大入力も全量展開前に拒否。超過時はStreamもcancelする。
 - 画像Glyphの読込失敗をDOM Integration testで検証し、Ruby付きPortable Sourceへ確実に戻ることを回帰保護。
 - Golden fixtureをWriter Renderer→DOM→Author Source→再Parseへ通すIntegration testを追加し、属性順のcanonical化を越えた意味Round-tripを検証。
+- 現在HEADをDesktop Chromiumのlocal Viewerでsmoke確認し、設定Panelの単独開閉、縦書き時のTitle/本文方向同期、Console error/warn 0件をQuality Gateへ記録。Mobile/WebKitは未検証のまま。
 - 詳細は[`docs/READER-KERNEL-ROADMAP.md`](docs/READER-KERNEL-ROADMAP.md)を参照。
 
 ## [Unreleased] — 2026-09-08

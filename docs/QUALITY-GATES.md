@@ -13,7 +13,7 @@
 | Renderer DOM → Author Source → Reader JSON | `tests/dom-reader-json.test.mjs` | PASS |
 | Registry validation / typed resolution | `tests/registry.test.mjs`, Golden test | PASS |
 | Malformed input / parser bounds / unsafe Registry | fuzz, limits, security tests | PASS |
-| Browser / mobile Reader smoke | Chromium/local is partial; WebKit/iOS/Android unavailable | PENDING |
+| Browser / mobile Reader smoke | Chromium/local Viewer smoke is PASS; WebKit/iOS/Android unavailable | PARTIAL |
 
 判定は現在の作業ツリーで実行した結果に基づきます。`PASS`は実装・自動テスト・必要なBrowser観測が揃った範囲だけに付け、外部Browser・実機・権限が必要な確認は`BLOCKED`へ分離します。Stage A〜Eは別Repositoryの指示に合わせた呼称で、Local Gateとの対応は以下の通りです。
 
@@ -29,7 +29,7 @@
 
 ## Automated evidence
 
-実行日時: 2026-09-08 JST
+実行日時: 2026-09-09 JST
 
 ```text
 node --check assets/js/app.js
@@ -43,6 +43,13 @@ git diff --check
 - `tests/large-source.test.mjs`は長文、連続Presentation、Ruby混在Projectionの保全を確認する。
 - `git diff --check`はWhitespace errorなしを確認する。
 - 固定test件数は記録値を正本にしない。最終判定時の現在HEADの実行ログおよびCI quality jobを正本とする。
+
+### 2026-09-09 Chromium local Viewer smoke
+
+- `python -m http.server 8765`で公開した現在HEADを`http://localhost:8765/?mode=viewer`から読み込み、AX tree上でデモ本文・Ruby・Variant・設定Panelを確認。
+- Consoleの`error` / `warn`は0件。
+- 「表示設定」は単独で開閉し、縦書き切替後に`#song-title`と`#lyrics`がともに`is-vertical` / `vertical-rl`となることを確認。
+- これはDesktop Chromiumのlocal smokeであり、Mobile / WebKit / 実配信PagesのPASS証跡ではない。
 
 ## Stage A — Baseline / semantic model
 
