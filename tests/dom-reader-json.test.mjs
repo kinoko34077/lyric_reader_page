@@ -12,13 +12,15 @@ class FakeClassList {
 }
 
 class FakeNode {
-  constructor(tagName = "#fragment", nodeType = 1, value = "") { this.tagName = tagName; this.nodeType = nodeType; this.nodeValue = nodeType === 3 ? value : null; this.childNodes = []; this.dataset = {}; this.style = {}; this.classList = new FakeClassList(); }
+  constructor(tagName = "#fragment", nodeType = 1, value = "") { this.tagName = tagName; this.nodeType = nodeType; this.nodeValue = nodeType === 3 ? value : null; this.childNodes = []; this.dataset = {}; this.style = {}; this.classList = new FakeClassList(); this.listeners = {}; }
   set className(value) { this.classList = new FakeClassList(); this.classList.add(...String(value || "").split(/\s+/).filter(Boolean)); }
   get className() { return [...this.classList.values].join(" "); }
   append(...children) { this.childNodes.push(...children.flatMap(child => child?.nodeType === 11 ? child.childNodes.splice(0) : [child]).filter(Boolean)); }
   replaceChildren(...children) { this.childNodes = []; this.append(...children); }
   get textContent() { return this.nodeType === 3 ? this.nodeValue : this.childNodes.map(child => child.textContent || child.nodeValue || "").join(""); }
   set textContent(value) { this.replaceChildren(new FakeNode("#text", 3, String(value))); }
+  addEventListener(type, listener) { (this.listeners[type] ||= []).push(listener); }
+  dispatchEvent(event) { for (const listener of this.listeners[event.type] || []) listener.call(this, event); }
   closest() { return null; }
   querySelectorAll(selector) { const found = []; const visit = node => { if (selector === "[data-source-start]" && node.dataset?.sourceStart) found.push(node); if (selector.includes(".ruby-presentation-part") && node.classList?.contains("ruby-presentation-part")) found.push(node); node.childNodes?.forEach(visit); }; this.childNodes.forEach(visit); return found; }
   querySelector(selector) { if (selector === "ruby" || selector === "rt") { let found = null; const visit = node => { if (found) return; if (node.tagName?.toLowerCase() === selector) { found = node; return; } node.childNodes?.forEach(visit); }; this.childNodes.forEach(visit); return found; } return null; }
@@ -42,5 +44,19 @@ test("rendered DOM round-trips through Author Source and Reader JSON", () => {
     const loaded = parseJsonText(json, "reader-document");
     assert.equal(loaded.content.variants[0].source.text, source);
     assert.equal(loaded.registry.styles.shout.weight, "700");
+  } finally { restore(); }
+});
+
+test("failed image Glyph rendering restores portable Ruby Source", () => {
+  const restore = installDocument();
+  try {
+    const container = new FakeNode("DIV");
+    renderLyrics(container, "[如何《どう》:glyph=missing]", { mode: "viewer", registry: { glyphs: { missing: { type: "image", src: "https://reader.example.test/missing.svg" } } } });
+    const wrapper = container.childNodes[0];
+    const image = wrapper.childNodes[0];
+    assert.equal(image.tagName, "IMG");
+    image.dispatchEvent({ type: "error" });
+    assert.equal(wrapper.textContent, "如何《どう》");
+    assert.equal(wrapper.dataset.glyphFailed, "true");
   } finally { restore(); }
 });

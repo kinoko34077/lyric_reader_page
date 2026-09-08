@@ -9,6 +9,7 @@
 - Writer、Draft、History、複雑なVariant編集、IME / Caret / Native Undo、Style rename UI、3つ以上のStyle競合表示はReader完成後のBeta改善へ移動。
 - 旧字・Ruby・複合Presentation・Combine・Glyph・Escape・複数行Presentationを含む`reader-kernel-golden.txt`をKernel回帰fixtureとして追加。
 - URL / ManifestのFetch本文をストリーム単位でサイズ制限し、`Content-Length`が無い過大入力も全量展開前に拒否。
+- 画像Glyphの読込失敗をDOM Integration testで検証し、Ruby付きPortable Sourceへ確実に戻ることを回帰保護。
 - 詳細は[`docs/READER-KERNEL-ROADMAP.md`](docs/READER-KERNEL-ROADMAP.md)を参照。
 
 ## [Unreleased] — 2026-09-08
