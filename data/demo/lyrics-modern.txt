@@ -5,3 +5,8 @@
 
 12
 組文字も、縦書きの中で読みやすく扱えます。
+
+◾︎Reader Smoke
+[晴々撥条《はれ〴〵バネ》:style=demo-title,c=2]
+[併置:combine=parallel] [Z配置:combine=z]
+[欠損Glyph:glyph=missing-svg] [欠損Style:style=missing-style]

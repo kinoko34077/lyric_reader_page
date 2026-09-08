@@ -120,6 +120,7 @@ IME、touch selection、OSのsoft keyboard下でのCaretはWebKit/iOS/Android実
 
 - `tests/registry.test.mjs`でHEX/Palette Outline、複数Layer、Gradient stop、fallback、Glyph 4型、missing reference、Asset上限を確認。
 - Chromium quality fixtureでTitleのOutline/Gradient、missing SVGの`glyph-failed`と元文字、文書指定remote Fontの自動取得失敗時の元文字、欠損Style / FontのWarning marker、未知Registry extensionの不活性保持、Parallel/Zの`.combine-unit`を確認。
+- 公開デモの`data/demo/reader.json`は実作品本文にReader Smokeセクションを含み、`tests/demo-smoke.test.mjs`でPalette/Bank、Style、Outline、Combine、Glyph、missing Asset/Font、Author Source round-tripを同じManifest経路から確認する。
 - `reader.css`のforced-colors fallbackはGradientを解除しCanvasTextへ戻す規則を持つ。
 
 ### Remaining

@@ -12,6 +12,29 @@
       { "id": "modernized", "label": "現代表記", "role": "reading", "src": "./lyrics-modern.txt" }
     ]
   },
+  "registry": {
+    "banks": {
+      "default": { "slots": { "0": { "color": "#272522", "name": "foreground" }, "1": { "color": "#000000", "name": "fallback" }, "2": { "color": "#b52d2d", "name": "chorus-red" }, "3": { "color": "#236ca3", "name": "accent-blue" } }, "names": { "0": "foreground", "1": "fallback", "2": "chorus-red", "3": "accent-blue" } },
+      "night": { "slots": { "0": "#f4f0e8", "1": "#111111", "2": "#54c28a", "3": "#8eb8ff" }, "names": { "2": "night-green" } }
+    },
+    "activeBank": "default",
+    "styles": {
+      "demo-title": { "color": 2, "outline": "thin", "gradient": "demo-gradient" },
+      "demo-chorus": { "color": 3 },
+      "missing-style": { "color": 99 }
+    },
+    "glyphs": {
+      "hare": { "type": "text", "text": "晴々" },
+      "missing-svg": { "type": "svg", "src": "./missing-glyph.svg" },
+      "font-hare": { "type": "font", "font": "nishiki", "glyph": "U+E000" }
+    },
+    "fonts": {
+      "nishiki": { "type": "remote", "url": "https://invalid.example/nishiki.woff2" },
+      "missing-font": { "type": "remote", "url": "https://invalid.example/missing.woff2" }
+    },
+    "outlines": { "thin": { "width": 0.08, "color": 3 } },
+    "gradients": { "demo-gradient": { "direction": "to-inline-end", "stops": [{ "at": 0, "palette": 2 }, { "at": 1, "palette": 3 }] } }
+  },
   "defaults": { "variantId": "original", "kanji": "original", "ruby": true, "writingMode": "horizontal" },
   "links": { "YouTube": "https://www.youtube.com/", "ニコニコ": "https://www.nicovideo.jp/" }
 }

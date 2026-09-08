@@ -6,7 +6,7 @@ Reader優先の現在ロードマップは[`docs/READER-KERNEL-ROADMAP.md`](docs
 
 ## 使い方
 
-- デモ: `index.html`
+- デモ: `index.html`。実作品本文にReader Smoke用のPalette / Style / Outline / Combine / Glyph / Asset fallbackを少量含め、`tests/demo-smoke.test.mjs`で公開Manifest経路を回帰確認します。
 - 外部Manifest: `index.html#m=https%3A%2F%2Fexample.com%2Freader.json`
 - 外部TXT: `index.html#src=https%3A%2F%2Fexample.com%2Flyrics.txt`。Manifestでformatを指定しない直接TXT URLは、ローカルTXTと同じく現行 / Legacy Syntaxを自動判定します。
 - Writer: `index.html?mode=writer`

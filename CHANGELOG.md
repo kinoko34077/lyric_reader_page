@@ -35,6 +35,7 @@
 - Readerの通常対応目安をSource約50,000文字までとし、現行500,000 code units等の制限は極端な入力を止める安全上限としてBest Effort範囲と分離した。
 - Writer系の正本をReader優先方針へ同期し、`K1`（文書OpenのUndo）と`K6`（Tab単位Draft分離）をWriter BetaのDeferred要件として明記した。現行Readerの文書単位History・暫定Tab警告とは混同しない。
 - Parser generator / Schema validatorを一度比較し、Static PagesのNo-build配布、独自Projection、Fail-soft Registry policyを理由に現行bounded local実装をv0.xでfreezeした。判断を[`docs/adr/0004-reader-kernel-library-freeze.md`](docs/adr/0004-reader-kernel-library-freeze.md)へ記録した。
+- 公開Demoの実作品本文末尾へReader SmokeセクションとRegistry定義を追加し、Palette/Bank、Style、Outline、Combine、Glyph、missing Asset/Font、Variantの実入力経路を`tests/demo-smoke.test.mjs`で回帰確認するようにした。
 - 詳細は[`docs/READER-KERNEL-ROADMAP.md`](docs/READER-KERNEL-ROADMAP.md)を参照。
 
 ## [Unreleased] — 2026-09-08

@@ -112,3 +112,17 @@ T:うい。(承諾)
 K:其《それ》ぢゃあ、
 K:拜々《バイ〴〵》〜！
 T:うい〜。(切実)
+
+◾︎Reader Smoke
+[晴々撥条《はれ〴〵バネ》:style=demo-title,c=2]
+[ベうーん:style=demo-chorus]
+[夜色:bank=night,c=2]
+[直行:combine]
+[併置:combine=parallel]
+[Z配置:combine=z]
+[晴:glyph=hare]
+[欠損Glyph:glyph=missing-svg]
+[外字Glyph:glyph=font-hare]
+[欠損Style:style=missing-style]
+[欠損Font:font=missing-font]
+[縁取り:outline=thin]
