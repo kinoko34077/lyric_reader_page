@@ -1,6 +1,6 @@
 # 歌詞リーダー
 
-外部のTXT / Reader JSONをブラウザから読み込み、歌詞・ルビ・各種Presentationを表示する静的Readerです。Writerでは本文を直接編集できます。ローカル本文はサーバーへ送信・保存しません。
+外部のTXT / Reader JSON / `.lyric.txt`をブラウザから読み込み、歌詞・ルビ・各種Presentationを表示する静的Readerです。Writerでは本文を直接編集できます。ローカル本文はサーバーへ送信・保存しません。
 
 Reader優先の現在ロードマップは[`docs/READER-KERNEL-ROADMAP.md`](docs/READER-KERNEL-ROADMAP.md)、最新の確定要件は[`docs/LYRIC_READER_REQUIREMENTS.md`](docs/LYRIC_READER_REQUIREMENTS.md)、実装と検証の対応表は[`docs/REQUIREMENTS-MATRIX.md`](docs/REQUIREMENTS-MATRIX.md)、現在のQuality Gate証跡は[`docs/QUALITY-GATES.md`](docs/QUALITY-GATES.md)を参照してください。
 
@@ -11,6 +11,7 @@ Reader優先の現在ロードマップは[`docs/READER-KERNEL-ROADMAP.md`](docs
 - 外部TXT: `index.html#src=https%3A%2F%2Fexample.com%2Flyrics.txt`
 - Writer: `index.html?mode=writer`
 - ローカルTXT / JSON: 「開く」または画面全体へのドラッグ＆ドロップ
+- `.lyric.txt`: JSON HeaderとAuthor SourceをまとめたCanonical Containerとして読み込み・書き出し
 
 Manifest内の相対URLはManifest自身のURLを基準に解決します。外部サーバーはブラウザから読めるCORSヘッダーを返す必要があります。
 
@@ -43,7 +44,7 @@ Reader Coreは`historical` / `modern`へ固定せず、文書定義のGeneric Va
 
 WriterではTitle・本文を直接編集し、外部HTML pasteはplain textとして扱います。Writerは現段階ではBeta扱いで、Reader KernelのSource保全・Projection・安全性を優先します。EditorのCaret、IME、Undo、Draft完全復旧、複雑なVariant編集はReader完成後に必要性を見て強化します。画面上のGlyphや新字体をSourceへ書き戻さない原則と、Rubyの通常Presentation / 部分Overrideは維持します。
 
-全文CopyはPortable Text（Presentation除去・Ruby保持）です。標準TXTダウンロードはPresentation入りAuthor Sourceそのものです。Reader文書ダウンロードはOSへの保存完了ではなく、ブラウザがダウンロードを開始したcheckpointです。Portable Text専用の保存UIは置いていません。
+全文CopyはPortable Text（Presentation除去・Ruby保持）です。標準TXTダウンロードはPresentation入りAuthor Sourceそのもの、`.lyric.txt`ダウンロードはJSON Headerとactive VariantのAuthor SourceをまとめたCanonical Containerです。Reader文書ダウンロードはOSへの保存完了ではなく、ブラウザがダウンロードを開始したcheckpointです。Portable Text専用の保存UIは置いていません。
 
 ## Registry
 

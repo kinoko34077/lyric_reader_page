@@ -29,7 +29,7 @@ Portable / Plain / Author Projection
 - Canonical `LYRIC-READER/1` parser / serializer is implemented in `assets/js/lyric-container.js`.
 - The format is `magic line + compact JSON Header line + blank-line delimiter + exact active Author Source body`.
 - `.lyric.txt` and magic-detected local files route through the existing transactional Reader Document loader; legacy TXT and Reader JSON remain readable.
-- Canonical Container export UI is the next slice; current work has not yet changed the existing TXT / Reader JSON export actions.
+- Canonical Container export is available beside the existing TXT, Reader JSON, and Portable Copy actions; the legacy export paths remain unchanged.
 
 ### 必須
 

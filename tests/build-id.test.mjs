@@ -16,3 +16,14 @@ test("HTML module, stylesheet, and config references share one build id", () => 
     if (ids.length) assert.ok(ids.every(id => id === expected), `${file} has a stale build id`);
   }
 });
+
+test("canonical Container export stays alongside existing TXT, JSON, and Copy actions", () => {
+  const html = fs.readFileSync(path.join(root, "index.html"), "utf8");
+  const app = fs.readFileSync(path.join(root, "assets/js/app.js"), "utf8");
+  assert.match(html, /id="download-container-button"/);
+  assert.match(html, /\.lyric\.txt/);
+  assert.match(app, /serializeLyricContainer/);
+  assert.match(app, /download-container-button/);
+  assert.match(app, /copy-all-button/);
+  assert.match(app, /download-reader-button/);
+});
