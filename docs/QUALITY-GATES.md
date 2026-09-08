@@ -117,7 +117,7 @@ IME、touch selection、OSのsoft keyboard下でのCaretはWebKit/iOS/Android実
 ### Observed
 
 - `tests/registry.test.mjs`でHEX/Palette Outline、複数Layer、Gradient stop、fallback、Glyph 4型、missing reference、Asset上限を確認。
-- Chromium quality fixtureでTitleのOutline/Gradient、missing SVGの`glyph-failed`と元文字、remote Font未許可時の元文字、Parallel/Zの`.combine-unit`を確認。
+- Chromium quality fixtureでTitleのOutline/Gradient、missing SVGの`glyph-failed`と元文字、remote Font未許可時の元文字、欠損Style / FontのWarning marker、未知Registry extensionの不活性保持、Parallel/Zの`.combine-unit`を確認。
 - `reader.css`のforced-colors fallbackはGradientを解除しCanvasTextへ戻す規則を持つ。
 
 ### Remaining

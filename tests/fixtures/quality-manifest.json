@@ -23,6 +23,7 @@
       "night": { "slots": { "0": "#f4f0e8", "1": "#111111", "2": "#54c28a", "3": "#8eb8ff" }, "names": { "2": "night-green" } }
     },
     "activeBank": "default",
+    "futureField": { "mode": "v2" },
     "styles": { "title": { "color": 2, "outline": "thin", "gradient": "title-gradient" }, "styled": { "color": 3 }, "parallel": { "combine": "parallel" }, "conflictA": { "color": 2 }, "conflictB": { "color": 3 } },
     "glyphs": { "hare": { "type": "text", "text": "晴々" }, "missing-svg": { "type": "svg", "src": "./missing.svg" }, "font-hare": { "type": "font", "font": "nishiki", "glyph": "U+E000" } },
     "fonts": { "nishiki": { "type": "remote", "url": "https://example.com/nishiki.woff2" } },

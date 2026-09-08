@@ -19,6 +19,7 @@
 - 未知のReader Document versionを本文・Variantが解釈可能な範囲で現行versionへBest-effort変換し、`unknown-version`警告を保持。現行形式での保存を促す。
 - Registryの未知最上位Field・Style属性を文書拒否ではなく不活性`extensions`へ保持し、既知の安全な定義だけをResolverへ渡す。
 - Registry Fontが未許可・未ロードのときも本文を標準Fontで表示し、Font fallbackをWarning markerへ記録。
+- 公開quality fixtureへ未知Registry extension、欠損Style / Font参照を追加し、Variant・Asset failureと合わせてFail-soft経路を常時検証。
 - 詳細は[`docs/READER-KERNEL-ROADMAP.md`](docs/READER-KERNEL-ROADMAP.md)を参照。
 
 ## [Unreleased] — 2026-09-08

@@ -58,7 +58,7 @@ Portable / Plain / Author Projection
 
 ### 現在地
 
-既存のAdapter、IR、Projection、Registry、Renderer、Fallbackに加え、実データ相当のGolden Fixtureを追加済み。現段階はKernel Gateの回帰を継続しながらReader実用化へ進める状態。
+既存のAdapter、IR、Projection、Registry、Renderer、Fallbackに加え、実データ相当のGolden Fixtureを追加済み。Variant、Remote Font、Asset failure、未知Registry extension、欠損Style / Font参照もfixtureへ含め、現段階はKernel Gateの回帰を継続しながらReader実用化へ進める状態。
 
 ## Stage 2 — 最低限のPresentation
 

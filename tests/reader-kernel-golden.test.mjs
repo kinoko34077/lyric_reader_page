@@ -7,6 +7,8 @@ import { normalizeRegistry, resolvePresentation, validateRegistry } from "../ass
 import { glyphFallbackText } from "../assets/js/reader-view.js";
 
 const fixture = fs.readFileSync(path.join(process.cwd(), "tests", "fixtures", "reader-kernel-golden.txt"), "utf8");
+const qualityManifest = JSON.parse(fs.readFileSync(path.join(process.cwd(), "tests", "fixtures", "quality-manifest.json"), "utf8"));
+const qualitySource = fs.readFileSync(path.join(process.cwd(), "tests", "fixtures", "quality-historical.txt"), "utf8");
 const registry = {
   palettes: { "0": "#272522", "1": "#000000", "2": "#b52d2d", "3": "#236ca3" },
   styles: { title: { color: 2 }, styled: { color: 3 } },
@@ -49,4 +51,12 @@ test("Kernel keeps executable Registry fields inert and malformed Source without
 test("Glyph fallback preserves Ruby meaning instead of dropping the reading", () => {
   const node = parseSource("[如何《どう》:glyph=missing]").nodes[0];
   assert.equal(glyphFallbackText(node), "如何《どう》");
+});
+
+test("quality fixture covers fail-soft Registry references and inert extensions", () => {
+  assert.deepEqual(qualityManifest.registry.futureField, { mode: "v2" });
+  assert.match(qualitySource, /style=missing-style/);
+  assert.match(qualitySource, /font=missing-font/);
+  assert.equal(qualityManifest.content.variants.length, 2);
+  assert.equal(qualityManifest.registry.fonts.nishiki.type, "remote");
 });

@@ -5,4 +5,6 @@
 [Z字:combine=z]
 [失敗:glyph=missing-svg]
 [外字:glyph=font-hare]
+[欠損Style:style=missing-style]
+[欠損Font:font=missing-font]
 [多重:style=conflictA,style=conflictB]
