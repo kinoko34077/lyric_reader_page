@@ -50,7 +50,7 @@ WriterではTitle・本文を直接編集し、外部HTML pasteはplain textと�
 
 RegistryはPalette / Palette Bank / Named Style / Outline / Gradient / Glyph / Fontを型付き・許可リスト付きで検証します。Palette 0/1は常在し、欠落時は`#ffffff` / `#000000`、2以上の欠損SlotはSlot 1へFallbackします。Styleは継承・cycle検出・複数指定Conflict Warningに対応し、Direct PropertyがStyleより優先されます。Outlineは相対幅と複数Layer、CombineはStraight / Parallel / Zを扱います。未知Fieldは安全な拡張領域へ保持しますが、解釈・実行はしません。
 
-Glyphはtext、SVG、raster image、font glyphを受け付け、未登録・未読込・Asset失敗時は元Source文字列へFallbackします。欠損Registry参照、Font未読込、Asset失敗は本文を止めず、表示専用の`⚠` Warning markerへ集約します。文書指定の外部Fontは初期状態で自動読込し、ユーザーが明示的にOFFにした場合だけ停止します。URL本文の再読込・切替後もRegistry Fontの解決を再実行します。SVGはinline DOMへ挿入せずImage contextで表示し、任意HTML / CSS / Script / Event Handler / 危険protocolは受け付けません。
+Glyphはtext、SVG、raster image、font glyphを受け付け、未登録・未読込・Asset失敗時は元Source文字列へFallbackします。欠損Registry参照、Font未読込、Asset失敗は本文を止めず、表示専用の右肩`⃠` Warning markerへ集約します。文書指定の外部Fontは初期状態で自動読込し、ユーザーが明示的にOFFにした場合だけ停止します。URL本文の再読込・切替後もRegistry Fontの解決を再実行します。SVGはinline DOMへ挿入せずImage contextで表示し、任意HTML / CSS / Script / Event Handler / 危険protocolは受け付けません。
 
 ## State・サイズ・互換性
 

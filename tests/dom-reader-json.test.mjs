@@ -68,6 +68,7 @@ test("failed image Glyph rendering restores portable Ruby Source", () => {
     assert.equal(wrapper.dataset.glyphFailed, "true");
     const warning = wrapper.children.find(child => child.classList.contains("view-warning"));
     assert.ok(warning);
+    assert.equal(warning.textContent, "⃠");
     assert.equal(warning.attributes["aria-hidden"], "true");
     assert.match(warning.title, /Asset/);
   } finally { restore(); }
@@ -98,6 +99,7 @@ test("unloaded Registry Font keeps text readable with a copy-excluded warning ma
     const wrapper = container.childNodes[0];
     const warning = wrapper.children.find(child => child.classList.contains("view-warning"));
     assert.ok(warning);
+    assert.equal(warning.textContent, "⃠");
     assert.match(warning.title, /Font nishiki/);
     assert.equal(renderedBodySource(container), source);
   } finally { restore(); }

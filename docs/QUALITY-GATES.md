@@ -51,6 +51,7 @@ git diff --check
 - Consoleの`error` / `warn`は0件。
 - 「表示設定」は単独で開閉し、縦書き切替後に`#song-title`と`#lyrics`がともに`is-vertical` / `vertical-rl`となることを確認。
 - これはDesktop Chromiumのlocal smokeであり、Mobile / WebKit / 実配信PagesのPASS証跡ではない。
+- 今回の監査ターンでは既存Chrome local tabの再接続を試みたが、CDPが`Debugger unattached`を返し、別tabもtimeoutしたため、新しいBrowser PASS証跡は追加していない。
 
 ## Stage A — Baseline / semantic model
 

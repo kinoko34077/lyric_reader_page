@@ -56,7 +56,7 @@ function conflictMark(count) {
 
 function warningMark(messages = []) {
   const values = [...new Set((Array.isArray(messages) ? messages : [messages]).map(value => String(value || "").trim()).filter(Boolean))];
-  const mark = document.createElement("span"); mark.className = "view-warning"; mark.setAttribute("aria-hidden", "true"); mark.textContent = "⚠"; mark.title = values.join(" / "); mark.dataset.warning = mark.title;
+  const mark = document.createElement("span"); mark.className = "view-warning"; mark.setAttribute("aria-hidden", "true"); mark.textContent = "⃠"; mark.title = values.join(" / "); mark.dataset.warning = mark.title;
   return mark;
 }
 

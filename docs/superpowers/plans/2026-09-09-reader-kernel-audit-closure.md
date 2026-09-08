@@ -34,11 +34,11 @@
 - Remove `annotations` from live state, payloads, draft/history snapshots, and renderer inputs.
 - The Source Presentation path remains the only runtime presentation path.
 
-- [ ] **Step 1: Write failing tests** asserting document payloads do not contain `annotations`, app state does not import or merge annotations, and legacy annotation input cannot affect render or saved Reader JSON.
-- [ ] **Step 2: Run focused tests and confirm they fail because annotation compatibility is still present.**
-- [ ] **Step 3: Remove annotation normalization/merge and all live/payload wiring while preserving unrelated runtime-integrity helpers.
-- [ ] **Step 4: Run focused tests, then the complete suite.**
-- [ ] **Step 5: Commit and push `refactor: remove legacy range annotations`.
+- [x] **Step 1: Write failing tests** asserting document payloads do not contain `annotations`, app state does not import or merge annotations, and legacy annotation input cannot affect render or saved Reader JSON.
+- [x] **Step 2: Run focused tests and confirm they fail because annotation compatibility is still present.**
+- [x] **Step 3: Remove annotation normalization/merge and all live/payload wiring while preserving unrelated runtime-integrity helpers.
+- [x] **Step 4: Run focused tests, then the complete suite.**
+- [x] **Step 5: Commit and push `refactor: remove legacy range annotations`.
 
 ### Task 2: Preserve recovery state across download initiation
 
@@ -50,11 +50,11 @@
 - `download()` remains a browser-start checkpoint.
 - TXT, Reader JSON, and `.lyric.txt` downloads must not call `clearDirty()` or `clearDraft()` merely because `a.click()` was invoked.
 
-- [ ] **Step 1: Add failing source-level behavior tests for all three download handlers.**
-- [ ] **Step 2: Run focused tests and confirm the handlers currently clear recovery state.**
-- [ ] **Step 3: Remove those cleanup calls and retain the existing start-status messages.**
-- [ ] **Step 4: Run focused and full tests.**
-- [ ] **Step 5: Commit and push `fix: preserve draft after download start`.
+- [x] **Step 1: Add failing source-level behavior tests for all three download handlers.**
+- [x] **Step 2: Run focused tests and confirm the handlers currently clear recovery state.**
+- [x] **Step 3: Remove those cleanup calls and retain the existing start-status messages.**
+- [x] **Step 4: Run focused and full tests.**
+- [x] **Step 5: Commit and push `fix: preserve draft after download start`.
 
 ### Task 3: Align external Font defaults and supported-range policy
 
@@ -71,11 +71,11 @@
 - User preferences may still disable remote font loading explicitly.
 - Normal supported Source range is approximately 50,000 characters; current larger safety limits are best-effort bounds, not a 500,000-character performance guarantee.
 
-- [ ] **Step 1: Add failing tests for automatic document-font loading and the policy wording.**
-- [ ] **Step 2: Run the focused tests and confirm the current default is false.
-- [ ] **Step 3: Set the document-load default to enabled, while keeping explicit user opt-out intact; update policy documents.
-- [ ] **Step 4: Run full tests and documentation consistency checks.
-- [ ] **Step 5: Commit and push `fix: align reader asset defaults and support range`.
+- [x] **Step 1: Add failing tests for automatic document-font loading and the policy wording.**
+- [x] **Step 2: Run the focused tests and confirm the current default is false.
+- [x] **Step 3: Set the document-load default to enabled, while keeping explicit user opt-out intact; update policy documents.
+- [x] **Step 4: Run full tests and documentation consistency checks.
+- [x] **Step 5: Commit and push `docs: align reader kernel policy and font defaults`.
 
 ### Task 4: Replace the small Golden fixture with a realistic Reader fixture
 
@@ -88,11 +88,11 @@
 - Fixture remains offline and deterministic.
 - It must exercise Ruby, legacy characters, Palette, Named Style, Outline, Glyph, Combine, Variant, remote Font definition, unknown Registry extension, and missing-asset fallback with a long multi-section Japanese source.
 
-- [ ] **Step 1: Add assertions requiring a substantial fixture and every listed capability.
-- [ ] **Step 2: Run the Golden test and confirm the current tiny fixture fails the size/coverage assertions.
-- [ ] **Step 3: Replace/extend the fixture using the existing real-work sample text and bounded local definitions.
-- [ ] **Step 4: Run Golden, full, syntax, and diff checks.
-- [ ] **Step 5: Commit and push `test: strengthen reader kernel golden fixture`.
+- [x] **Step 1: Add assertions requiring a substantial fixture and every listed capability.
+- [x] **Step 2: Run the Golden test and confirm the current tiny fixture fails the size/coverage assertions.
+- [x] **Step 3: Replace/extend the fixture using the existing real-work sample text and bounded local definitions.
+- [x] **Step 4: Run Golden, full, syntax, and diff checks.
+- [x] **Step 5: Commit and push `test: strengthen reader kernel golden fixture`.
 
 ### Task 5: Re-evaluate the remaining locally executable Viewer gate
 
@@ -105,14 +105,13 @@
 - Record automated and available local browser evidence separately from unavailable WebKit/iOS/Android/live deployment evidence.
 - Do not claim Mobile/WebKit PASS without observation.
 
-- [ ] **Step 1: Run the current full automated suite and available local Viewer smoke.
-- [ ] **Step 2: Record only observed results and remaining external-only blockers.
-- [ ] **Step 3: Commit and push `docs: record reader kernel audit closure evidence`.
+- [x] **Step 1: Run the current full automated suite and available local Viewer smoke.
+- [x] **Step 2: Record only observed results and remaining external-only blockers.
+- [x] **Step 3: Commit and push `docs: record reader kernel audit closure evidence`.
 
 ### Final verification
 
-- [ ] Run `node --test tests/*.test.mjs`.
-- [ ] Run `node --check assets/js/*.js` for every JavaScript file.
-- [ ] Run `git diff --check`.
+- [x] Run `node --test tests/*.test.mjs`.
+- [x] Run `node --check assets/js/*.js` for every JavaScript file.
+- [x] Run `git diff --check`.
 - [ ] Confirm `git status --short --branch` is clean and `main` is synchronized with `origin/main` after the final push.
-

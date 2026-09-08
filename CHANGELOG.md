@@ -20,10 +20,11 @@
 - format未指定のReader JSON / Container / ManifestもSourceからAdapterを検出し、明示formatを優先するRead-many入力境界へ揃えた。
 - URL本文の新規読込・再読込後も、外部Font許可時はRegistry Fontの取得・Fallback判定を再実行するようにした。
 - 文書指定の外部Fontを既定で自動取得するようにし、ユーザーが明示的にOFFにした場合だけ停止する。取得失敗時は標準Fontと元Source表示へFallbackする。
+- 欠損Registry参照・Font・Assetの表示用Warning markerを旧`⚠`から右肩の`⃠`へ統一し、Copy / Author Source projectionからは引き続き除外する。
 - TXT / Reader JSON / `.lyric.txt`のダウンロード開始時にDirty状態やDraft Recoveryを消去しないよう修正した。保存完了ではなく開始checkpointという表示契約を維持する。
 - Reader JSONの未知トップレベルFieldを不活性な拡張として保持し、Document state・Draft・Historyを経由したCanonical保存でも消さないようにした。
 - URL Manifest読込でも同じ未知トップレベルField保持を適用し、入力経路による情報欠落をなくした。
-- 欠損Style / Palette / Glyph / Font / Assetを本文表示継続のまま`⚠` Warning markerへ統一し、markerをPortable Copy・Author Source投影から除外。
+- 欠損Style / Palette / Glyph / Font / Assetを本文表示継続のまま右肩`⃠` Warning markerへ統一し、markerをPortable Copy・Author Source投影から除外。
 - 未知のReader Document versionを本文・Variantが解釈可能な範囲で現行versionへBest-effort変換し、`unknown-version`警告を保持。現行形式での保存を促す。
 - Registryの未知最上位Field・Style属性を文書拒否ではなく不活性`extensions`へ保持し、既知の安全な定義だけをResolverへ渡す。
 - Registry Fontが未許可・未ロードのときも本文を標準Fontで表示し、Font fallbackをWarning markerへ記録。
