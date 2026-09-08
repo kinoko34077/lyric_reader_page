@@ -1,6 +1,6 @@
-import { getSyntaxAdapter, graphemes, nodeLength, parseSource, serializeSource, toPlainText, toPortableText } from "./syntax-adapter.js?v=20260908-019";
-import { transformNodes } from "./transformer.js?v=20260908-019";
-import { resolvePresentation } from "./registry.js?v=20260908-019";
+import { getSyntaxAdapter, graphemes, nodeLength, parseSource, serializeSource, toPlainText, toPortableText } from "./syntax-adapter.js";
+import { transformNodes } from "./transformer.js";
+import { resolvePresentation } from "./registry.js";
 
 const SAFE_ANNOTATION_PROPERTIES = new Set(["color", "backgroundColor", "fontWeight", "fontStyle", "textDecoration", "textDecorationColor", "textDecorationThickness", "textUnderlineOffset", "opacity"]);
 

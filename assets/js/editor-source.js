@@ -1,4 +1,4 @@
-import { graphemes } from "./syntax-adapter.js?v=20260908-019";
+import { graphemes } from "./syntax-adapter.js";
 
 /**
  * Convert rendered editor DOM back to Author Source without treating view-only

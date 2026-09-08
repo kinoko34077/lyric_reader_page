@@ -1,4 +1,4 @@
-import { getSyntaxAdapter } from "./syntax-adapter.js?v=20260908-019";
+import { getSyntaxAdapter } from "./syntax-adapter.js";
 
 const HEX = /^#[0-9a-f]{6}$/i;
 const NAME = /^[\w-]+$/;

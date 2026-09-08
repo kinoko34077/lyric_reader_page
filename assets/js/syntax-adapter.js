@@ -1,6 +1,6 @@
 // @ts-check
-import { parseRuby } from "./ruby-parser.js?v=20260908-019";
-import { MAX_SOURCE_BYTES } from "./config.js?v=20260908-019";
+import { parseRuby } from "./ruby-parser.js";
+import { MAX_SOURCE_BYTES } from "./config.js";
 
 /** @typedef {{type: "text", value: string}} TextNode */
 /** @typedef {{type: "ruby", base: string, ruby: string, explicit: boolean, baseDecorations?: RubyDecoration[], rubyDecorations?: RubyDecoration[]}} RubyNode */

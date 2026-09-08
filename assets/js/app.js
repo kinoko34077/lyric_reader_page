@@ -1,12 +1,12 @@
-import { isReaderJsonFile, loadInput, parseJsonText, validateSourceText } from "./data-loader.js?v=20260908-019";
-import { MAX_READER_DOCUMENT_JSON_BYTES, MAX_SOURCE_BYTES } from "./config.js?v=20260908-019";
-import { firstLineInfo, withFirstLineBody } from "./content-boundary.js?v=20260908-019";
-import { boundedHistory, clone, documentIdentity, documentPayload, draftDiffers, draftPayload, localSourceIdentity, migrateReaderDocument, normalizeDraft } from "./document-state.js?v=20260908-019";
-import { applyPresentation, applyRubyPresentation, assertCapabilities, clearPresentation, clearRubyPresentation, getSyntaxAdapter, graphemes, isSafePresentationName, parseSource, serializeSource, toPortableText } from "./syntax-adapter.js?v=20260908-019";
-import { renderLyrics, rawText } from "./reader-view.js?v=20260908-019";
-import { normalizeRegistry, paletteValue, validateRegistry } from "./registry.js?v=20260908-019";
-import { renderedBodySource as serializeRenderedBodySource } from "./editor-source.js?v=20260908-019";
-import { activeVariant, normalizeActiveVariantId, normalizeDocumentData, normalizeVariants, replaceVariantSource, resolveMetadata, resolveTitle } from "./document-model.js?v=20260908-019";
+import { isReaderJsonFile, loadInput, parseJsonText, validateSourceText } from "./data-loader.js";
+import { MAX_READER_DOCUMENT_JSON_BYTES, MAX_SOURCE_BYTES } from "./config.js";
+import { firstLineInfo, withFirstLineBody } from "./content-boundary.js";
+import { boundedHistory, clone, documentIdentity, documentPayload, draftDiffers, draftPayload, localSourceIdentity, migrateReaderDocument, normalizeDraft } from "./document-state.js";
+import { applyPresentation, applyRubyPresentation, assertCapabilities, clearPresentation, clearRubyPresentation, getSyntaxAdapter, graphemes, isSafePresentationName, parseSource, serializeSource, toPortableText } from "./syntax-adapter.js";
+import { renderLyrics, rawText } from "./reader-view.js";
+import { normalizeRegistry, paletteValue, validateRegistry } from "./registry.js";
+import { renderedBodySource as serializeRenderedBodySource } from "./editor-source.js";
+import { activeVariant, normalizeActiveVariantId, normalizeDocumentData, normalizeVariants, replaceVariantSource, resolveMetadata, resolveTitle } from "./document-model.js";
 
 const $ = id => document.getElementById(id);
 const params = new URLSearchParams(location.search);
