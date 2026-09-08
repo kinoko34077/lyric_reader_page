@@ -163,7 +163,8 @@ export function renderLyrics(element, source, options = {}) {
           else { wrapper.replaceChildren(document.createTextNode(fallback)); wrapper.classList.add("glyph-failed"); wrapper.dataset.glyphFailed = "true"; appendWarningMark(wrapper, [...(resolved.warnings || []), "Font Glyphを読み込めないためSource文字へFallbackしました。"]); }
         }
       }
-      wrapper.dataset.sourceEnd = String(offset); Object.assign(wrapper.style, annotationStyle(start, offset)); appendWarningMark(wrapper, resolved.warnings); if (resolved.conflicts?.length) wrapper.append(conflictMark(resolved.conflicts.length)); parent.append(wrapper); return;
+      const fontWarnings = resolved.fontName && options.loadedRegistryFonts instanceof Set && !options.loadedRegistryFonts.has(resolved.fontName) ? [`Font ${resolved.fontName}を読み込めないため標準FontへFallbackしています。`] : [];
+      wrapper.dataset.sourceEnd = String(offset); Object.assign(wrapper.style, annotationStyle(start, offset)); appendWarningMark(wrapper, [...(resolved.warnings || []), ...fontWarnings]); if (resolved.conflicts?.length) wrapper.append(conflictMark(resolved.conflicts.length)); parent.append(wrapper); return;
     }
     if (node.type === "text") {
       const sourceValue = sourceNode.value || node.value; const start = offset; const end = start + graphemes(sourceValue).length; const span = document.createElement("span"); span.className = "source-text"; span.dataset.sourceStart = String(start); span.dataset.sourceEnd = String(end); span.textContent = node.value; Object.assign(span.style, annotationStyle(start, end)); parent.append(span); offset = end; return;

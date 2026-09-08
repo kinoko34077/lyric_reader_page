@@ -89,6 +89,20 @@ test("missing Registry presentation remains visible with a copy-excluded warning
   } finally { restore(); }
 });
 
+test("unloaded Registry Font keeps text readable with a copy-excluded warning marker", () => {
+  const restore = installDocument();
+  try {
+    const container = new FakeNode("DIV");
+    const source = "[本文:style=font-style]";
+    renderLyrics(container, source, { mode: "viewer", loadedRegistryFonts: new Set(), registry: { styles: { "font-style": { font: "nishiki" } }, fonts: { nishiki: { type: "remote", url: "https://example.test/nishiki.woff2" } } } });
+    const wrapper = container.childNodes[0];
+    const warning = wrapper.children.find(child => child.classList.contains("view-warning"));
+    assert.ok(warning);
+    assert.match(warning.title, /Font nishiki/);
+    assert.equal(renderedBodySource(container), source);
+  } finally { restore(); }
+});
+
 test("Golden fixture survives Writer DOM rendering and Author Source projection", () => {
   const restore = installDocument();
   try {
