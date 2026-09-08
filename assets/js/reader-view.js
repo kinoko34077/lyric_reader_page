@@ -63,8 +63,23 @@ function setPresentationData(element, presentation = {}, resolved) {
 }
 
 function conflictMark(count) {
-  const mark = document.createElement("span"); mark.className = "view-warning"; mark.setAttribute("aria-hidden", "true"); mark.textContent = "⚠"; mark.title = `Presentation競合 ${count}件`;
+  return warningMark([`Presentation競合 ${count}件`]);
+}
+
+function warningMark(messages = []) {
+  const values = [...new Set((Array.isArray(messages) ? messages : [messages]).map(value => String(value || "").trim()).filter(Boolean))];
+  const mark = document.createElement("span"); mark.className = "view-warning"; mark.setAttribute("aria-hidden", "true"); mark.textContent = "⚠"; mark.title = values.join(" / "); mark.dataset.warning = mark.title;
   return mark;
+}
+
+function appendWarningMark(element, messages) {
+  if (!messages?.length) return;
+  const existing = [...(element.children || [])].find(child => child.classList?.contains("view-warning"));
+  if (existing) {
+    const values = existing.dataset.warning ? existing.dataset.warning.split(" / ") : [];
+    const merged = [...new Set([...values, ...messages.map(value => String(value || "").trim()).filter(Boolean)])];
+    existing.title = merged.join(" / "); existing.dataset.warning = existing.title;
+  } else element.append(warningMark(messages));
 }
 
 function renderStyleList(presentation = {}) {
@@ -88,7 +103,7 @@ function decoratedRubyPart(value, decorations, part, sourceStart, rubyIndex, reg
     const span = document.createElement("span"); span.className = "ruby-presentation-part";
     if (part === "base") { span.dataset.sourceStart = String(sourceStart + index); span.dataset.sourceEnd = String(sourceStart + index + 1); span.dataset.rubyStart = String(index); span.dataset.rubyEnd = String(index + 1); span.dataset.rubyPart = "base"; span.dataset.rubyIndex = String(rubyIndex); }
     else { span.dataset.rubyStart = String(index); span.dataset.rubyEnd = String(index + 1); span.dataset.rubyPart = "ruby"; span.dataset.rubyIndex = String(rubyIndex); }
-    setPresentationData(span, presentation, resolvePresentation(presentation, registry)); span.textContent = unit; fragment.append(span);
+    const resolved = resolvePresentation(presentation, registry); setPresentationData(span, presentation, resolved); span.textContent = unit; if (resolved.warnings?.length) span.append(warningMark(resolved.warnings)); fragment.append(span);
   });
   return fragment;
 }
@@ -140,15 +155,15 @@ export function renderLyrics(element, source, options = {}) {
         if (resolved.glyph.type === "text" && resolved.glyph.text) wrapper.replaceChildren(document.createTextNode(resolved.glyph.text));
         else if (["svg", "image"].includes(resolved.glyph.type) && resolved.glyph.src) {
           const image = document.createElement("img"); image.className = "source-glyph"; image.src = resolved.glyph.src; image.alt = ""; image.draggable = false;
-          image.addEventListener("error", () => { wrapper.replaceChildren(document.createTextNode(fallback)); wrapper.classList.add("glyph-failed"); wrapper.dataset.glyphFailed = "true"; }); wrapper.replaceChildren(image);
+          image.addEventListener("error", () => { wrapper.replaceChildren(document.createTextNode(fallback)); wrapper.classList.add("glyph-failed"); wrapper.dataset.glyphFailed = "true"; appendWarningMark(wrapper, [...(resolved.warnings || []), "Glyph Assetの読込に失敗したためSource文字へFallbackしました。"]); }); wrapper.replaceChildren(image);
         } else if (resolved.glyph.type === "font") {
           const fontLoaded = options.loadedRegistryFonts?.has(resolved.glyph.font);
           const replacement = fontLoaded ? fontGlyphText(resolved.glyph.glyph) : "";
           if (replacement) { wrapper.classList.add("glyph-font"); wrapper.replaceChildren(document.createTextNode(replacement)); }
-          else { wrapper.replaceChildren(document.createTextNode(fallback)); wrapper.classList.add("glyph-failed"); wrapper.dataset.glyphFailed = "true"; }
+          else { wrapper.replaceChildren(document.createTextNode(fallback)); wrapper.classList.add("glyph-failed"); wrapper.dataset.glyphFailed = "true"; appendWarningMark(wrapper, [...(resolved.warnings || []), "Font Glyphを読み込めないためSource文字へFallbackしました。"]); }
         }
       }
-      wrapper.dataset.sourceEnd = String(offset); Object.assign(wrapper.style, annotationStyle(start, offset)); if (resolved.conflicts?.length) wrapper.append(conflictMark(resolved.conflicts.length)); parent.append(wrapper); return;
+      wrapper.dataset.sourceEnd = String(offset); Object.assign(wrapper.style, annotationStyle(start, offset)); appendWarningMark(wrapper, resolved.warnings); if (resolved.conflicts?.length) wrapper.append(conflictMark(resolved.conflicts.length)); parent.append(wrapper); return;
     }
     if (node.type === "text") {
       const sourceValue = sourceNode.value || node.value; const start = offset; const end = start + graphemes(sourceValue).length; const span = document.createElement("span"); span.className = "source-text"; span.dataset.sourceStart = String(start); span.dataset.sourceEnd = String(end); span.textContent = node.value; Object.assign(span.style, annotationStyle(start, end)); parent.append(span); offset = end; return;

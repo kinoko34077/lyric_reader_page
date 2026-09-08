@@ -41,6 +41,7 @@ Portable / Plain / Author Projection
 - URL / Manifest入力のストリーム本文を上限前に打ち切るサイズ境界
 - Registry validation / resolution
 - RendererのSource非破壊、Glyph失敗時の元文字Fallback
+- 欠損Registry参照・Asset失敗の表示用Warning marker（Copy / Author Source投影から除外）
 - 任意HTML / JavaScript / 危険protocolの実行禁止
 
 ### Gate

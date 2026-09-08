@@ -15,6 +15,7 @@
 - Canonical Container `LYRIC-READER/1`（JSON Header + 空行delimiter + Author Source Body）を追加し、active Variant以外のSource、未知Header、未知Version警告を保持。
 - `.lyric.txt`またはmagic検出されたローカル入力をContainerとしてReader Documentへ変換し、既存TXT / Reader JSON経路と共存させた。
 - `.lyric.txt`のCanonical Container書き出しUIを追加し、既存のTXT / Reader JSON / Portable Copy操作を維持。
+- 欠損Style / Palette / Glyph / Font / Assetを本文表示継続のまま`⚠` Warning markerへ統一し、markerをPortable Copy・Author Source投影から除外。
 - 詳細は[`docs/READER-KERNEL-ROADMAP.md`](docs/READER-KERNEL-ROADMAP.md)を参照。
 
 ## [Unreleased] — 2026-09-08
