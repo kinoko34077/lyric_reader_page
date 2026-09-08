@@ -24,6 +24,7 @@ test("provisional presentation at the start of a TXT is never classified as JSON
 test("streaming URL sources stop at the byte limit before calling response.text", async () => {
   const originalFetch = globalThis.fetch;
   const oversized = new TextEncoder().encode("x".repeat(2_000_001));
+  let cancelled = false;
   try {
     globalThis.fetch = async () => ({
       ok: true,
@@ -37,6 +38,7 @@ test("streaming URL sources stop at the byte limit before calling response.text"
               delivered = true;
               return { done: false, value: oversized };
             },
+            async cancel() { cancelled = true; },
             releaseLock() {}
           };
         }
@@ -44,6 +46,7 @@ test("streaming URL sources stop at the byte limit before calling response.text"
       text() { throw new Error("response.text() should not be used"); }
     });
     await assert.rejects(fetchText("https://reader.example.test/source.txt", "https://reader.example.test/"), /本文が大きすぎ/);
+    assert.equal(cancelled, true);
   } finally {
     globalThis.fetch = originalFetch;
   }

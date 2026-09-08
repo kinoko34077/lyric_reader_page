@@ -38,6 +38,9 @@ async function readResponseText(response, maxBytes, tooLargeMessage) {
         if (total > maxBytes) throw new Error(tooLargeMessage);
         chunks.push(chunk);
       }
+    } catch (error) {
+      try { await reader.cancel?.(); } catch { /* the original read error is authoritative */ }
+      throw error;
     } finally {
       reader.releaseLock?.();
     }
