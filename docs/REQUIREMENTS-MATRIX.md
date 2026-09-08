@@ -26,6 +26,7 @@
 | Generic Variant Set | `normalizeVariants`, `activeVariant`, loader/app | `document-model`, `data-loader`, browser quality fixture | Document-defined ID / label / role、複数Variant切替を確認 | 旧形式Migrationは互換入口のみ |
 | Semantic Link / shared presentation | `linkedPresentation`, `setVariantOverride`, normalized `links` | `document-model.test.mjs` | 異なる本文長でもoffsetに依存せず共有値とOverrideを分離 | anchorの表面MarkupとRendererへの範囲適用は仕様未確定 |
 | Draft / History isolation | `document-state.js`, `app.js` | `document-state.test.mjs`, full suite | version 3、旧version migration、unknown versionのBest-effort変換、count/byte bounded | localStorage evictionはBrowser環境依存 |
+| Writer K1 / K6 | Writer BetaのDeferred要件 | Reader完成後に専用状態遷移テストを追加 | K1=文書OpenをUndo対象、K6=Tab単位Draft分離。Reader v0.xの完成条件外 | 現行Readerは文書単位Historyと暫定的な別Tab警告 |
 | vNext `[target:attrs]` | `narouTextAdapter`, `syntax-adapter.js` | `syntax-adapter.test.mjs` | color/style/glyph/combine/weight等をTyped IRへ変換 | v0.xの表面互換は保証しない |
 | Legacy syntax isolation | `legacyNarouTextAdapter`, `getSyntaxAdapter` | adapter router test、legacy editor serialization test | `narou-legacy`だけが`{}`形式を出力。既定Adapterへ混在しない | 旧文書の実機編集をGate 8で確認 |
 | Escape / unknown literal | bounded scanner、`isSafePresentationName` | syntax fuzz / escape / reserved-name tests | escapeは意味保持、未知属性はLiteral、予約名は拒否 | 正式Escape対象一覧はSyntax v1で再確認 |

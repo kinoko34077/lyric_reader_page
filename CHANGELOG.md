@@ -33,6 +33,7 @@
 - 公開quality fixtureへ未知Registry extension、欠損Style / Font参照を追加し、Variant・Asset failureと合わせてFail-soft経路を常時検証。
 - 旧Range Annotationをruntime state、History、Draft、payload、Rendererから撤去し、Reader上のPresentationをAuthor Source / IR経路へ一本化した。入力に残る旧フィールドは無視する。
 - Readerの通常対応目安をSource約50,000文字までとし、現行500,000 code units等の制限は極端な入力を止める安全上限としてBest Effort範囲と分離した。
+- Writer系の正本をReader優先方針へ同期し、`K1`（文書OpenのUndo）と`K6`（Tab単位Draft分離）をWriter BetaのDeferred要件として明記した。現行Readerの文書単位History・暫定Tab警告とは混同しない。
 - 詳細は[`docs/READER-KERNEL-ROADMAP.md`](docs/READER-KERNEL-ROADMAP.md)を参照。
 
 ## [Unreleased] — 2026-09-08

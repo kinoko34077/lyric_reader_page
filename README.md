@@ -54,7 +54,7 @@ Glyphはtext、SVG、raster image、font glyphを受け付け、未登録・未�
 
 ## State・サイズ・互換性
 
-Reader Document / Draftはversion 3です。既知の旧versionは明示Migrationし、未知versionも理解可能な本文・VariantをBest-effortで現行versionへ変換し、警告を出します。Reader JSON / Manifestの未知トップレベルFieldも不活性な拡張として保持し、Canonical Reader JSON保存で消さないようにします。Draftは永続保存ではなくRecovery用途です。localStorage失敗時も編集は継続し、同一文書の別Tab更新は警告します。Historyは最大40件・概算8MBで、別文書へ漏れません。
+Reader Document / Draftはversion 3です。既知の旧versionは明示Migrationし、未知versionも理解可能な本文・VariantをBest-effortで現行versionへ変換し、警告を出します。Reader JSON / Manifestの未知トップレベルFieldも不活性な拡張として保持し、Canonical Reader JSON保存で消さないようにします。Draftは永続保存ではなくRecovery用途です。localStorage失敗時も編集は継続します。Historyは最大40件・概算8MBで、Reader v0.xでは文書単位に限定します。Writer Betaでは、文書を開く操作自体をUndo対象にする`K1`と、TabごとにDraftを分離する`K6`を実装予定です。現行の別Tab更新警告はその暫定UXです。
 
 通常のReader対応目安はSource約50,000文字までです。それを超えるSourceは処理を試みるBest Effortで、性能保証には含めません。現行Runtimeには極端に巨大・悪意ある入力を止める安全上限としてSource 500,000 code units / 2MB、Manifest JSON 200,000 code units / 512KB、Reader Document JSON 2,000,000 code units / 4.5MBがあります。これらは本Repositoryの安全上限であり、Source、Manifest、Reader Document、Registry、Assetを同一上限で扱いません。
 

@@ -90,8 +90,8 @@ v0.xの既定表面は次の形式とする。
 ## 10. State / UX / Security
 
 - localStorage失敗は編集失敗に波及させず、自動復元不可を通知して編集を継続する。Draftは永続保存を保証しない。
-- Local Draft identityはファイル名だけでなくsize、mtime、content hashを含め、同名別文書を分離する。別Tab更新は警告し、現在の編集を優先する。
-- Historyは件数・概算メモリを制限する。Document、Variant、Registryを跨いで復元しない。
+- Local Draft identityはファイル名だけでなくsize、mtime、content hashを含め、同名別文書を分離する。Tab単位のDraft分離は`K6`としてWriter Betaへ延期する。
+- Historyは件数・概算メモリを制限する。文書を開く操作自体もUndo対象にする`K1`はWriter Betaの確定方針だが、現行ReaderのHistoryは文書単位に限定する。
 - 外部HTML pasteはplain textへ限定し、IME中のUndo横取りを避け、caretを可能な範囲で維持する。Clipboard拒否時は選択コピーFallbackを示す。
 - 任意Script、Event Handler、HTML、CSS injection、危険protocol、inline SVG実行を許可しない。Prototype-sensitive Registry keyを拒否する。
 - Header/Footerは自動収納し、設定Panelは独立スクロール領域とする。縦横切替時もTitle・Metadata・本文の向きを同期し、本文のSourceを変更しない。
@@ -108,7 +108,15 @@ v0.xの既定表面は次の形式とする。
 
 Source、Manifest、Reader Document、Registry、Assetはそれぞれ別のvalidation pipelineを通す。
 
-## 12. HOLD
+## 12. DEFERRED Writer decisions
+
+Reader v0.xの完成条件には含めないが、正本上のWriter方針は次のとおりとする。
+
+- `K1`: 文書を開く操作自体もUndo対象とする。現行の文書単位HistoryをReader完成後に拡張する。
+- `K6`: Browser TabごとにDraftを分離し、別TabのDraftを相互に上書き・復元候補へ混入させない。別Tab更新の警告は補助UXであり、Tab分離の代替ではない。
+- いずれもSource保全・本文表示・Portable Projectionを止めるReader Kernel要件ではない。Writer実装時に専用の状態遷移テストを追加する。
+
+## 13. HOLD
 
 - `HOLD-B7`: Serializerのlexical losslessとsemantic canonicalの最終選択
 - `HOLD-GRADIENT` / `HOLD-F6`: Gradientの意味および通常Colorとの競合

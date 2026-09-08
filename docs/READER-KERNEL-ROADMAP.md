@@ -74,7 +74,7 @@ Palette、Style、Glyph、Combine、Font、Outlineを閲覧用途として維持
 
 ## Stage 4 — Editor改善
 
-実利用でReader Kernelを壊すP0が発生した場合だけ即時修正する。Caret、IME、Native Undo、Draft完全復旧、Style rename transaction、複雑なVariant authoring、詳細Accessibility、印刷・forced-colorsはReader完成後に必要性を見て対応する。
+実利用でReader Kernelを壊すP0が発生した場合だけ即時修正する。Caret、IME、Native Undo、Draft完全復旧、Style rename transaction、複雑なVariant authoring、詳細Accessibility、印刷・forced-colorsはReader完成後に必要性を見て対応する。Writer Betaでは`K1`（文書を開く操作自体のUndo）と`K6`（Tab単位Draft分離）を別途実装する。
 
 ## Severity
 
