@@ -36,6 +36,7 @@
 | Ruby Base / Reading partial | scoped Ruby decorations、`selectionOffsets`, `applyRubyPresentation` | Ruby range / clearing / projection tests、Chrome Writer | Base/Readingを別範囲で装飾。通常適用は双方、部分選択はOverride | iOS/Androidのtouch+IME未検証 |
 | Ruby dedicated color removal | UIから専用色を撤去、`rt{color:inherit}` | HTML grep、browser settings AX | Ruby色専用Controlなし。一般Presentationへ統合 | Accessibility NameはHOLD-G5 |
 | Portable / Plain projection | Adapter `toPortableText`, `toPlainText`, `rawText` | projection tests、Chrome Copy path | PortableはRuby保持/Presentation除去、PlainはRuby除去 | Clipboard権限failureの実機確認待ち |
+| Legacy Range Annotation | `runtime-integrity.js` payload compatibility、`reader-view.js` excludes legacy paint | `dom-reader-json.test.mjs`, runtime integrity tests | Old annotation data is retained for migration/storage but cannot override Source Presentation at render time | Legacy payload cleanup can follow Reader completion |
 | Palette 0/1 / missing fallback | `normalizeRegistry`, `paletteValue` | registry tests | `#fff/#000`常在、2以上欠損はSlot 1へfallback | UIの追加Slot表示は安全上限内 |
 | Palette Bank / names / explicit ref | `banks`, `paletteNames`, `bank` Presentation、settings UI | registry tests、Chrome fixture | Bank切替と名前表示、Source explicit bank resolve | 同時編集のmulti-tab UXは警告のみ |
 | Named Style precedence / inheritance | `resolvedStyle`, `resolvePresentation` | registry tests | Direct > Style、cycle/depth/missing refを検出 | Style property別の詳細Cascadeは今後拡張 |

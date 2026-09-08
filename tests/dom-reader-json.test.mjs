@@ -103,6 +103,17 @@ test("unloaded Registry Font keeps text readable with a copy-excluded warning ma
   } finally { restore(); }
 });
 
+test("legacy Range Annotation does not override Author Source Presentation", () => {
+  const restore = installDocument();
+  try {
+    const container = new FakeNode("DIV");
+    renderLyrics(container, "[本文:c=2]", { mode: "viewer", annotations: [{ range: { start: 0, end: 2 }, style: { color: "#00ff00" } }], registry: { palettes: { "2": "#d02020" } } });
+    const wrapper = container.childNodes[0];
+    assert.equal(wrapper.style.color, "#d02020");
+    assert.equal(renderedBodySource(container), "[本文:c=2]");
+  } finally { restore(); }
+});
+
 test("Golden fixture survives Writer DOM rendering and Author Source projection", () => {
   const restore = installDocument();
   try {
