@@ -356,6 +356,11 @@ export function serializeSource(document, adapter = narouTextAdapter) { return a
 export function toPortableText(document, adapter = narouTextAdapter) { return adapter.toPortableText(document); }
 export function toPlainText(document, adapter = narouTextAdapter) { return adapter.toPlainText(document); }
 export function validateSource(source, adapter = narouTextAdapter) { return adapter.validate(source); }
+/** Project readable text without allowing malformed Presentation to block Copy. */
+export function toPortableTextSafe(source, adapter = narouTextAdapter) {
+  try { return toPortableText(parseSource(source, adapter), adapter); }
+  catch { return String(source ?? ""); }
+}
 export function nodeLength(node) { return node.type === "span" ? (node.children || []).reduce((sum, child) => sum + nodeLength(child), 0) : graphemes(node.type === "ruby" ? node.base : node.value).length; }
 
 function samePresentation(a, b) { return JSON.stringify(a || {}) === JSON.stringify(b || {}); }

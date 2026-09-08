@@ -25,5 +25,6 @@ test("canonical Container export stays alongside existing TXT, JSON, and Copy ac
   assert.match(app, /serializeLyricContainer/);
   assert.match(app, /download-container-button/);
   assert.match(app, /copy-all-button/);
+  assert.match(app, /toPortableTextSafe/);
   assert.match(app, /download-reader-button/);
 });

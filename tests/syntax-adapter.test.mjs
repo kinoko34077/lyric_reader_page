@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { applyPresentation, applyRubyPresentation, assertCapabilities, clearPresentation, detectSyntaxAdapter, graphemes, getSyntaxAdapter, isSafePresentationName, legacyNarouTextAdapter, narouTextAdapter, nodeLength, parseSource, serializeSource, toPlainText, toPortableText, validateSource } from "../assets/js/syntax-adapter.js";
+import { applyPresentation, applyRubyPresentation, assertCapabilities, clearPresentation, detectSyntaxAdapter, graphemes, getSyntaxAdapter, isSafePresentationName, legacyNarouTextAdapter, narouTextAdapter, nodeLength, parseSource, serializeSource, toPlainText, toPortableText, toPortableTextSafe, validateSource } from "../assets/js/syntax-adapter.js";
 import { rawText, safeAnnotationStyle } from "../assets/js/reader-view.js";
 
 test("vNext provisional markup becomes typed presentation IR", () => {
@@ -18,6 +18,11 @@ test("author serialization round-trips while portable projections remove present
   assert.equal(serializeSource(document), source);
   assert.equal(toPortableText(document), "如何《どう》\n12\n晴");
   assert.equal(toPlainText(document), "如何\n12\n晴");
+});
+
+test("safe Portable projection preserves malformed Source instead of throwing", () => {
+  assert.equal(toPortableTextSafe("[本文:c=bad]"), "[本文:c=bad]");
+  assert.equal(toPortableTextSafe("[本文:c=2]"), "本文");
 });
 
 test("known invalid attributes fail validation while unknown extensions remain literal", () => {

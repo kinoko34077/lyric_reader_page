@@ -44,7 +44,7 @@ Reader Coreは`historical` / `modern`へ固定せず、文書定義のGeneric Va
 
 WriterではTitle・本文を直接編集し、外部HTML pasteはplain textとして扱います。Writerは現段階ではBeta扱いで、Reader KernelのSource保全・Projection・安全性を優先します。EditorのCaret、IME、Undo、Draft完全復旧、複雑なVariant編集はReader完成後に必要性を見て強化します。画面上のGlyphや新字体をSourceへ書き戻さない原則と、Rubyの通常Presentation / 部分Overrideは維持します。
 
-全文CopyはPortable Text（Presentation除去・Ruby保持）です。標準TXTダウンロードはPresentation入りAuthor Sourceそのもの、`.lyric.txt`ダウンロードはJSON Headerとactive VariantのAuthor SourceをまとめたCanonical Containerです。旧Range Annotationは移行・保存用に保持できますが、表示時には描画せずSource Presentationへ二重適用しません。Reader文書ダウンロードはOSへの保存完了ではなく、ブラウザがダウンロードを開始したcheckpointです。Portable Text専用の保存UIは置いていません。
+全文CopyはPortable Text（Presentation除去・Ruby保持）です。正常なSourceではPresentationだけを除去し、不正Presentationを含むReaderでも例外にせず原文を保全してCopyできます。標準TXTダウンロードはPresentation入りAuthor Sourceそのもの、`.lyric.txt`ダウンロードはJSON Headerとactive VariantのAuthor SourceをまとめたCanonical Containerです。旧Range Annotationは移行・保存用に保持できますが、表示時には描画せずSource Presentationへ二重適用しません。Reader文書ダウンロードはOSへの保存完了ではなく、ブラウザがダウンロードを開始したcheckpointです。Portable Text専用の保存UIは置いていません。
 
 ## Registry
 

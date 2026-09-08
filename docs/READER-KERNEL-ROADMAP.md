@@ -55,6 +55,7 @@ Portable / Plain / Author Projection
 - Parseで本文文字が消失しない
 - Serialize後に再Parseできる
 - PortableはPresentationだけを除去し、Rubyと本文を保持する
+- 不正Presentationを含むSourceでもPortable Copyは例外・本文欠落を起こさず、原文Fallbackを返す
 - PlainはPortableからRubyだけを除去する
 - View変換結果をAuthor Sourceへ逆流させない
 - Malformed入力がhang・無限再帰・巨大展開を起こさない
