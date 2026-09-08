@@ -303,14 +303,14 @@ export function resolvePresentation(presentation = {}, registry = {}) {
   const combine = direct.combine || merged.combine; const normalizedCombine = combine ? normalizeCombine(combine) : null;
   const outlineName = direct.outline?.name || merged.outline; const gradientName = direct.gradient?.name || merged.gradient; const fontName = direct.font?.name || merged.font;
   const conflictColors = conflicts.filter(conflict => conflict.property === "color").flatMap(conflict => conflict.values || []).map(value => resolveColor(value, normalized, bankName)).filter(Boolean).filter((value, index, values) => values.indexOf(value) === index);
-  const resolved = { color, paletteBank: bankName, glyph: glyph ? clone(glyph) : null, glyphText: glyph?.type === "text" ? glyph.text : null, combine: normalizedCombine, styleNames: styles, styleName: styles[0] || null, conflicts, conflictColors, warnings };
+  const resolved = { color, paletteBank: bankName, glyph: glyph ? clone(glyph) : null, glyphAsset: glyph ? clone(glyph) : null, glyphText: glyph?.type === "text" ? glyph.text : null, combine: normalizedCombine, styleNames: styles, styleName: styles[0] || null, styleDefinitions: styles.filter(name => normalized.styles[name]).map(name => ({ name, definition: clone(normalized.styles[name]) })), conflicts, conflictColors, warnings };
   if (outlineName && normalized.outlines[outlineName]) { resolved.outlines = resolvedOutline(outlineName, normalized, bankName); resolved.outline = resolved.outlines[0] || null; }
   else if (outlineName) warnings.push(`Outline ${outlineName} が存在しません。`);
   if (gradientName && normalized.gradients[gradientName]) {
     const gradient = normalized.gradients[gradientName]; resolved.gradient = { direction: gradient.direction, fallbackColor: paletteValue(normalized, 0, bankName), stops: gradient.stops.map(stop => ({ position: Number(stop.at), color: stop.color || resolveColor(stop.palette, normalized, bankName) })).filter(stop => stop.color) };
   } else if (gradientName) warnings.push(`Gradient ${gradientName} が存在しません。`);
   const glyphFontName = glyph?.type === "font" ? glyph.font : null; const resolvedFontName = fontName || glyphFontName;
-  if (resolvedFontName && normalized.fonts[resolvedFontName]) resolved.font = { type: "remote", url: normalized.fonts[resolvedFontName].url, family: `ReaderFont-${resolvedFontName}` };
+  if (resolvedFontName && normalized.fonts[resolvedFontName]) { resolved.fontDefinition = clone(normalized.fonts[resolvedFontName]); resolved.font = { type: "remote", url: normalized.fonts[resolvedFontName].url, family: `ReaderFont-${resolvedFontName}` }; }
   else if (resolvedFontName) warnings.push(`Font ${resolvedFontName} が存在しません。`);
   if (direct.weight || merged.weight) resolved.weight = String(direct.weight?.value || direct.weight || merged.weight);
   return resolved;

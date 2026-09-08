@@ -1,6 +1,7 @@
 // @ts-check
 import { parseRuby } from "./ruby-parser.js";
 import { MAX_SOURCE_BYTES } from "./config.js";
+import { normalizeRubyRange } from "./runtime-integrity.js";
 
 /** @typedef {{type: "text", value: string}} TextNode */
 /** @typedef {{type: "ruby", base: string, ruby: string, explicit: boolean, baseDecorations?: RubyDecoration[], rubyDecorations?: RubyDecoration[]}} RubyNode */
@@ -458,7 +459,7 @@ export function applyRubyPresentation(document, range, presentation) {
       const node = nodes[index]; const nextPath = [...parentPath, index];
       if (node.type === "span") { find(node.children || [], nextPath); if (path) return; }
       else if (node.type === "ruby") {
-        if (current++ === nodeIndex) { const length = graphemes(part === "base" ? node.base : node.ruby).length; localStart = Math.max(0, Math.min(length, Number(range?.start) || 0)); localEnd = Math.max(localStart, Math.min(length, Number(range?.end) || length)); path = nextPath; return; }
+        if (current++ === nodeIndex) { const normalized = normalizeRubyRange(range, graphemes(part === "base" ? node.base : node.ruby).length); if (normalized) { localStart = normalized.start; localEnd = normalized.end; path = nextPath; } return; }
       }
     }
   };
@@ -496,7 +497,7 @@ export function clearRubyPresentation(document, range) {
       const node = nodes[index]; const nextPath = [...parentPath, index];
       if (node.type === "span") { find(node.children || [], nextPath); if (path) return; }
       else if (node.type === "ruby") {
-        if (current++ === nodeIndex) { const length = graphemes(part === "base" ? node.base : node.ruby).length; localStart = Math.max(0, Math.min(length, Number(range?.start) || 0)); localEnd = Math.max(localStart, Math.min(length, Number(range?.end) || length)); path = nextPath; return; }
+        if (current++ === nodeIndex) { const normalized = normalizeRubyRange(range, graphemes(part === "base" ? node.base : node.ruby).length); if (normalized) { localStart = normalized.start; localEnd = normalized.end; path = nextPath; } return; }
       }
     }
   };

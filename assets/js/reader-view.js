@@ -1,6 +1,7 @@
 import { getSyntaxAdapter, graphemes, nodeLength, parseSource, serializeSource, toPlainText, toPortableText } from "./syntax-adapter.js";
 import { transformNodes } from "./transformer.js";
 import { resolvePresentation } from "./registry.js";
+import { mergeAnnotations } from "./runtime-integrity.js";
 
 const SAFE_ANNOTATION_PROPERTIES = new Set(["color", "backgroundColor", "fontWeight", "fontStyle", "textDecoration", "textDecorationColor", "textDecorationThickness", "textUnderlineOffset", "opacity"]);
 
@@ -123,7 +124,8 @@ export function renderLyrics(element, source, options = {}) {
   const nodes = transformNodes(sourceNodes, options.kanji);
   element.replaceChildren();
   const fragment = document.createDocumentFragment(); let offset = 0;
-  const annotationStyle = (start, end) => (options.annotations || []).filter(annotation => annotation.range.end > start && annotation.range.start < end).map(annotation => safeAnnotationStyle(annotation.style)).reduce((style, next) => ({ ...style, ...next }), {});
+  const annotations = mergeAnnotations(options.annotations || []);
+  const annotationStyle = (start, end) => annotations.filter(annotation => annotation.range.end > start && annotation.range.start < end).map(annotation => safeAnnotationStyle(annotation.style)).reduce((style, next) => ({ ...style, ...next }), {});
   let rubyIndex = 0;
   const renderNodes = (displayNodes, originalNodes, parent) => displayNodes.forEach((node, index) => {
     const sourceNode = originalNodes[index] || node;

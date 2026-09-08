@@ -94,6 +94,13 @@ test("Glyph text, SVG, image, and font definitions stay typed and missing assets
   assert.equal(normalizeRegistry({ glyphs: { text: "置換" } }).glyphs.text.text, "置換");
 });
 
+test("Registry resolution exposes concrete Style, Glyph, and Font definitions", () => {
+  const result = resolvePresentation({ style: { type: "style", name: "shout" }, glyph: { type: "glyph", name: "font" }, font: { type: "font", name: "nishiki" } }, registry);
+  assert.deepEqual(result.styleDefinitions, [{ name: "shout", definition: { weight: "700", combine: { type: "combine", mode: "parallel" }, extends: ["base"] } }]);
+  assert.deepEqual(result.glyphAsset, { type: "font", font: "nishiki", glyph: "hare" });
+  assert.deepEqual(result.fontDefinition, { type: "remote", url: "https://example.com/nishiki.woff2" });
+});
+
 test("style inheritance has a bounded depth and does not recurse forever", () => {
   const styles = {};
   for (let index = 0; index < 66; index++) styles[`s${index}`] = index ? { extends: `s${index - 1}` } : {};
