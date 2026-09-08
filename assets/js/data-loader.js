@@ -24,6 +24,31 @@ export function validateSourceText(text) {
   return text;
 }
 
+async function readResponseText(response, maxBytes, tooLargeMessage) {
+  if (response.body?.getReader) {
+    const reader = response.body.getReader();
+    const chunks = [];
+    let total = 0;
+    try {
+      while (true) {
+        const part = await reader.read();
+        if (part.done) break;
+        const chunk = part.value instanceof Uint8Array ? part.value : new Uint8Array(part.value || []);
+        total += chunk.byteLength;
+        if (total > maxBytes) throw new Error(tooLargeMessage);
+        chunks.push(chunk);
+      }
+    } finally {
+      reader.releaseLock?.();
+    }
+    const bytes = new Uint8Array(total);
+    let offset = 0;
+    for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
+    return new TextDecoder().decode(bytes);
+  }
+  return response.text();
+}
+
 /** '[' is valid Author Source, so local classification must not sniff JSON by first character. */
 export function isReaderJsonFile(fileName = "", mimeType = "", text = "") {
   if (/\.txt$/i.test(String(fileName))) return false;
@@ -79,7 +104,7 @@ export async function fetchText(resource, base) {
   if (!response.ok) throw new Error(`本文を取得できませんでした (${response.status})。配信元のCORS設定も確認してください。`);
   const length = Number(response.headers.get("content-length") || 0);
   if (length > MAX_SOURCE_BYTES) throw new Error("本文が大きすぎます。");
-  const text = await response.text();
+  const text = await readResponseText(response, MAX_SOURCE_BYTES, "本文が大きすぎます。");
   return { text: validateSourceText(text), url: url.href };
 }
 
@@ -91,7 +116,7 @@ export async function loadInput(hash = location.hash) {
     const manifestUrl = allowedUrl(manifestRef);
     const response = await fetch(manifestUrl, { cache: "no-store" });
     if (!response.ok) throw new Error(`Manifestを取得できませんでした (${response.status})。`);
-    const manifest = parseJsonText(await response.text());
+    const manifest = parseJsonText(await readResponseText(response, MAX_MANIFEST_JSON_BYTES, "JSON文書が大きすぎます。"));
     const variants = await loadManifestVariants(manifest, manifestUrl.href);
     return { ...manifestDocumentFields(manifest, variants, normalizeActiveVariantId(variants, manifest.defaults?.variantId || manifest.activeVariantId)), sourceUrl: manifestUrl.href };
   }

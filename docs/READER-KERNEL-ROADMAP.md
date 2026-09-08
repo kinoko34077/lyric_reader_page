@@ -31,6 +31,7 @@ Portable / Plain / Author Projection
 - Ruby、Escape、Nested、Multiline、Presentation参照
 - Typed IR、Serializer、Portable / Plain Projection
 - Parserの深度・要素数・属性数・Source長制限
+- URL / Manifest入力のストリーム本文を上限前に打ち切るサイズ境界
 - Registry validation / resolution
 - RendererのSource非破壊、Glyph失敗時の元文字Fallback
 - 任意HTML / JavaScript / 危険protocolの実行禁止

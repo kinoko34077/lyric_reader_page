@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { isReaderJsonFile, loadInput, parseJsonText, validateSourceText } from "../assets/js/data-loader.js";
+import { isReaderJsonFile, loadInput, parseJsonText, validateSourceText, fetchText } from "../assets/js/data-loader.js";
 
 test("JSON parser accepts valid data and rejects malformed input", () => {
   assert.deepEqual(parseJsonText('{"title":"demo"}'), { title: "demo" });
@@ -19,6 +19,34 @@ test("provisional presentation at the start of a TXT is never classified as JSON
   assert.equal(isReaderJsonFile("", "", '{"content":"本文"}'), true);
   assert.equal(isReaderJsonFile("", "", "\uFEFF{\"content\":\"本文\"}"), true);
   assert.equal(isReaderJsonFile("", "", "[文字]{c=2}\n本文"), false);
+});
+
+test("streaming URL sources stop at the byte limit before calling response.text", async () => {
+  const originalFetch = globalThis.fetch;
+  const oversized = new TextEncoder().encode("x".repeat(2_000_001));
+  try {
+    globalThis.fetch = async () => ({
+      ok: true,
+      headers: { get: () => null },
+      body: {
+        getReader() {
+          let delivered = false;
+          return {
+            async read() {
+              if (delivered) return { done: true, value: undefined };
+              delivered = true;
+              return { done: false, value: oversized };
+            },
+            releaseLock() {}
+          };
+        }
+      },
+      text() { throw new Error("response.text() should not be used"); }
+    });
+    await assert.rejects(fetchText("https://reader.example.test/source.txt", "https://reader.example.test/"), /本文が大きすぎ/);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
 
 test("manifest loading keeps generic Variant metadata and rejects duplicate IDs", async () => {
