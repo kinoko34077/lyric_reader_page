@@ -134,7 +134,14 @@ function rubyBasePart(value, decorations, sourceStart, rubyIndex, registry, writ
 export function renderLyrics(element, source, options = {}) {
   const adapter = options.adapter || getSyntaxAdapter(options.format || "narou-text");
   const preserveSource = options.mode !== "viewer" || options.preserveSource === true;
-  const sourceNodes = parseSource(source, adapter).nodes;
+  let sourceNodes;
+  let parseWarnings = [];
+  try {
+    sourceNodes = parseSource(source, adapter).nodes;
+  } catch (error) {
+    sourceNodes = [{ type: "text", value: String(source ?? "") }];
+    parseWarnings = [`Source Presentationを解釈できないため原文へFallbackしました${error instanceof Error ? `: ${error.message}` : "。"}`];
+  }
   const nodes = transformNodes(sourceNodes, options.kanji);
   element.replaceChildren();
   const fragment = document.createDocumentFragment(); let offset = 0;
@@ -172,7 +179,7 @@ export function renderLyrics(element, source, options = {}) {
     } else wrapper.append(rubyBasePart(node.base, sourceNode.baseDecorations, start, currentRubyIndex, options.registry || {}, options.writingMode));
     parent.append(wrapper); offset = end;
   });
-  renderNodes(nodes, sourceNodes, fragment); element.append(fragment); element.classList.toggle("is-vertical", options.writingMode === "vertical"); return sourceNodes;
+  renderNodes(nodes, sourceNodes, fragment); element.append(fragment); if (parseWarnings.length) element.append(warningMark(parseWarnings)); element.classList.toggle("is-vertical", options.writingMode === "vertical"); return sourceNodes;
 }
 
 export function rawText(nodes, range = null) {

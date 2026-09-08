@@ -114,6 +114,20 @@ test("legacy Range Annotation does not override Author Source Presentation", () 
   } finally { restore(); }
 });
 
+test("malformed Presentation falls back to visible source text with a warning", () => {
+  const restore = installDocument();
+  try {
+    const container = new FakeNode("DIV");
+    const source = "題\n[本文:c=bad]";
+    renderLyrics(container, source, { mode: "viewer" });
+    assert.match(container.textContent, /\[本文:c=bad\]/);
+    const warning = container.children.find(child => child.classList.contains("view-warning"));
+    assert.ok(warning);
+    assert.equal(warning.attributes["aria-hidden"], "true");
+    assert.match(warning.title, /Fallback/);
+  } finally { restore(); }
+});
+
 test("Golden fixture survives Writer DOM rendering and Author Source projection", () => {
   const restore = installDocument();
   try {
