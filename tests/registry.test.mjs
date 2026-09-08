@@ -25,12 +25,26 @@ const registry = {
   gradients: { fire: { direction: "to-inline-end", stops: [{ at: 0, palette: 2 }, { at: 1, color: "#ffee00" }] } }
 };
 
-test("registry validates supported data-only definitions and rejects executable fields", () => {
+test("registry validates supported data-only definitions and ignores executable fields safely", () => {
   assert.equal(validateRegistry(registry).valid, true);
-  assert.equal(validateRegistry({ scripts: "alert(1)" }).valid, false);
+  const executable = validateRegistry({ scripts: "alert(1)" });
+  assert.equal(executable.valid, true);
+  assert.ok(executable.warnings.some(warning => warning.includes("scripts")));
+  assert.equal(normalizeRegistry({ scripts: "alert(1)" }).extensions.scripts, "alert(1)");
   assert.equal(validateRegistry({ glyphs: { hare: { html: "<svg>" } } }).valid, false);
   assert.equal(validateRegistry({ fonts: { remote: { type: "remote", url: "javascript:alert(1)" } } }).valid, false);
   assert.equal(validateRegistry({ styles: { unsafe: { weight: "700;color:red" } } }).valid, false);
+});
+
+test("unknown Registry fields are retained as inert extensions with warnings", () => {
+  const value = { futureField: { paletteAlgorithm: "v2" }, styles: { future: { color: 2, sparkle: { enabled: true } } } };
+  const result = validateRegistry(value);
+  assert.equal(result.valid, true);
+  assert.ok(result.warnings.some(warning => warning.includes("futureField")));
+  assert.ok(result.warnings.some(warning => warning.includes("Style future のsparkle")));
+  const normalized = normalizeRegistry(value);
+  assert.deepEqual(normalized.extensions.futureField, { paletteAlgorithm: "v2" });
+  assert.deepEqual(normalized.styles.future.extensions.sparkle, { enabled: true });
 });
 
 test("Palette 0/1 are always present and missing slots fall back to Palette 1", () => {

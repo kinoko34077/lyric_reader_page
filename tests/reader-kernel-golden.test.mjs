@@ -37,8 +37,10 @@ test("Golden Source retains Ruby, nested Presentation, Combine, and Glyph semant
   assert.equal(normalizeRegistry(registry).banks.default.slots["2"], "#b52d2d");
 });
 
-test("Kernel rejects executable Registry input and malformed Source without hanging", () => {
-  assert.equal(validateRegistry({ scripts: "alert(1)" }).valid, false);
+test("Kernel keeps executable Registry fields inert and malformed Source without hanging", () => {
+  const registryResult = validateRegistry({ scripts: "alert(1)" });
+  assert.equal(registryResult.valid, true);
+  assert.ok(registryResult.warnings.some(warning => warning.includes("scripts")));
   assert.throws(() => parseSource("[x:style=\"<script>\"]"), /不正|Literal|Source|属性/);
   const hostile = `[${"[".repeat(40)}x${"]".repeat(40)}:style=x]`;
   assert.doesNotThrow(() => parseSource(hostile));

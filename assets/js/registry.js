@@ -9,8 +9,8 @@ const MAX_ASSET_COUNT = 512;
 const MAX_ASSET_BYTES = 4_000_000;
 const MAX_STYLE_DEPTH = 64;
 const RESERVED_KEYS = new Set(["__proto__", "constructor", "prototype"]);
-const TOP_LEVEL = new Set(["palettes", "paletteNames", "paletteBanks", "banks", "activeBank", "styles", "glyphs", "fonts", "gradients", "outlines"]);
-const STYLE_KEYS = new Set(["color", "bank", "font", "weight", "outline", "gradient", "combine", "extends"]);
+const TOP_LEVEL = new Set(["palettes", "paletteNames", "paletteBanks", "banks", "activeBank", "styles", "glyphs", "fonts", "gradients", "outlines", "extensions"]);
+const STYLE_KEYS = new Set(["color", "bank", "font", "weight", "outline", "gradient", "combine", "extends", "extensions"]);
 const WEIGHT = /^(?:normal|bold|bolder|lighter|[1-9]\d{2})$/i;
 const DIRECTIONS = new Set(["to-right", "to-left", "to-top", "to-bottom", "to-inline-start", "to-inline-end"]);
 const COMBINE_MODES = new Set(["straight", "parallel", "z"]);
@@ -95,6 +95,8 @@ function normalizeStyle(value) {
     else if (key === "weight") result.weight = String(source.weight);
     else result[key] = clone(source[key]);
   }
+  const extensions = Object.fromEntries([...Object.entries(record(source.extensions)), ...Object.entries(source).filter(([key]) => !STYLE_KEYS.has(key) && !RESERVED_KEYS.has(key))]);
+  if (Object.keys(extensions).length) result.extensions = clone(extensions);
   return result;
 }
 
@@ -135,7 +137,8 @@ export function normalizeRegistry(registry = {}) {
   const fonts = {}; for (const [name, definition] of Object.entries(record(value.fonts))) if (validName(name) && definition && typeof definition === "object" && safeHttpsUrl(String(definition.url || ""))) fonts[name] = { type: "remote", url: String(definition.url) };
   const gradients = {}; for (const [name, definition] of Object.entries(record(value.gradients))) { const gradient = normalizeGradient(definition); if (validName(name) && gradient) gradients[name] = gradient; }
   const outlines = {}; for (const [name, definition] of Object.entries(record(value.outlines))) { const outline = normalizeOutline(definition); if (validName(name) && outline.length) outlines[name] = outline; }
-  return { palettes: banks.default.slots, paletteNames: banks.default.names, banks, activeBank, styles, glyphs, fonts, gradients, outlines };
+  const extensions = Object.fromEntries([...Object.entries(record(value.extensions)), ...Object.entries(value).filter(([key]) => !TOP_LEVEL.has(key) && !RESERVED_KEYS.has(key))]);
+  return { palettes: banks.default.slots, paletteNames: banks.default.names, banks, activeBank, styles, glyphs, fonts, gradients, outlines, ...(Object.keys(extensions).length ? { extensions: clone(extensions) } : {}) };
 }
 
 function colorReferenceValid(value) { return normalizeColorReference(value) !== null; }
@@ -162,7 +165,7 @@ function validateStyleDefinitions(value, errors, warnings) {
   const styles = record(value.styles);
   for (const [name, style] of Object.entries(styles)) {
     if (!validName(name) || !style || typeof style !== "object" || Array.isArray(style)) { errors.push(`Style ${name} が不正です。`); continue; }
-    for (const key of Object.keys(style)) if (!STYLE_KEYS.has(key)) errors.push(`Style ${name} の${key}は未対応です。`);
+    for (const key of Object.keys(style)) if (!STYLE_KEYS.has(key)) warnings.push(`Style ${name} の${key}は未対応のため無視します。`);
     if (style.color !== undefined && !colorReferenceValid(style.color)) errors.push(`Style ${name} のcolor参照が不正です。`);
     if (style.bank !== undefined && !validName(String(style.bank))) errors.push(`Style ${name} のBank参照が不正です。`);
     if (style.extends !== undefined && !(Array.isArray(style.extends) ? style.extends.every(validName) : validName(style.extends))) errors.push(`Style ${name} の継承指定が不正です。`);
@@ -227,7 +230,7 @@ export function validateRegistry(registry = {}) {
   const errors = []; const warnings = []; const value = record(registry);
   if (!registry || typeof registry !== "object" || Array.isArray(registry)) errors.push("RegistryはObject形式で指定してください。");
   try { if (new TextEncoder().encode(JSON.stringify(value)).byteLength > MAX_REGISTRY_BYTES) errors.push("Registryが大きすぎます。"); } catch { errors.push("Registryの形式が不正です。"); }
-  for (const key of Object.keys(value)) if (!TOP_LEVEL.has(key)) errors.push(`Registryの項目${key}は未対応です。`);
+  for (const key of Object.keys(value)) if (!TOP_LEVEL.has(key)) warnings.push(`Registryの項目${key}は未対応のため保持のみとします: ${key}`);
   validateBanks(value, errors); validateStyleDefinitions(value, errors, warnings); validateGlyphs(value, errors); validateDefinitions(value, errors);
   const banks = sourceBanks(value); const styleDefinitions = record(value.styles);
   for (const [name, style] of Object.entries(styleDefinitions)) {
