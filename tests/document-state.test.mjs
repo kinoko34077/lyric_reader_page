@@ -11,16 +11,17 @@ const data = {
 test("document identity and payload keep variants, registry, and active variant together", () => {
   const sourceMetadataData = { ...data, sourceMetadata: { title: "Source title", note: "原注" } };
   assert.equal(documentIdentity(data), "song-a||reader:|a.reader.json");
-  const payload = documentPayload(sourceMetadataData, "題", [{ range: { start: 0, end: 1 } }], "modern");
+  const payload = documentPayload(sourceMetadataData, "題", "modern");
   assert.equal(payload.activeVariantId, "modern");
   assert.equal(payload.variants[0].source.text, "古い");
   assert.equal(payload.variants[1].source.text, "現代");
   assert.equal(payload.manifest.registry.palettes["2"], "#d02020");
   assert.deepEqual(payload.sourceMetadata, { title: "Source title", note: "原注" });
+  assert.equal(Object.hasOwn(payload, "annotations"), false);
 });
 
 test("draft round-trip detects registry-only and variant-only changes", () => {
-  const draft = draftPayload(data, "題", [], "modern");
+  const draft = draftPayload(data, "題", "modern");
   assert.equal(draftDiffers(draft, draft.document), false);
   const changedRegistry = structuredClone(draft.document);
   changedRegistry.manifest.registry.palettes["2"] = "#000000";
@@ -50,9 +51,14 @@ test("Reader Document versions migrate explicitly and future versions load best-
 });
 
 test("unknown Reader Document fields are retained separately from canonical fields", () => {
-  const extensions = readerDocumentExtensions({ version: 4, content: {}, meta: {}, futureScalar: "keep", futureObject: { mode: "v2" }, futureArray: ["x"] });
+  const extensions = readerDocumentExtensions({ version: 4, content: {}, meta: {}, annotations: [{ range: { start: 0, end: 1 } }], futureScalar: "keep", futureObject: { mode: "v2" }, futureArray: ["x"] });
   assert.deepEqual(extensions, { futureScalar: "keep", futureObject: { mode: "v2" }, futureArray: ["x"] });
   assert.equal(Object.hasOwn(extensions, "content"), false);
+});
+
+test("legacy Range Annotation data is discarded during Reader migration", () => {
+  const migrated = migrateReaderDocument({ version: 4, annotations: [{ range: { start: 0, end: 1 }, style: { color: "red" } }], content: { text: "本文" } });
+  assert.equal(Object.hasOwn(migrated, "annotations"), false);
 });
 
 test("local identity separates same-name files when metadata or content differs", () => {

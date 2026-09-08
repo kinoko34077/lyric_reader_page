@@ -80,14 +80,14 @@
           <label><span>Palette Slot</span><select id="palette-slot" aria-label="Palette Slot"><option value="0">Slot 0</option><option value="1">Slot 1</option><option value="2">Slot 2</option><option value="3">Slot 3</option></select></label>
           <label><span>Slot色</span><input id="palette-color" type="color" value="#d02020" aria-label="Palette Slotの色"></label>
           <button class="action-button" id="palette-save-button" type="button">Palette Slotを更新</button>
-          <button class="action-button" id="annotate-button" type="button">選択範囲へSlotを適用</button>
+          <button class="action-button" id="apply-palette-button" type="button">選択範囲へSlotを適用</button>
           <label><span>Style名</span><input id="style-name" type="text" value="shout" pattern="[A-Za-z0-9_-]+" aria-label="Style名"></label>
           <button class="action-button" id="style-button" type="button">選択範囲にStyle</button>
           <label><span>Glyph名</span><input id="glyph-name" type="text" value="hare-special" pattern="[A-Za-z0-9_-]+" aria-label="Glyph名"></label>
           <button class="action-button" id="glyph-button" type="button">選択範囲にGlyph</button>
           <label><span>組文字mode</span><select id="combine-mode" aria-label="組文字mode"><option value="straight">直行</option><option value="parallel">併置</option><option value="z">Z字</option></select></label>
           <button class="action-button" id="combine-button" type="button">選択範囲を組文字</button>
-          <button class="action-button" id="clear-annotation-button" type="button">選択範囲の装飾を解除</button>
+          <button class="action-button" id="clear-presentation-button" type="button">選択範囲の装飾を解除</button>
         </fieldset>
         <nav class="song-links" id="song-links" aria-label="楽曲リンク"></nav>
       </div>

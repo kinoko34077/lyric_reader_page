@@ -9,10 +9,6 @@ function ratio(value, total, viewport) {
   return range ? Math.min(1, Math.max(0, finiteNonNegative(value) / range)) : 0;
 }
 
-function styleKey(style) {
-  try { return JSON.stringify(style || {}); } catch { return "{}"; }
-}
-
 export function captureScrollPosition(metrics = {}) {
   return {
     top: ratio(metrics.scrollTop, metrics.scrollHeight, metrics.clientHeight),
@@ -55,28 +51,4 @@ export function normalizeRubyRange(range, length) {
   const second = Math.max(0, Math.min(max, Number(range?.end) || 0));
   const start = Math.min(first, second); const end = Math.max(first, second);
   return end > start ? { nodeIndex, part, start, end } : null;
-}
-
-function normalizeAnnotation(annotation) {
-  if (!annotation || typeof annotation !== "object" || !annotation.range || !annotation.style || typeof annotation.style !== "object") return null;
-  const first = Number(annotation.range.start); const second = Number(annotation.range.end);
-  if (!Number.isFinite(first) || !Number.isFinite(second)) return null;
-  const start = Math.max(0, Math.min(first, second)); const end = Math.max(0, Math.max(first, second));
-  if (end <= start) return null;
-  return { ...structuredClone(annotation), range: { start, end }, style: structuredClone(annotation.style) };
-}
-
-export function mergeAnnotations(...groups) {
-  const normalized = groups.flatMap(group => Array.isArray(group) ? group.map(normalizeAnnotation).filter(Boolean) : []);
-  normalized.sort((a, b) => a.range.start - b.range.start || a.range.end - b.range.end);
-  const result = [];
-  for (const annotation of normalized) {
-    const previous = result.at(-1);
-    if (previous && styleKey(previous.style) === styleKey(annotation.style) && annotation.range.start <= previous.range.end) {
-      previous.range.end = Math.max(previous.range.end, annotation.range.end);
-    } else if (!previous || styleKey(previous.style) !== styleKey(annotation.style) || annotation.range.start !== previous.range.start || annotation.range.end !== previous.range.end) {
-      result.push(annotation);
-    }
-  }
-  return result;
 }

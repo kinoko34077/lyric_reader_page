@@ -2,17 +2,6 @@ import { getSyntaxAdapter, graphemes, nodeLength, parseSource, serializeSource, 
 import { transformNodes } from "./transformer.js";
 import { resolvePresentation } from "./registry.js";
 
-const SAFE_ANNOTATION_PROPERTIES = new Set(["color", "backgroundColor", "fontWeight", "fontStyle", "textDecoration", "textDecorationColor", "textDecorationThickness", "textUnderlineOffset", "opacity"]);
-
-export function safeAnnotationStyle(style = {}) {
-  const result = {};
-  for (const [property, value] of Object.entries(style || {})) {
-    if (!SAFE_ANNOTATION_PROPERTIES.has(property) || typeof value !== "string" || /url\s*\(|expression\s*\(|[;{}<>]/i.test(value)) continue;
-    result[property] = value;
-  }
-  return result;
-}
-
 function styleFromResolved(element, resolved, writingMode) {
   if (resolved.color) element.style.color = resolved.color;
   if (resolved.weight) element.style.fontWeight = resolved.weight;

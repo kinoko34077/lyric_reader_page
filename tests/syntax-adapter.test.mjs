@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { applyPresentation, applyRubyPresentation, assertCapabilities, clearPresentation, detectSyntaxAdapter, graphemes, getSyntaxAdapter, isSafePresentationName, legacyNarouTextAdapter, narouTextAdapter, nodeLength, parseSource, serializeSource, toPlainText, toPortableText, toPortableTextSafe, validateSource } from "../assets/js/syntax-adapter.js";
-import { rawText, safeAnnotationStyle } from "../assets/js/reader-view.js";
+import { rawText } from "../assets/js/reader-view.js";
 
 test("vNext provisional markup becomes typed presentation IR", () => {
   const document = parseSource("[如何《どう》:c=2,style=title]\n[12:combine]\n[晴:glyph=hare-special]");
@@ -99,10 +99,6 @@ test("multiple Ruby-part ranges remain closed through nested serialization", () 
 test("Ruby-part copy projection keeps the original portable Ruby", () => {
   const document = parseSource("前｜如何《どう》後");
   assert.equal(rawText(document.nodes, { ruby: { nodeIndex: 0, part: "ruby", start: 0, end: 1 } }), "｜如何《どう》");
-});
-
-test("legacy annotation styles are restricted to safe data-only properties", () => {
-  assert.deepEqual(safeAnnotationStyle({ color: "#fff", fontWeight: "700", backgroundImage: "url(javascript:alert(1))", content: "<img>" }), { color: "#fff", fontWeight: "700" });
 });
 
 test("presentation registry names share the parser safety contract", () => {

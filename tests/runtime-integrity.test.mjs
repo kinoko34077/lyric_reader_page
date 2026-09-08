@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { captureScrollPosition, commitDocumentCandidate, mergeAnnotations, normalizeRubyRange, restoreScrollPosition, scrollStorageKey } from "../assets/js/runtime-integrity.js";
+import { captureScrollPosition, commitDocumentCandidate, normalizeRubyRange, restoreScrollPosition, scrollStorageKey } from "../assets/js/runtime-integrity.js";
 
 test("reader-shell scroll position is stored as bounded ratios and restored", () => {
   const position = captureScrollPosition({ scrollTop: 240, scrollLeft: 90, scrollHeight: 1240, scrollWidth: 690, clientHeight: 400, clientWidth: 390, anchor: 18 });
@@ -24,21 +24,6 @@ test("invalid document candidates roll back without mutating current state", () 
   assert.equal(result.value, current);
   assert.equal(result.error.message, "本文がありません");
   assert.equal(current.title, "current");
-});
-
-test("range annotations are clamped, sorted, and deduplicated before rendering", () => {
-  const annotations = mergeAnnotations([
-    { range: { start: 8, end: 3 }, style: { color: "red" } },
-    { range: { start: 0, end: 2 }, style: { color: "blue" } },
-    { range: { start: 0, end: 2 }, style: { color: "blue" } },
-    { range: { start: 2, end: 3 }, style: { color: "red" } },
-    { range: { start: 4, end: 4 }, style: { color: "ignored" } }
-  ], [{ range: { start: 1, end: 2 }, style: { color: "green" } }]);
-  assert.deepEqual(annotations, [
-    { range: { start: 0, end: 2 }, style: { color: "blue" } },
-    { range: { start: 1, end: 2 }, style: { color: "green" } },
-    { range: { start: 2, end: 8 }, style: { color: "red" } }
-  ]);
 });
 
 test("Ruby selection is clamped to its own grapheme domain", () => {
