@@ -77,9 +77,13 @@ export function draftDiffers(draft, current) {
 export function migrateReaderDocument(value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Reader文書の形式が不正です。");
   const version = value.version == null ? 1 : Number(value.version);
-  if (!Number.isInteger(version) || version < 1 || version > DOCUMENT_MODEL_VERSION) throw new Error("未対応のReader文書versionです。");
+  if (!Number.isInteger(version) || version < 1) throw new Error("未対応のReader文書versionです。");
   if (version === DOCUMENT_MODEL_VERSION && Array.isArray(value.content?.variants)) return { ...value, version: DOCUMENT_MODEL_VERSION };
   const content = typeof value.content === "object" && value.content ? value.content : value;
   const migrated = migrateLegacyContent(content);
-  return { ...value, version: DOCUMENT_MODEL_VERSION, content: { ...content, ...migrated, format: content.format || value.format || "narou-text" } };
+  const warnings = Array.isArray(value.warnings) ? [...value.warnings] : [];
+  if (version > DOCUMENT_MODEL_VERSION && !warnings.includes("unknown-version")) warnings.push("unknown-version");
+  const result = { ...value, version: DOCUMENT_MODEL_VERSION, content: { ...content, ...migrated, format: content.format || value.format || "narou-text" } };
+  if (warnings.length) result.warnings = warnings;
+  return result;
 }

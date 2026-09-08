@@ -54,7 +54,7 @@ Glyphはtext、SVG、raster image、font glyphを受け付け、未登録・未�
 
 ## State・サイズ・互換性
 
-Reader Document / Draftはversion 3です。既知の旧versionは明示Migrationし、未知versionは拒否します。Draftは永続保存ではなくRecovery用途です。localStorage失敗時も編集は継続し、同一文書の別Tab更新は警告します。Historyは最大40件・概算8MBで、別文書へ漏れません。
+Reader Document / Draftはversion 3です。既知の旧versionは明示Migrationし、未知versionも理解可能な本文・VariantをBest-effortで現行versionへ変換し、警告を出します。Draftは永続保存ではなくRecovery用途です。localStorage失敗時も編集は継続し、同一文書の別Tab更新は警告します。Historyは最大40件・概算8MBで、別文書へ漏れません。
 
 現行Runtimeの上限はSource 500,000 code units / 2MB、Manifest JSON 200,000 code units / 512KB、Reader Document JSON 2,000,000 code units / 4.5MBです。これらは本Repositoryの安全上限であり、Source、Manifest、Reader Document、Registry、Assetを同一上限で扱いません。
 

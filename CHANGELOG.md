@@ -16,6 +16,7 @@
 - `.lyric.txt`またはmagic検出されたローカル入力をContainerとしてReader Documentへ変換し、既存TXT / Reader JSON経路と共存させた。
 - `.lyric.txt`のCanonical Container書き出しUIを追加し、既存のTXT / Reader JSON / Portable Copy操作を維持。
 - 欠損Style / Palette / Glyph / Font / Assetを本文表示継続のまま`⚠` Warning markerへ統一し、markerをPortable Copy・Author Source投影から除外。
+- 未知のReader Document versionを本文・Variantが解釈可能な範囲で現行versionへBest-effort変換し、`unknown-version`警告を保持。現行形式での保存を促す。
 - 詳細は[`docs/READER-KERNEL-ROADMAP.md`](docs/READER-KERNEL-ROADMAP.md)を参照。
 
 ## [Unreleased] — 2026-09-08

@@ -37,12 +37,16 @@ test("legacy draft shape is migrated without losing its source", () => {
   assert.equal(migrated.document.manifest.registry.palettes["2"], "#f00");
 });
 
-test("Reader Document versions migrate explicitly and future versions fail closed", () => {
+test("Reader Document versions migrate explicitly and future versions load best-effort", () => {
   const migrated = migrateReaderDocument({ content: { text: "本文" } });
   assert.equal(migrated.version, 3);
   assert.equal(migrated.content.variants[0].source.text, "本文");
   assert.equal(migrateReaderDocument({ version: 2, content: { historical: "古", modern: "新" } }).content.variants.length, 2);
-  assert.throws(() => migrateReaderDocument({ version: 4, content: { text: "本文" } }), /未対応のReader文書version/);
+  const future = migrateReaderDocument({ version: 4, content: { text: "本文", futureField: { keep: true } } });
+  assert.equal(future.version, 3);
+  assert.equal(future.content.variants[0].source.text, "本文");
+  assert.deepEqual(future.content.futureField, { keep: true });
+  assert.equal(future.warnings.includes("unknown-version"), true);
 });
 
 test("local identity separates same-name files when metadata or content differs", () => {
