@@ -17,6 +17,8 @@ const registry = {
 
 test("Golden Source parses, preserves meaning, and closes through serialization", () => {
   validateSource(fixture);
+  assert.ok(new TextEncoder().encode(fixture).byteLength > 7000, "Golden fixture must exercise a substantial Reader source");
+  assert.ok((fixture.match(/^曲中セクション/gm) || []).length >= 12, "Golden fixture must contain repeated real-work sections");
   const document = parseSource(fixture);
   const serialized = serializeSource(document);
   assert.deepEqual(parseSource(serialized), document);
