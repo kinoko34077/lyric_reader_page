@@ -49,6 +49,24 @@ export function getSyntaxAdapter(format = "narou-text") {
   if (!adapter) throw new Error(`未対応の本文formatです: ${format}`);
   return adapter;
 }
+
+function presentationNodeCount(nodes = []) {
+  return nodes.reduce((count, node) => count + (node?.type === "span" ? 1 + presentationNodeCount(node.children) : 0), 0);
+}
+
+/** Detect a legacy surface syntax without changing the canonical default. */
+export function detectSyntaxAdapter(source, fallback = "narou-text") {
+  const preferred = getSyntaxAdapter(fallback);
+  if (preferred !== narouTextAdapter) return preferred;
+  const value = String(source ?? "");
+  let current = null;
+  let legacy = null;
+  try { current = narouTextAdapter.parse(value); } catch { /* the loader reports the canonical parse error later */ }
+  try { legacy = legacyNarouTextAdapter.parse(value); } catch { /* malformed input keeps the canonical adapter */ }
+  if (legacy && presentationNodeCount(legacy.nodes) > (current ? presentationNodeCount(current.nodes) : 0)) return legacyNarouTextAdapter;
+  return preferred;
+}
+
 export function assertCapabilities(adapter, required = {}) {
   for (const [capability, enabled] of Object.entries(required)) if (enabled && !adapter?.capabilities?.[capability]) throw new Error(`Syntax Adapterが${capability}に対応していません。`);
   return adapter;

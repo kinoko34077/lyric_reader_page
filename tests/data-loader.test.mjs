@@ -67,6 +67,14 @@ test("local input routes lyric containers before JSON or plain TXT", () => {
   assert.equal(parseLocalInput('{"content":{"variants":[]}}', "song.json", "application/json").kind, "reader-document");
 });
 
+test("local plain TXT detects legacy syntax while preserving vNext defaults", () => {
+  const legacy = parseLocalInput("題\n[文字]{c=2}", "legacy.txt", "text/plain");
+  assert.equal(legacy.kind, "source");
+  assert.equal(legacy.format, "narou-legacy");
+  const current = parseLocalInput("題\n[文字:c=2]", "current.txt", "text/plain");
+  assert.equal(current.format, "narou-text");
+});
+
 test("manifest loading keeps generic Variant metadata and rejects duplicate IDs", async () => {
   const originalFetch = globalThis.fetch;
   const originalLocation = globalThis.location;

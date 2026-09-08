@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { applyPresentation, applyRubyPresentation, assertCapabilities, clearPresentation, graphemes, getSyntaxAdapter, isSafePresentationName, legacyNarouTextAdapter, narouTextAdapter, nodeLength, parseSource, serializeSource, toPlainText, toPortableText, validateSource } from "../assets/js/syntax-adapter.js";
+import { applyPresentation, applyRubyPresentation, assertCapabilities, clearPresentation, detectSyntaxAdapter, graphemes, getSyntaxAdapter, isSafePresentationName, legacyNarouTextAdapter, narouTextAdapter, nodeLength, parseSource, serializeSource, toPlainText, toPortableText, validateSource } from "../assets/js/syntax-adapter.js";
 import { rawText, safeAnnotationStyle } from "../assets/js/reader-view.js";
 
 test("vNext provisional markup becomes typed presentation IR", () => {
@@ -133,6 +133,12 @@ test("Ruby presentation ranges are bounded and full clearing removes scoped deco
   const cleared = clearPresentation(document, { start: 0, end: 2 });
   assert.equal(serializeSource(cleared), "如何《どう》");
   assert.deepEqual(parseSource(serializeSource(cleared)), cleared);
+});
+
+test("local syntax detection selects the legacy adapter without misclassifying vNext", () => {
+  assert.equal(detectSyntaxAdapter("[文字]{c=2}").id, "narou-legacy");
+  assert.equal(detectSyntaxAdapter("[文字:c=2]").id, "narou-text");
+  assert.equal(detectSyntaxAdapter("通常の[角括弧]と{本文}").id, "narou-text");
 });
 
 test("adapter router isolates legacy syntax from the vNext default", () => {

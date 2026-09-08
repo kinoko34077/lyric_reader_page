@@ -10,7 +10,7 @@ Reader優先の現在ロードマップは[`docs/READER-KERNEL-ROADMAP.md`](docs
 - 外部Manifest: `index.html#m=https%3A%2F%2Fexample.com%2Freader.json`
 - 外部TXT: `index.html#src=https%3A%2F%2Fexample.com%2Flyrics.txt`
 - Writer: `index.html?mode=writer`
-- ローカルTXT / JSON: 「開く」または画面全体へのドラッグ＆ドロップ
+- ローカルTXT / JSON: 「開く」または画面全体へのドラッグ＆ドロップ。TXTは現行`[対象:指定]`と旧`[対象]{指定}`を自動判定して読み込みます。
 - `.lyric.txt`: JSON HeaderとAuthor SourceをまとめたCanonical Containerとして読み込み・書き出し
 
 Manifest内の相対URLはManifest自身のURLを基準に解決します。外部サーバーはブラウザから読めるCORSヘッダーを返す必要があります。
@@ -28,7 +28,7 @@ Author Sourceを本文・Title・Ruby・局所Presentationの正本として扱�
 [如何《どう》:base-range=0-1,base-c=3]
 ```
 
-既定のvNext Adapterは`[対象:指定]`形式です。旧`[対象]{指定}`形式は`content.format`を`narou-legacy`（旧`narou` alias）と明示した文書だけで読み込みます。Parser、Serializer、Portable Text、Plain Text、Editor操作は[`assets/js/syntax-adapter.js`](assets/js/syntax-adapter.js)の交換可能な境界に閉じ込めています。
+既定のvNext Adapterは`[対象:指定]`形式です。旧`[対象]{指定}`形式は`narou-legacy`（旧`narou` alias）Adapterで読み込みます。ローカルTXTでは旧記法を自動検出し、Reader Documentへ保持したうえで、保存時は読み込んだAdapterの形式を使います。Parser、Serializer、Portable Text、Plain Text、Editor操作は[`assets/js/syntax-adapter.js`](assets/js/syntax-adapter.js)の交換可能な境界に閉じ込めています。
 
 Backslash U+005Cで`[ ] : { } ｜ 《》`等をescapeできます。Presentationは複数属性、Nested、改行跨ぎ、RubyのBase/Reading個別範囲に対応し、Writerが生成したSourceは同じAdapterで再読込できることを検証します。
 

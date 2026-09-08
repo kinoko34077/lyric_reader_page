@@ -1,6 +1,7 @@
 import { MAX_MANIFEST_JSON_BYTES, MAX_MANIFEST_JSON_CHARS, MAX_READER_DOCUMENT_JSON_BYTES, MAX_READER_DOCUMENT_JSON_CHARS, MAX_SOURCE_BYTES, MAX_SOURCE_CHARS } from "./config.js";
 import { normalizeActiveVariantId } from "./document-model.js";
 import { containerToReaderDocument, isLyricContainerText, parseLyricContainer } from "./lyric-container.js";
+import { detectSyntaxAdapter } from "./syntax-adapter.js";
 
 const allowedUrl = (value, base = location.href) => {
   const url = new URL(value, base);
@@ -72,7 +73,8 @@ export function parseLocalInput(text, fileName = "", mimeType = "") {
     return { kind: "reader-document", document: containerToReaderDocument(container), warnings: container.warnings || [] };
   }
   if (isReaderJsonFile(fileName, mimeType, value)) return { kind: "reader-document", document: parseJsonText(value, "reader-document"), warnings: [] };
-  return { kind: "source", source: validateSourceText(value), warnings: [] };
+  const source = validateSourceText(value);
+  return { kind: "source", source, format: detectSyntaxAdapter(source).id, warnings: [] };
 }
 
 async function loadManifestVariants(manifest, base) {
