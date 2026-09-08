@@ -29,7 +29,7 @@
 - 標準TXT保存はPresentation Markupを含むAuthor Sourceそのもの。
 - Portable Text専用の保存/Export UIは置かない。通常の本文CopyがPortable Projectionを使う。
 - `toPortableText()`等のProjection APIは内部境界として維持する。
-- Reader Document/Draftはversionを持ち、既知versionのみ明示Migrationし、未知の将来versionはfail-closedする。DownloadはOSへの保存完了ではなく「ダウンロード開始」のcheckpointと表示する。
+- Reader Document/Draftはversionを持ち、既知versionは明示Migrationし、未知の将来versionも理解可能なSource / VariantをBest-effortで現行形式へ変換して警告する。不正文書はfail-safeにCurrentへ反映しない。DownloadはOSへの保存完了ではなく「ダウンロード開始」のcheckpointと表示する。
 
 ## 5. 暫定Syntax Adapter
 

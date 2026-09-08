@@ -57,12 +57,12 @@ git diff --check
 
 - Node baselineが`.nvmrc`で固定され、CIのquality成功がdeployの前提になっている。
 - Author Source、Generic Variant、Source Metadata、Title、Draft、Historyが同じDocument identity境界にある。
-- Reader JSON version migrationは未知versionを拒否し、Source / Registry / Variantを不正文書から半端に反映しない。
+- Reader JSON version migrationは未知versionでも理解可能なSource / Variantを現行形式へBest-effort変換し、警告を保持する。不正文書は従来どおりCurrentへ反映しない。
 
 ### Observed
 
 - `tests/document-model.test.mjs`でGeneric A/B、異なる本文長のSemantic Link、Shared Presentation、Variant Override、Title/Metadata precedenceを確認。
-- `tests/document-state.test.mjs`でversion 3 payload、旧version migration、unknown version拒否、同名ファイルのidentity差、History boundedを確認。
+- `tests/document-state.test.mjs`でversion 3 payload、旧version migration、unknown versionのBest-effort変換、同名ファイルのidentity差、History boundedを確認。
 - `tests/data-loader.test.mjs`でManifest Variant metadata、duplicate ID、BOM付きJSON、Local/Reader JSONのvalidation分離を確認。
 
 ### Remaining
