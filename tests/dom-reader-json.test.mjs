@@ -1,8 +1,13 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
 import { renderLyrics } from "../assets/js/reader-view.js";
 import { renderedBodySource } from "../assets/js/editor-source.js";
 import { parseJsonText } from "../assets/js/data-loader.js";
+import { parseSource, toPortableText } from "../assets/js/syntax-adapter.js";
+
+const goldenFixture = fs.readFileSync(path.join(process.cwd(), "tests", "fixtures", "reader-kernel-golden.txt"), "utf8");
 
 class FakeClassList {
   constructor() { this.values = new Set(); }
@@ -15,8 +20,10 @@ class FakeNode {
   constructor(tagName = "#fragment", nodeType = 1, value = "") { this.tagName = tagName; this.nodeType = nodeType; this.nodeValue = nodeType === 3 ? value : null; this.childNodes = []; this.dataset = {}; this.style = {}; this.classList = new FakeClassList(); this.listeners = {}; }
   set className(value) { this.classList = new FakeClassList(); this.classList.add(...String(value || "").split(/\s+/).filter(Boolean)); }
   get className() { return [...this.classList.values].join(" "); }
-  append(...children) { this.childNodes.push(...children.flatMap(child => child?.nodeType === 11 ? child.childNodes.splice(0) : [child]).filter(Boolean)); }
+  get children() { return this.childNodes.filter(child => child.nodeType === 1); }
+  append(...children) { const additions = children.flatMap(child => child?.nodeType === 11 ? child.childNodes.splice(0) : [child]).filter(Boolean); additions.forEach(child => { child.parentNode = this; }); this.childNodes.push(...additions); }
   replaceChildren(...children) { this.childNodes = []; this.append(...children); }
+  replaceWith(...children) { if (!this.parentNode) return; const parent = this.parentNode; const index = parent.childNodes.indexOf(this); const additions = children.flatMap(child => child?.nodeType === 11 ? child.childNodes.splice(0) : [child]).filter(Boolean); additions.forEach(child => { child.parentNode = parent; }); parent.childNodes.splice(index, 1, ...additions); }
   get textContent() { return this.nodeType === 3 ? this.nodeValue : this.childNodes.map(child => child.textContent || child.nodeValue || "").join(""); }
   set textContent(value) { this.replaceChildren(new FakeNode("#text", 3, String(value))); }
   addEventListener(type, listener) { (this.listeners[type] ||= []).push(listener); }
@@ -58,5 +65,16 @@ test("failed image Glyph rendering restores portable Ruby Source", () => {
     image.dispatchEvent({ type: "error" });
     assert.equal(wrapper.textContent, "如何《どう》");
     assert.equal(wrapper.dataset.glyphFailed, "true");
+  } finally { restore(); }
+});
+
+test("Golden fixture survives Writer DOM rendering and Author Source projection", () => {
+  const restore = installDocument();
+  try {
+    const container = new FakeNode("DIV");
+    renderLyrics(container, goldenFixture, { mode: "writer", preserveSource: true, registry: { palettes: { "2": "#b52d2d", "3": "#236ca3" }, styles: { title: { color: 2 }, styled: { color: 3 } }, glyphs: { hare: { type: "text", text: "晴々" } } } });
+    const projected = renderedBodySource(container);
+    assert.deepEqual(parseSource(projected), parseSource(goldenFixture));
+    assert.equal(toPortableText(parseSource(projected)), toPortableText(parseSource(goldenFixture)));
   } finally { restore(); }
 });
