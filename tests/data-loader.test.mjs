@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { isReaderJsonFile, loadInput, parseJsonText, validateSourceText, fetchText } from "../assets/js/data-loader.js";
+import { isReaderJsonFile, loadInput, parseJsonText, validateSourceText, fetchText, parseLocalInput } from "../assets/js/data-loader.js";
+import { serializeLyricContainer } from "../assets/js/lyric-container.js";
 
 test("JSON parser accepts valid data and rejects malformed input", () => {
   assert.deepEqual(parseJsonText('{"title":"demo"}'), { title: "demo" });
@@ -50,6 +51,20 @@ test("streaming URL sources stop at the byte limit before calling response.text"
   } finally {
     globalThis.fetch = originalFetch;
   }
+});
+
+test("local input routes lyric containers before JSON or plain TXT", () => {
+  const source = "題\n[如何《どう》:c=2]";
+  const document = {
+    version: 3,
+    content: { format: "narou-text", activeVariantId: "original", variants: [{ id: "original", label: "原文", source: { text: source, url: "fixture:" } }] },
+    meta: { title: "題" }
+  };
+  const loaded = parseLocalInput(serializeLyricContainer(document, "original"), "song.lyric.txt", "text/plain");
+  assert.equal(loaded.kind, "reader-document");
+  assert.equal(loaded.document.content.variants[0].source.text, source);
+  assert.equal(parseLocalInput("本文", "song.txt", "text/plain").kind, "source");
+  assert.equal(parseLocalInput('{"content":{"variants":[]}}', "song.json", "application/json").kind, "reader-document");
 });
 
 test("manifest loading keeps generic Variant metadata and rejects duplicate IDs", async () => {

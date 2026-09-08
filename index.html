@@ -10,7 +10,7 @@
   <body>
     <header class="site-header" id="site-header">
       <a class="site-title" href="./">歌詞リーダー</a>
-      <div class="header-tools"><button class="header-button" id="open-file-button" type="button">開く</button><input id="source-file" type="file" accept=".txt,.json,text/plain,application/json" hidden><button class="header-button" id="reload-button" type="button">再読込</button><p class="source-status" id="source-status" aria-live="polite">読み込み中…</p><button class="header-button" id="settings-toggle" type="button" aria-expanded="false" aria-controls="settings-panel">表示設定</button><button class="header-button" id="mode-switch" type="button">編集</button></div>
+      <div class="header-tools"><button class="header-button" id="open-file-button" type="button">開く</button><input id="source-file" type="file" accept=".txt,.lyric.txt,.json,text/plain,application/json" hidden><button class="header-button" id="reload-button" type="button">再読込</button><p class="source-status" id="source-status" aria-live="polite">読み込み中…</p><button class="header-button" id="settings-toggle" type="button" aria-expanded="false" aria-controls="settings-panel">表示設定</button><button class="header-button" id="mode-switch" type="button">編集</button></div>
     </header>
 
     <main class="reader-shell" id="reader-shell">
@@ -93,7 +93,7 @@
     </aside>
 
     <footer class="site-footer" id="site-footer"><span>外部データをブラウザ上で読み込んで表示しています</span><nav class="footer-links" id="footer-links" aria-label="楽曲リンク"></nav></footer>
-    <div class="drop-overlay" id="drop-overlay" hidden><strong>TXT / Reader JSONをドロップ</strong><span>画面のどこに置いても本文を開けます</span></div>
+    <div class="drop-overlay" id="drop-overlay" hidden><strong>TXT / .lyric.txt / Reader JSONをドロップ</strong><span>画面のどこに置いても本文を開けます</span></div>
     <script type="module" src="assets/js/app.js?v=20260908-019"></script>
   </body>
 </html>
