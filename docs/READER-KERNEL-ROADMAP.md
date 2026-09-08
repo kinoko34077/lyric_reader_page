@@ -46,7 +46,7 @@ Portable / Plain / Author Projection
 - Reader Documentの未知versionは理解可能な本文を現行形式へBest-effort変換し、未知version警告を保持
 - Reader JSON / Manifestの未知トップレベルFieldは不活性拡張として保持し、Draft / History経由のCanonical保存でも消さない
 - Registryの未知Fieldは不活性拡張として保持し、既知のAllowlist外の処理を実行しない
-- Registry Fontの未ロード時は標準FontへFallbackし、表示用Warning markerを残す
+- Registry Fontの未ロード時は標準FontへFallbackし、表示用Warning markerを残す。許可中のURL本文再読込・切替後はRegistry Font解決を再実行する
 - 旧Range Annotationは保存互換だけを残し、Rendererでは描画せずAuthor Source / IR Presentationとの二重適用を防ぐ
 - 任意HTML / JavaScript / 危険protocolの実行禁止
 
