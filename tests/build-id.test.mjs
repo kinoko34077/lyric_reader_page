@@ -28,3 +28,16 @@ test("canonical Container export stays alongside existing TXT, JSON, and Copy ac
   assert.match(app, /toPortableTextSafe/);
   assert.match(app, /download-reader-button/);
 });
+
+test("download initiation preserves dirty and Draft recovery state", () => {
+  const app = fs.readFileSync(path.join(root, "assets/js/app.js"), "utf8");
+  const start = app.indexOf('$("copy-all-button")');
+  const end = app.indexOf('$("share-button")', start);
+  assert.ok(start >= 0 && end > start, "document export handlers must remain wired together");
+  const exports = app.slice(start, end);
+  assert.doesNotMatch(exports, /clearDirty\(/);
+  assert.doesNotMatch(exports, /clearDraft\(/);
+  assert.match(exports, /TXTダウンロードを開始しました/);
+  assert.match(exports, /Reader文書ダウンロードを開始しました/);
+  assert.match(exports, /\.lyric\.txtダウンロードを開始しました/);
+});
