@@ -1,15 +1,31 @@
 {
-  "version": 2,
+  "version": 3,
   "id": "quality-fixture",
   "title": "検証用",
   "artist": "Quality Gate",
   "description": "厳格テスト用Reader文書",
   "autoTitle": true,
-  "content": { "historical": "./quality-historical.txt", "modern": "./quality-modern.txt", "format": "narou-text" },
+  "content": {
+    "format": "narou-text",
+    "titleSource": "first-line",
+    "variants": [
+      { "id": "original", "label": "原文", "role": "source", "src": "./quality-historical.txt" },
+      { "id": "modernized", "label": "現代表記", "role": "reading", "src": "./quality-modern.txt" }
+    ],
+    "links": [
+      { "id": "chorus", "members": [{ "variantId": "original", "anchor": "chorus" }, { "variantId": "modernized", "anchor": "chorus" }], "presentation": { "style": { "type": "style", "name": "styled" } } }
+    ],
+    "variantOverrides": { "modernized": { "chorus": { "color": { "type": "palette", "index": 2 } } } }
+  },
   "registry": {
-    "palettes": { "0": "#272522", "2": "#b52d2d", "3": "#236ca3" },
-    "styles": { "title": { "color": 2, "outline": "thin", "gradient": "title-gradient" }, "styled": { "color": 3 } },
-    "glyphs": { "hare": { "text": "晴々" } },
+    "banks": {
+      "default": { "slots": { "0": { "color": "#272522", "name": "foreground" }, "2": { "color": "#b52d2d", "name": "chorus-red" }, "3": { "color": "#236ca3", "name": "accent-blue" } } },
+      "night": { "slots": { "0": "#f4f0e8", "1": "#111111", "2": "#54c28a", "3": "#8eb8ff" }, "names": { "2": "night-green" } }
+    },
+    "activeBank": "default",
+    "styles": { "title": { "color": 2, "outline": "thin", "gradient": "title-gradient" }, "styled": { "color": 3 }, "parallel": { "combine": "parallel" }, "conflictA": { "color": 2 }, "conflictB": { "color": 3 } },
+    "glyphs": { "hare": { "type": "text", "text": "晴々" }, "missing-svg": { "type": "svg", "src": "./missing.svg" }, "font-hare": { "type": "font", "font": "nishiki", "glyph": "U+E000" } },
+    "fonts": { "nishiki": { "type": "remote", "url": "https://example.com/nishiki.woff2" } },
     "outlines": { "thin": { "width": 1, "color": 3 } },
     "gradients": { "title-gradient": { "direction": "to-right", "stops": [{ "at": 0, "palette": 2 }, { "at": 1, "palette": 3 }] } }
   },

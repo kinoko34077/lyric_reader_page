@@ -16,7 +16,7 @@ export function boundedHistory(history, index, next, limits = {}) {
   const maxEntries = limits.maxEntries || MAX_HISTORY_ENTRIES;
   const maxBytes = limits.maxBytes || MAX_HISTORY_BYTES;
   let items = [...(history || []).slice(0, (index ?? history?.length - 1) + 1), next];
-  const bytes = value => { try { return JSON.stringify(value).length; } catch { return Number.MAX_SAFE_INTEGER; } };
+  const bytes = value => { try { return new TextEncoder().encode(JSON.stringify(value)).byteLength; } catch { return Number.MAX_SAFE_INTEGER; } };
   if (bytes(next) > maxBytes) return { history: [next], index: 0 };
   while (items.length > maxEntries || bytes(items) > maxBytes) items.shift();
   return { history: items, index: items.length - 1 };
@@ -37,6 +37,7 @@ export function documentPayload(data, title, annotations = [], activeVariant = n
     links: clone(normalized.links),
     variantOverrides: clone(normalized.variantOverrides),
     metadata: clone(normalized.metadata),
+    sourceMetadata: clone(data?.sourceMetadata || {}),
     sourceIdentity: String(data?.sourceIdentity || ""),
     titleSource: data?.titleSource || "first-line",
     manifest: clone(data?.manifest || {}),

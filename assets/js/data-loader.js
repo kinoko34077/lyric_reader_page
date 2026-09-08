@@ -1,4 +1,4 @@
-import { MAX_MANIFEST_JSON_BYTES, MAX_MANIFEST_JSON_CHARS, MAX_READER_DOCUMENT_JSON_BYTES, MAX_READER_DOCUMENT_JSON_CHARS, MAX_SOURCE_BYTES, MAX_SOURCE_CHARS } from "./config.js?v=20260908-016";
+import { MAX_MANIFEST_JSON_BYTES, MAX_MANIFEST_JSON_CHARS, MAX_READER_DOCUMENT_JSON_BYTES, MAX_READER_DOCUMENT_JSON_CHARS, MAX_SOURCE_BYTES, MAX_SOURCE_CHARS } from "./config.js?v=20260908-019";
 import { normalizeActiveVariantId } from "./document-model.js";
 
 const allowedUrl = (value, base = location.href) => {
@@ -13,7 +13,7 @@ export function parseJsonText(text, kind = "manifest") {
   const maxChars = documentKind ? MAX_READER_DOCUMENT_JSON_CHARS : MAX_MANIFEST_JSON_CHARS;
   const maxBytes = documentKind ? MAX_READER_DOCUMENT_JSON_BYTES : MAX_MANIFEST_JSON_BYTES;
   if (text.length > maxChars || new TextEncoder().encode(text).byteLength > maxBytes) throw new Error("JSON文書が大きすぎます。");
-  try { return JSON.parse(text); } catch { throw new Error("JSON文書の形式が不正です。"); }
+  try { return JSON.parse(text.replace(/^\uFEFF/, "")); } catch { throw new Error("JSON文書の形式が不正です。"); }
 }
 
 export function validateSourceText(text) {
@@ -29,7 +29,7 @@ export function isReaderJsonFile(fileName = "", mimeType = "", text = "") {
   if (/\.txt$/i.test(String(fileName))) return false;
   if (/\.json$/i.test(String(fileName)) || /^(application\/json|application\/.*\+json)$/i.test(String(mimeType))) return true;
   if (!String(fileName) && !String(mimeType)) {
-    try { JSON.parse(String(text)); return true; } catch { return false; }
+    try { JSON.parse(String(text).replace(/^\uFEFF/, "")); return true; } catch { return false; }
   }
   return false;
 }
@@ -38,11 +38,15 @@ async function loadManifestVariants(manifest, base) {
   const content = manifest.content || manifest.lyrics || {};
   if (Array.isArray(content.variants) && content.variants.length) {
     const variants = [];
+    const seen = new Set();
     for (const [index, raw] of content.variants.entries()) {
       if (!raw || typeof raw !== "object") throw new Error("ManifestのVariant定義が不正です。");
       const id = String(raw.id || `variant-${String.fromCharCode(65 + index)}`);
-      const source = typeof raw.text === "string" ? { text: validateSourceText(raw.text), url: "manifest:" } : await fetchText(raw.src || raw.url || raw.source, base);
-      variants.push({ id, label: String(raw.label || raw.name || id), role: raw.role == null ? "" : String(raw.role), source });
+      if (!id || seen.has(id)) throw new Error(`ManifestのVariant IDが重複しています: ${id}`);
+      seen.add(id);
+      const inline = typeof raw.text === "string" ? raw.text : raw.source && typeof raw.source === "object" && typeof raw.source.text === "string" ? raw.source.text : null;
+      const source = inline !== null ? { text: validateSourceText(inline), url: "manifest:" } : await fetchText(raw.src || raw.url || (typeof raw.source === "string" ? raw.source : ""), base);
+      variants.push({ id, label: String(raw.label || raw.name || id), role: raw.role == null ? "" : String(raw.role), source, links: Array.isArray(raw.links) ? raw.links : [], presentation: raw.presentation && typeof raw.presentation === "object" ? raw.presentation : {}, overrides: raw.overrides && typeof raw.overrides === "object" ? raw.overrides : {} });
     }
     return variants;
   }
@@ -52,6 +56,21 @@ async function loadManifestVariants(manifest, base) {
   const variants = [{ id: "historical", label: "歴史的仮名遣", role: "historical", source: first }];
   if (content.modern) variants.push({ id: "modern", label: "現代仮名", role: "modern", source: await fetchText(content.modern, base) });
   return variants;
+}
+
+function manifestDocumentFields(manifest, variants, activeVariantId) {
+  const content = manifest.content || manifest.lyrics || {};
+  const manifestMetadata = manifest.sourceMetadata && typeof manifest.sourceMetadata === "object" && !Array.isArray(manifest.sourceMetadata) ? manifest.sourceMetadata : null;
+  const contentMetadata = content.sourceMetadata && typeof content.sourceMetadata === "object" && !Array.isArray(content.sourceMetadata) ? content.sourceMetadata : null;
+  return {
+    manifest,
+    variants,
+    activeVariantId,
+    links: Array.isArray(content.links) ? content.links : [],
+    variantOverrides: content.variantOverrides && typeof content.variantOverrides === "object" ? content.variantOverrides : {},
+    titleSource: content.titleSource || manifest.titleSource || "first-line",
+    sourceMetadata: manifestMetadata && Object.keys(manifestMetadata).length ? manifestMetadata : (contentMetadata || manifestMetadata || {})
+  };
 }
 
 export async function fetchText(resource, base) {
@@ -74,16 +93,16 @@ export async function loadInput(hash = location.hash) {
     if (!response.ok) throw new Error(`Manifestを取得できませんでした (${response.status})。`);
     const manifest = parseJsonText(await response.text());
     const variants = await loadManifestVariants(manifest, manifestUrl.href);
-    return { manifest, variants, activeVariantId: normalizeActiveVariantId(variants, manifest.defaults?.variantId || manifest.activeVariantId), sourceUrl: manifestUrl.href };
+    return { ...manifestDocumentFields(manifest, variants, normalizeActiveVariantId(variants, manifest.defaults?.variantId || manifest.activeVariantId)), sourceUrl: manifestUrl.href };
   }
   if (sourceRef) {
     const source = await fetchText(sourceRef);
     const variants = [{ id: "variant-A", label: "Variant A", role: "", source }];
-    return { manifest: { title: "外部本文", autoTitle: true, content: { format: "narou" } }, variants, activeVariantId: variants[0].id, sourceUrl: source.url };
+    return { manifest: { title: "外部本文", autoTitle: true, content: { format: "narou-text" } }, variants, activeVariantId: variants[0].id, links: [], variantOverrides: {}, titleSource: "first-line", sourceMetadata: {}, sourceUrl: source.url };
   }
   const fallback = await fetchText("data/demo/reader.json");
   const manifestUrl = new URL("data/demo/reader.json", location.href);
   const manifest = parseJsonText(fallback.text);
   const variants = await loadManifestVariants(manifest, manifestUrl.href);
-  return { manifest, variants, activeVariantId: normalizeActiveVariantId(variants, manifest.defaults?.variantId || manifest.activeVariantId), sourceUrl: manifestUrl.href };
+  return { ...manifestDocumentFields(manifest, variants, normalizeActiveVariantId(variants, manifest.defaults?.variantId || manifest.activeVariantId)), sourceUrl: manifestUrl.href };
 }

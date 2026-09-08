@@ -1,178 +1,66 @@
 # Changelog
 
-## [Unreleased] - 2026-09-08
+## [Unreleased] — 2026-09-08
 
-現在の`main`までの変更履歴です。正式なPresentation構文は未確定のため、以下の`[] {}`記法はv0.xの暫定実装です。
+この節は現在の作業ツリーへ実装・検証済みの変更だけを記録します。Quality Gateの判定とBrowser手動証跡は[`docs/QUALITY-GATES.md`](docs/QUALITY-GATES.md)で管理し、未検証項目を完了扱いにしません。
 
-### 境界条件監査の追加修正
+### Source / Document model
 
-- Parserをregex依存から制限付きbalanced scannerへ変更し、Presentation対象内改行、escaped literal、入力時のnested Presentationを扱えるようにした。
-- EditorのPresentation操作は既存属性をflatに統合し、空Span除去・隣接同値Span統合を行う。編集結果が再Parser可能であるRound-trip Closureを回帰テスト化した。
-- Source境界をgrapheme cluster（`Intl.Segmenter`、未対応時はcode point fallback）へ統一。Rubyはsemantic nodeとして不可分に保持し、結合濁点・IVS・ZWJ絵文字を分割しない。
-- ローカルDraft identityへファイル名・サイズ・更新時刻・SHA-256（非対応時は決定的fallback）を組み込み、同名ファイル衝突を回避。localStorage失敗時も編集を継続し、同一文書の別タブ更新は警告する。
-- Historyを最大40件・約8MBへ制限。Manifest JSONとReader Document JSONの上限を分離し、ローカルReader JSONも同一validation pipelineへ通した。
-- Registryのprototype pollution予約名、Registry総量、Glyph fallback長を拒否。Gradientのlogical inline方向、forced-colors時のfallback、Outlineのem基準を明示した。
-- 外部フォントの自動読込を初期OFFにし、設定で明示許可した場合だけ外部リクエストを行う。手動適用はユーザー操作として継続。
-- 外部HTML pasteをplain textへ限定し、Writerのcaret復元、autocorrect / spellcheck抑制、Clipboard API失敗時の選択コピーfallbackを追加。
-- Node 22.14.0を`.nvmrc`とCIで固定し、Build ID整合テストを追加。`Tests green`と`Pages deployed`はCI上の別jobとして維持する。
+- Author Sourceを本文・Title・局所Presentationの正本として維持し、ViewのGlyph・字体変換・Font・Palette・Outline・Gradient・Combine・Writing ModeをSourceへ逆流させない構造に整理。
+- Reader CoreをGeneric Variant Setへ移行。Document-definedなVariant ID / label / role / Source、Semantic Link、共有Presentation、Variant単位Overrideを保持し、旧`historical` / `modern`は入口Migrationへ限定。
+- Title第1行の自動切り分け、BOM、LF / CRLF、空Source、1行Sourceを保持。本文編集時にTitleと本文を連結・欠落させない境界ヘルパーを追加。
+- Reader Document / Draftをversion 3へ統一し、旧versionの明示Migration、将来versionのfail-closed、Source Metadataの保存、Registry / Variant / AnnotationのAtomic復元を実装。
+- `data/demo/reader.json`をGeneric Variant形式へ更新し、品質検証用の長文・Presentation fixtureを追加。
 
-今回のSource serializerは意味的canonicalizeを採用する。属性順や同一Presentationの隣接境界は正規化されるが、Portable TextとPlain Textの文字意味は保持する。未登録Presentationは黙って削除せず、Registry validationまたはParser validationで拒否する。SVG assetは現行v0.xでは受け付けず、Glyphは安全なfallback文字列のみとする。
+### Syntax / Editor / Projection
 
-### 監査後の安定化
+- 既定Surface Syntaxを`[対象:指定]`へ移行。旧`[対象]{指定}`は`narou-legacy`（旧`narou` alias）でのみ扱い、Adapter Routerで形式を分離。
+- Balanced scanner型Parserで複数属性、Nested Presentation、改行跨ぎ、Backslash escape、Ruby共存、未知指定のLiteral保持を実装。
+- max depth / node / attribute / Source lengthを設け、空指定・Scoped Ruby指定の誤用・malformed入力を明示拒否。
+- `edit → serialize → parse`のRound-trip Closureを、通常文字・Ruby・Nested・Multiline・Escape・Grapheme・複数Style・部分範囲で回帰テスト化。
+- Editor範囲操作をIR上で行い、Span split / merge / unwrap、Ruby Base/Readingの部分Presentation、複数Styleを正規化。予約語Registry keyをUIとParserで共通拒否。
+- DOMからAuthor Sourceを復元するEditor projectionをAdapter-aware化し、legacy文書の編集でvNext記法を誤出力しないよう修正。Ruby部分装飾を表示Markerから保持。
+- Portable Text APIはPresentationを除去しつつRuby・Source文字を保持。全文CopyはPortable、標準TXT保存はAuthor Sourceそのものとした。
+- 外部HTML pasteをplain textへ限定し、Caret復元、IME / Undo境界、autocorrect / autocapitalize / spellcheck抑制、Clipboard失敗時のfallbackを維持。
 
-- 監査時点のQuality Gate実行結果：27 tests passed / 0 failed。JS構文検査とUnit/Integration testをCIで実行し、成功時のみPagesをDeployする構成へ変更。
+### Registry / Renderer
 
-- スクロール位置保存・復元の対象を実際の`reader-shell`スクロール領域へ修正。
-- 不正Registryを含むReader JSONを文書状態へ反映する前に検証し、現在文書を保持するよう修正。
-- Rubyの部分選択で読み情報を失わないよう、Rubyを不可分な単位として保持。
-- 5000行の長文、2000件の連続Presentation、Ruby混在Projectionを含む大規模回帰テストを追加。
-- 全文コピーの表示名を実際のPortable Text出力に合わせて修正。
-- タイトルも本文と同じSyntax Adapter / IR / Rendererを通し、タイトルRuby・Glyph・Style・Gradient・Outlineを表示可能化。
-- 通常文字のRendererを1文字1要素からSource text run単位へ変更し、Source mappingの範囲を維持。
-- Adapter Router、JSDoc Typed IR、範囲split / wrap / unwrap処理を追加。交換境界をADRへ記録。
-- Registryをstrict validation化し、Palette Slot編集と選択範囲へのSlot適用をUI上分離。
-- Reader JSONをversion 2へ更新し、version 1とversionなし文書のmigration、将来versionのfail-closedを追加。
-- Registry / ThemeのNamed Fontを読み込み、失敗時は標準フォントへfallback。
+- Palette Slot / Palette Bank / Slot名、必須Slot 0/1、欠損Slotの1 fallback、Sourceからの明示Bank参照を実装。
+- Named Styleの直接指定優先、任意階層継承、循環・深度検出、複数Style Conflict、Style rename transactionを実装。
+- Outlineの相対`em`幅・複数Layer、GradientのRegistry HEX stop・logical direction・Palette 0 fallback・forced-colors fallbackを実装。ColorとGradientの最終優先規則はHOLDのまま。
+- Glyphをtext / SVG / raster image / font glyphのTyped definitionとして検証・解決。複数文字Source、missing asset、未読込Fontでは元Sourceへfallbackし、SVGをinline DOMへ入れない。
+- CombineをStraight / Parallel / Zの3Modeへ拡張し、縦書き・横書きで同じ意味指定をRenderer側で適応。
+- 任意HTML / CSS / Script / Event Handler / 危険protocolを拒否し、Registry総量・Asset数・Asset総量・URL・Style keyを検証。
 
-### Reader基盤
+### State / UX / Delivery
 
-- 外部TXT / JSON / Reader JSONをブラウザ上で読み込む静的Readerを追加。
-- `#m=`による外部Manifest読込と、`#src=`による外部TXT読込に対応。
-- Manifestの相対URLをManifest自身のURL基準で解決。
-- 外部データのHTTP(S)制限、サイズ制限、CORSエラー表示を追加。
-- 任意CSS・HTML・Scriptを外部データから直接適用しない構成に整理。
-- GitHub Pages Actionsによる`main`からの公開に対応。
+- local Draft identityへfilename / size / mtime / SHA-256（非対応時は決定的fallback）を組み込み、同名別ファイルの衝突を低減。
+- localStorage失敗時も編集を継続し、自動復元不可を通知。別TabのDraft更新を検知して現在の編集を優先する警告を表示。
+- Historyを最大件数・概算UTF-8 bytesでbounded化し、Document identity変更時に履歴を初期化。
+- Manifest JSON、Reader Document JSON、Source、Registry、Assetを個別validation pipelineへ分離。Local JSONもRemoteと同じJSON parser / size validationを通す。
+- Header / Footerの自動収納、設定Panelの独立スクロール、半透明Scrollbar、縦横書き時の本文・Title向き同期を維持。
+- 外部Web Fontの自動読込を初期OFFとし、明示許可・失敗時fallback・古いFont requestの上書き防止を実装。
+- Node 22.14.0を`.nvmrc`で固定。CIはsyntax check / testをquality jobで行い、成功時のみPages deploy jobへ進む。Build ID整合テストを維持。
 
-### Source / Ruby / Projection
+### Verification
 
-- なろう・青空文庫系Ruby記法を解析・表示。
-- `｜親文字《よみ》`と漢字連続部の暗黙Rubyに対応。
-- Unicodeの漢字プロパティを利用し、CJK互換漢字を含むRubyを処理。
-- Source上の原文を正本として保持し、表示用の旧字→新字体変換と分離。
-- 表示DOMからの原文記法復元と全文コピーを実装。
-- Portable TextではPresentation指定を除去し、本文・改行・タイトル・Rubyを保持。
-- Plain TextではRuby記法も除去し、本文文字列のみを生成。
-- タイトル第1行の自動切り分け、BOM、CRLF / LFの保持に対応。
-- タイトル・本文編集時にSourceの改行や本文境界を壊さないよう修正。
+- `node --check`で`assets/js`のJavaScriptを検査。
+- `node --test tests/*.test.mjs`でUnit / Property / Integration / Regressionを実行。
+- `git diff --check`でWhitespaceを検査。
+- ChromiumでGeneric Variant、Registry表示、Style Conflict、Glyph fallback、Combine、Settings scroll、Writer実選択、縦横切替を手動確認。WebKit / iOS / Android実機、IME、forced-colors、Clipboard権限、外部CORSはQuality Gateへ未検証として記録。
 
-### 表示設定
+### HOLD（未確定・実装側で確定しない）
 
-- 横書き / 縦書き切替。
-- 歴史的仮名遣 / 現代仮名切替。
-- 原字 / 新字体切替。
-- Ruby表示切替。
-- 文字サイズ変更。
-- 背景色、本文文字色、Ruby色の変更。
-- Ruby色の有効 / 無効チェックボックスを追加。
-- 明朝、ゴシック、等幅、游明朝、Noto Serif JP、Noto Sans JPを選択可能化。
-- CORS対応の外部Webフォント読込に対応。
-- 読込不能なフォントはFallbackへ戻す設計。
-- 作品既定値とユーザー設定を分離し、「作品既定に戻す」を追加。
-- 設定パネルのスクロール、Escape閉じ、外側クリック閉じ、フォーカス改善。
-- 半透明系のスクロールバーと読書領域のスクロール位置維持。
-- 横書き / 縦書きでスクロール方向を調整。
-- 読書中のヘッダー / フッター自動収納と画面端での再表示。
-- タイトルを本文と同じスクロール領域に含め、常時表示を解除。
-- モバイル幅でのヘッダー折返し・設定パネル表示を調整。
+- `HOLD-B7`: Serializerのlexical losslessとsemantic canonicalの最終選択。
+- `HOLD-GRADIENT` / `HOLD-F6`: Gradientの最終意味および通常Colorとの競合。
+- `HOLD-G2-detail`: External SVGのOrigin / CORS詳細。
+- `HOLD-G5`: GlyphのScreen Reader Accessible Name。
+- `HOLD-STYLE-3PLUS`: 3つ以上のStyle競合の具体的Visual分割。
+- Title / Metadata / Variant Linkの表面Markupおよび元質問票I〜Sの未回答事項。
 
-### Writer / Viewer
+## Historical implementation record
 
-- 同一ページ内でViewerとWriterを切替。
-- `?mode=writer`で編集モードを直接開く。
-- Writerでタイトル・本文を直接編集。
-- Viewerでは編集操作を非表示化。
-- モード切替時にSource、Variant、表示設定、Draft、文書識別子を保持。
-- 本文・タイトルの未保存変更を検知。
-- ファイル読込、D&D、URL読込、Manifest切替、再読込時の未保存Guard。
-- `beforeunload`によるページ離脱警告。
-- TXT保存とReader JSON保存でDirty状態を分離。
-- TXT / Reader JSONの保存、Source URLコピー、共有リンクコピー。
-- TXT / Reader JSONの画面全体ドラッグ＆ドロップ読込。
-- 同一ファイルの再選択にも対応。
-
-### Draft / History
-
-- 文書識別子ごとのDraft保存・復元・破棄（Variant、Registry、metadataを含むv2形式）。
-- Draft復元後も未保存状態を維持。
-- historical / modern Variantを区別したDraft・History。
-- 文書切替時にHistoryを必ず初期化し、前文書のsnapshotを新文書へ適用しない構成。
-- Undo / Redoで本文、Variant、タイトル、Registryを復元。
-- IME・通常入力欄ではReader独自Undoを横取りしない。
-
-### Reader JSON / Registry
-
-- historical / modern両VariantをReader JSONへ保存。
-- Metadata、Theme、Default View、Link、Registry領域をReader JSONへ保存。
-- Palette / Style / Glyph / Font / Gradient / Outline Registryを検証し、Styleから参照して表示。
-- Palette、Style、Glyphの許可済みデータのみを検証・正規化。
-- 不正な色、名前、Presentation属性を拒否。
-- 任意HTML、Script、CSSを実行・適用しない。
-- 登録済みPaletteを文字色へ解決。
-- 登録済みGlyphを表示上の文字へ差し替え。
-- 未登録GlyphはSource文字列へFallback。
-
-### 暫定Presentation記法
-
-以下をSyntax AdapterでTyped IRへ変換します。
-
-```text
-[文字]{c=2}
-[文字]{style=shout}
-[文字]{glyph=hare-special}
-[12]{combine}
-[如何《どう》]{style=title,c=2}
-```
-
-- `c=N`：Palette参照。
-- `style=X`：Named Style参照。
-- `glyph=X`：Named Glyph参照。
-- `combine`：組文字指定。
-- Presentation付きSourceの再シリアライズ。
-- Style / Glyph / CombineのWriter操作。
-- 選択範囲の着色・装飾解除をAuthor Source内Markupへ移行。
-- 既存のRange Annotationは互換的に読み込めるが、現在のWriter操作ではSource内Markupを優先。
-
-### Syntax Adapter / 内部構造
-
-- `syntax-adapter.js`を追加し、Parser固有記法をReader Coreから分離。
-- `parse`、`serialize`、`toPortableText`、`toPlainText`、`validate`の契約を追加。
-- `registry.js`を追加し、Registry検証とPresentation解決を分離。
-- Reader表示、Copy Projection、Editor操作が直接Ruby Parserへ依存しない構成へ移行。
-- 将来のParser・記法差替えをAdapter内に限定できる土台を追加。
-
-### テスト・検証
-
-- Node標準テストランナーによる回帰テストを追加。
-- Parser、Ruby互換、Sourceラウンドトリップを検証。
-- Portable Text / Plain TextのProjectionを検証。
-- 不正Presentation属性の拒否を検証。
-- Palette / Style / Glyph解決とGlyph fallbackを検証。
-- Registry正規化と履歴復元用のDeep Cloneを検証。
-- Presentation適用・解除の範囲処理を検証。
-- JavaScript各モジュールの`node --check`を実行。
-- `git diff --check`を実行。
-
-実行コマンド：
-
-```text
-node --test tests/*.test.mjs
-```
-
-直近の結果：27 tests passed / 0 failed。
-
-## 既知の未完了項目
-
-- 実機のMobile Safari / Chromeでの最終統合検証。
-- 実際のReader JSONにRegistry定義を含めたブラウザ表示テスト。
-- Palette / Style / Glyph Registry編集UIの本格化。
-- GlyphのSVG・Font asset解決と安全な表示。
-- Nishiki-tekiのライセンス確認・self-host対応。
-- Range Annotationの互換読込を含む完全廃止。
-- Parser候補比較と正式Syntax仕様の確定（暫定Adapterの境界と理由はADRで固定済み）。
-- JSDoc IR型の導入は完了。CIでの静的checkJs実行とSchema validator導入は未完了。
-- `app.js`のDocument State / Editor / I/O / View Preference分割。
-
-## 主なコミット
+以下は過去の実装単位を示す履歴です。現在の要件・検証状態は上記UnreleasedとQuality Gate文書を参照してください。
 
 | Commit | 内容 |
 | --- | --- |
@@ -191,17 +79,5 @@ node --test tests/*.test.mjs
 | `7ddbe7d` | Registry検証・解決 |
 | `13a4546` | Source中心Presentation編集 |
 | `fa4ee80` | Style / Glyph / Combine編集操作 |
-| `4ad3d8f` | 暫定Presentation記法の文書化 |
 | `1350722` | Source移行安定化・大規模回帰テスト |
-# Changelog
-
-## Unreleased — Gate 1 semantic document model
-
-- 添付の確定要件・監査仕様を基準仕様として追跡する`docs/REQUIREMENTS-MATRIX.md`を追加。
-- Author Source優先のMetadata/Title意味モデルを追加。第1行Titleと明示複数行Titleの表現を分離。
-- `historical` / `modern`固定をReader Coreから外し、Generic Variant Set・文書定義label・active Variantを導入。
-- Variant LinkをID/anchorで保持し、共有PresentationとVariant単位Overrideを追加。文字offsetを対応関係の正本にしない。
-- Reader Document/Draftをversion 3へ移行。旧versionは明示変換し、未知versionはfail-closed。
-- Gate 0/1の受入条件、未確定HOLD、次Gateの未実装範囲を記録。
-
-> この段階ではGate 2以降のSyntax vNext、Ruby部分編集、Palette Bank、Style継承、Glyph/Combine等を完了扱いにしていない。
+| `e7cd61e` | Generic semantic document model |

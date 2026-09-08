@@ -1,60 +1,83 @@
 # 歌詞リーダー
 
-外部のTXT / JSONをブラウザから直接読み込んで表示する、静的な歌詞Readerです。Reader側は歌詞本文を保存しません。
+外部のTXT / Reader JSONをブラウザから読み込み、歌詞・ルビ・各種Presentationを表示する静的Readerです。Writerでは本文を直接編集できます。ローカル本文はサーバーへ送信・保存しません。
 
-詳細な実装履歴は[`CHANGELOG.md`](./CHANGELOG.md)を参照してください。
+最新の確定要件は[`docs/LYRIC_READER_REQUIREMENTS.md`](docs/LYRIC_READER_REQUIREMENTS.md)、実装と検証の対応表は[`docs/REQUIREMENTS-MATRIX.md`](docs/REQUIREMENTS-MATRIX.md)、現在のQuality Gate証跡は[`docs/QUALITY-GATES.md`](docs/QUALITY-GATES.md)を参照してください。
 
 ## 使い方
 
 - デモ: `index.html`
-- 外部manifest: `index.html#m=https%3A%2F%2Fexample.com%2Freader.json`
+- 外部Manifest: `index.html#m=https%3A%2F%2Fexample.com%2Freader.json`
 - 外部TXT: `index.html#src=https%3A%2F%2Fexample.com%2Flyrics.txt`
+- Writer: `index.html?mode=writer`
+- ローカルTXT / JSON: 「開く」または画面全体へのドラッグ＆ドロップ
 
-manifest内の相対URLはmanifest自身のURLを基準に解決します。外部サーバーはブラウザからの読み取りを許可するCORSヘッダーを返す必要があります。
+Manifest内の相対URLはManifest自身のURLを基準に解決します。外部サーバーはブラウザから読めるCORSヘッダーを返す必要があります。
 
-## ディレクトリ
+## Author SourceとSyntax Adapter
 
-- `assets/js/data-loader.js`: 外部データの取得とサイズ制限
-- `assets/js/ruby-parser.js`: なろう式ルビのAST化
-- `assets/js/transformer.js`: 旧字体から新字体への変換
-- `assets/js/reader-view.js`: DOM描画と原文記法への復元
-- `assets/js/syntax-adapter.js`: Author Sourceの構文とReader Coreの境界。現行は青空文庫系Ruby Adapterを提供し、Portable Text / Plain Text / validationの契約を分離します。
-- `assets/js/registry.js`: Palette / Style / Glyph等の許可済みRegistryを検証・解決します。外部定義から任意CSSやHTMLは受け付けず、未登録Glyphは原文へフォールバックします。
-
-Writerでは、Author Sourceを正本として編集します。表面SyntaxはSyntax Adapterの責務であり、Reader Coreへ散らしません。現在の旧v0.x記法はGate 2の移行完了までは現行Adapterで読めますが、最新仕様の正本Syntaxではありません。
+Author Sourceを本文・Title・Ruby・局所Presentationの正本として扱います。Viewの字体変換、Glyph、Font、Palette、Outline、Gradient、Combine、縦横書きはSourceへ逆流しません。
 
 ```text
-[文字]{c=2}
-[文字]{style=shout}
-[文字]{glyph=hare-special}
-[12]{combine}
-[如何《どう》]{style=title,c=2}
+[文字:c=2]
+[文字:style=shout]
+[晴:glyph=hare-special]
+[12:combine=parallel]
+[如何《どう》:c=2,style=title]
+[如何《どう》:base-range=0-1,base-c=3]
 ```
 
-全文CopyはPresentationを除去し、本文とRubyだけをPortable Textとして出力します。WriterのPalette操作は「Slot色の更新」と「選択範囲へSlotを適用」を分離しています。回帰テストは`node --test tests/*.test.mjs`で実行できます。
-- `assets/js/app.js`: UI状態と各責務の接続
-- `data/demo/`: ローカルで動作確認できるmanifestとサンプル本文
+既定のvNext Adapterは`[対象:指定]`形式です。旧`[対象]{指定}`形式は`content.format`を`narou-legacy`（旧`narou` alias）と明示した文書だけで読み込みます。Parser、Serializer、Portable Text、Plain Text、Editor操作は[`assets/js/syntax-adapter.js`](assets/js/syntax-adapter.js)の交換可能な境界に閉じ込めています。
 
-表示設定では、横書き / 縦書き、文書定義Variant、旧字 / 新字体、ルビ、文字サイズ、背景色、文字色、標準フォントを切り替えられます。「作品既定に戻す」でmanifestの既定表示へ戻せます。ReaderはAuthor Sourceを正本として保持し、閲覧モードと`?mode=writer`の編集モードを同一ページ内で切り替えます。TXT / Reader JSONの読込、本文の直接編集、Portable Textの全文コピー、TXT / Reader JSON保存、Draft復元に対応します。Reader Document/Draftはversion 3のGeneric Variantモデルを使用し、旧versionは明示移行、未知の将来versionは拒否します。SourceとJSON Metadataが競合した場合はSourceを優先します。manifestの`theme`で初期テーマを指定でき、外部Webフォントは初期状態では自動読込せず、表示設定の明示許可後に読み込みます。Readerは任意CSS/HTML/Scriptを読み込みません。
+Backslash U+005Cで`[ ] : { } ｜ 《》`等をescapeできます。Presentationは複数属性、Nested、改行跨ぎ、RubyのBase/Reading個別範囲に対応し、Writerが生成したSourceは同じAdapterで再読込できることを検証します。
 
-ローカルのTXT / Reader JSONは画面全体へドロップするか、ヘッダーの「開く」からブラウザ内だけで読み込めます。編集モードではタイトルと本文をその場で編集でき、入力元の原文記法を正本として保持します。ローカル本文はサーバーへ送信・保存しません。
+## Title・Metadata・Variant
 
-「Reader文書のダウンロード開始」では、本文・メタデータ・テーマ・表示状態・リンクを`reader.reader.json`としてダウンロード開始します。これはOSへの保存完了ではなく、ブラウザへダウンロードを開始したcheckpointです。同ファイルは「開く」からブラウザ内へ復元できます。
+通常は各VariantのAuthor Source第1行をTitleとして表示し、残りを本文として表示します。BOM、CRLF、空行、1行だけのSourceも境界規則に従います。明示TitleやArtist/Credit/Noteの表面Markupは未確定ですが、IRと同期用`sourceMetadata`はSource優先で扱います。
 
-本番公開時は、`index.html` のCSS / JSクエリと `assets/js/config.js`・`assets/js/data-loader.js` のビルドIDを揃えて更新してください。
+Reader Coreは`historical` / `modern`へ固定せず、文書定義のGeneric Variant Setを保持します。旧形式は入口でGeneric Variantへ移行します。VariantはID・label・role・独立Sourceを持ち、Semantic Linkの共有PresentationとVariant単位Overrideを保持できます。対応関係の正本はLink ID/anchorであり、offsetではありません。
 
-## 品質境界とサイズ仕様
+## 表示・編集
 
-- Author SourceはSyntax Adapterを介してTyped IRへ変換します。旧`[] {}`表記の扱いと、次期`[対象:指定]`表記への移行はGate 2で行います。SerializerのLexical lossless/canonical方針は`HOLD-B7`として未確定です。
-- Writer操作後のSourceはParserへ再読込できることを必須とします。Nested Presentation、Ruby部分操作、Escapeの詳細は各Gateで閉じます。Unicode境界はgraphemeを基準に扱います。
-- Sourceは最大500,000文字 / 2MB、Manifest JSONは最大200,000文字 / 512KB、Reader Document JSONは最大2,000,000文字 / 4.5MBです。historicalとmodernは個別Source上限で検証します。
-- Draftは自動復元用の一時Recoveryであり永続保存を保証しません。localStorage失敗時も本文編集は継続し、同一文書を別タブで更新した場合はlast-writer-winsの可能性を警告します。Historyは最大40件・約8MBです。
-- VariantはGeneric Variant Setとして保持します。Semantic Linkには共有Presentationを設定でき、Variant単位のOverrideで上書きできます。保存操作の表示はダウンロード開始を意味し、ディスク保存完了を保証しません。
+表示設定では横書き / 縦書き、Variant、字体、ルビ、文字サイズ、背景色、文字色、フォント、Palette Bankを切り替えられます。Header/Footerは読書中に自動収納され、設定Panelは独立してスクロールします。縦横切替時もTitle・Metadata・本文の向きが同期します。
 
-最新の要件・Gate対応表は[`docs/REQUIREMENTS-MATRIX.md`](docs/REQUIREMENTS-MATRIX.md)、設計判断は[`docs/adr/0002-generic-semantic-document-model.md`](docs/adr/0002-generic-semantic-document-model.md)を参照してください。
+WriterではTitle・本文を直接編集し、外部HTML pasteはplain textとして扱います。EditorのCaret、IME、Undo、装飾範囲、Grapheme境界を保護し、画面上のGlyphや新字体をSourceへ書き戻しません。Rubyの通常PresentationはBase/Readingへ同じ既定を適用し、個別選択時だけ部分Overrideを保存します。Reader全体のRuby専用色設定はありません。
 
-回帰テストは`node --test tests/*.test.mjs`、構文検査はCIの`node --check`で実行します。Browser / Mobile / IME / forced-colors / Clipboard権限は別途実機確認するGateであり、Unit test greenだけでは完了扱いにしません。
+全文CopyはPortable Text（Presentation除去・Ruby保持）です。標準TXTダウンロードはPresentation入りAuthor Sourceそのものです。Reader文書ダウンロードはOSへの保存完了ではなく、ブラウザがダウンロードを開始したcheckpointです。Portable Text専用の保存UIは置いていません。
 
-## GitHub Pages
+## Registry
 
-`main` へpushすると `.github/workflows/deploy-pages.yml` が静的サイトをGitHub Pagesへ公開します。GitHubリポジトリの Settings → Pages で、Sourceを「GitHub Actions」に設定してください。
+RegistryはPalette / Palette Bank / Named Style / Outline / Gradient / Glyph / Fontを型付き・許可リスト付きで検証します。Palette 0/1は常在し、欠落時は`#ffffff` / `#000000`、2以上の欠損SlotはSlot 1へFallbackします。Styleは継承・cycle検出・複数指定Conflict Warningに対応し、Direct PropertyがStyleより優先されます。Outlineは相対幅と複数Layer、CombineはStraight / Parallel / Zを扱います。
+
+Glyphはtext、SVG、raster image、font glyphを受け付け、未登録・未読込・Asset失敗時は元Source文字列へFallbackします。外部Fontの自動読込は初期OFFです。SVGはinline DOMへ挿入せずImage contextで表示し、任意HTML / CSS / Script / Event Handler / 危険protocolは受け付けません。
+
+## State・サイズ・互換性
+
+Reader Document / Draftはversion 3です。既知の旧versionは明示Migrationし、未知versionは拒否します。Draftは永続保存ではなくRecovery用途です。localStorage失敗時も編集は継続し、同一文書の別Tab更新は警告します。Historyは最大40件・概算8MBで、別文書へ漏れません。
+
+現行Runtimeの上限はSource 500,000 code units / 2MB、Manifest JSON 200,000 code units / 512KB、Reader Document JSON 2,000,000 code units / 4.5MBです。これらは本Repositoryの安全上限であり、Source、Manifest、Reader Document、Registry、Assetを同一上限で扱いません。
+
+## 開発・検証
+
+```text
+node --check assets/js/app.js
+node --test tests/*.test.mjs
+git diff --check
+```
+
+CIでは`.nvmrc`のNode 22.14.0を使い、JavaScript構文検査と全Testが成功した場合だけPages Deployへ進みます。Unit / IntegrationのPASSとPages公開、Chromium以外の実機・IME・forced-colors・Clipboard権限検証は別状態として記録します。
+
+## 未確定事項
+
+Serializerのlexical lossless方針、Gradientの最終意味とColor競合、External SVGのOrigin/CORS詳細、GlyphのAccessible Name、3つ以上のStyle競合Visual規則、Title/Metadata/Linkの表面MarkupはHOLDです。これらを推測で仕様化せず、確定済みの安全性・Source保存・Projection・State isolationの実装を優先します。
+
+## 主なディレクトリ
+
+- `assets/js/syntax-adapter.js`: Surface SyntaxとTyped IR、Editor範囲操作、Projection
+- `assets/js/document-model.js`: Generic Variant、Title、Metadata、Semantic Link
+- `assets/js/document-state.js`: Draft、History、Document identity、Migration
+- `assets/js/registry.js`: Palette / Style / Assetの検証・解決
+- `assets/js/reader-view.js`: Safe Renderer、Ruby、Glyph、Combine、Source mapping
+- `assets/js/editor-source.js`: Renderer DOMからAuthor SourceへのAdapter-aware projection
+- `assets/js/app.js`: UIイベント、I/O、State境界の接続
+- `tests/`: Unit、Property/Round-trip、Integration、Regression fixture

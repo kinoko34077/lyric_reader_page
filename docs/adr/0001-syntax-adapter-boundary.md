@@ -4,6 +4,10 @@
 
 Accepted for v0.x.
 
+This ADR is retained as the historical boundary decision. The current vNext
+surface and presentation rules are specified by ADR 0003; the old `[] {}`
+syntax described below is no longer the default Adapter surface.
+
 ## Decision
 
 Author Source is parsed by a replaceable Adapter before it reaches Reader Core. The current `narou-text` Adapter owns the provisional `[] {}` Presentation mapper and the existing Narou/Aozora-style Ruby parser. Reader Core consumes only the typed IR (`document`, `text`, `ruby`, `span`, and Presentation references).

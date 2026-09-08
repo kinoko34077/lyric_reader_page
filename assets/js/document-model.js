@@ -113,6 +113,7 @@ export function normalizeDocumentData(data = {}) {
     ...data,
     variants,
     activeVariantId,
+    titleSource: data.titleSource || "first-line",
     links: Array.isArray(data.links) ? clone(data.links) : [],
     variantOverrides: clone(data.variantOverrides || {}) || {},
     metadata: resolveMetadata(data.sourceMetadata, data.metadata || data.manifest?.meta || {})
@@ -125,7 +126,7 @@ export function migrateLegacyContent(content = {}) {
     source: typeof content.text === "string" ? { text: content.text, url: "reader:" } : (typeof content.content === "string" ? { text: content.content, url: "reader:" } : undefined),
     historical: typeof content.historical === "string" ? { text: content.historical, url: "reader:" } : content.historical,
     modern: typeof content.modern === "string" ? { text: content.modern, url: "reader:" } : content.modern,
-    modernAvailable: typeof content.modern === "string"
+    modernAvailable: content.modern != null
   });
   return { variants, activeVariantId: normalizeActiveVariantId(variants, content.activeVariantId || content.activeVariant), links: clone(content.links || []) || [], variantOverrides: clone(content.variantOverrides || {}) || {} };
 }

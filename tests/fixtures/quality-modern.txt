@@ -1,3 +1,8 @@
-[晴々]{style=title}
-[ABCDE]{style=styled}
+[晴々:style=title]
+[ABCDE:style=styled]
 通常本文
+[12:combine=parallel]
+[Z字:combine=z]
+[失敗:glyph=missing-svg]
+[外字:glyph=font-hare]
+[多重:style=conflictA,style=conflictB]

@@ -13,6 +13,7 @@ test("generic Variant Set preserves document-defined labels and selects by id", 
   assert.deepEqual(data.variants.map(variant => variant.label), ["原文", "現代表記"]);
   assert.equal(activeVariant(data).source.text, "題\n新しい本文");
   assert.equal(normalizeActiveVariantId(data.variants, "missing"), "original");
+  assert.equal(data.titleSource, "first-line");
 });
 
 test("legacy historical/modern data is only an input migration to generic variants", () => {

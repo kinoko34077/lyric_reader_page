@@ -5,7 +5,7 @@ import { parseSource, serializeSource, toPlainText, toPortableText } from "../as
 test("large mixed source preserves Author Source and projections", () => {
   const lines = Array.from({ length: 5000 }, (_, index) => {
     const ruby = `如何《どう${index % 10}》`;
-    const presentation = index % 4 === 0 ? `[${ruby}]{c=2,style=shout}` : index % 4 === 1 ? `[${index % 100}]{combine}` : index % 4 === 2 ? `[晴]{glyph=hare-special}` : ruby;
+    const presentation = index % 4 === 0 ? `[${ruby}:c=2,style=shout]` : index % 4 === 1 ? `[${index % 100}:combine]` : index % 4 === 2 ? `[晴:glyph=hare-special]` : ruby;
     return `${index}: ${presentation} 通常文`;
   });
   const source = lines.join("\n");
@@ -13,21 +13,21 @@ test("large mixed source preserves Author Source and projections", () => {
   assert.equal(serializeSource(document), source);
   const portable = toPortableText(document);
   const plain = toPlainText(document);
-  assert.equal(portable.includes("{c="), false);
-  assert.equal(portable.includes("{style="), false);
-  assert.equal(portable.includes("{combine}"), false);
-  assert.equal(portable.includes("{glyph="), false);
+  assert.equal(portable.includes(":c="), false);
+  assert.equal(portable.includes(":style="), false);
+  assert.equal(portable.includes(":combine"), false);
+  assert.equal(portable.includes(":glyph="), false);
   assert.equal((portable.match(/《/g) || []).length, 2500);
   assert.equal(plain.includes("《"), false);
   assert.equal(plain.split("\n").length, 5000);
 });
 
 test("many adjacent presentation nodes normalize without losing source", () => {
-  const source = Array.from({ length: 2000 }, (_, index) => `[${index % 10}]{combine}`).join("");
+  const source = Array.from({ length: 2000 }, (_, index) => `[${index % 10}:combine]`).join("");
   const document = parseSource(source);
   assert.equal(document.nodes.length, 1);
-  assert.equal(serializeSource(document), `[${Array.from({ length: 2000 }, (_, index) => index % 10).join("") }]{combine}`);
+  assert.equal(serializeSource(document), `[${Array.from({ length: 2000 }, (_, index) => index % 10).join("") }:combine]`);
   const portable = toPortableText(document);
   assert.equal(portable.length, 2000);
-  assert.equal(portable, source.replace(/\[(\d)\]\{combine\}/g, "$1"));
+  assert.equal(portable, source.replace(/\[(\d)\:combine\]/g, "$1"));
 });

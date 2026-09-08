@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted for the Gate 1 migration. Supersedes the historical/modern assumptions in ADR 0001 where they conflict; ADR 0001 remains a historical record of the original Adapter boundary.
+Accepted. Supersedes the historical/modern assumptions in ADR 0001 where they conflict; ADR 0001 remains a historical record of the original Adapter boundary. Surface Presentation decisions are further specified by ADR 0003.
 
 ## Decision
 
@@ -18,5 +18,5 @@ Reader Document and Draft payloads use model version 3. Versions 1 and 2 migrate
 
 - The current Variant selector is populated from document-defined labels.
 - Existing two-Variant documents remain readable through a boundary migration.
-- Surface Syntax remains an Adapter concern and is intentionally unchanged until Gate 2.
+- Surface Syntax remains an Adapter concern. The vNext Adapter is now implemented separately from this model; explicit title/metadata/link surface spellings remain undecided.
 - Explicit title markup is represented in the semantic model, but its surface spelling remains undecided.

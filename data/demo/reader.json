@@ -1,10 +1,17 @@
 {
-  "version": 1,
+  "version": 3,
   "id": "demo",
   "title": "晴々撥条",
   "artist": "KiNoTch.",
   "description": "外部manifestから読み込んだデモ本文です。",
-  "content": { "historical": "./lyrics-historical.txt", "modern": "./lyrics-modern.txt", "format": "narou" },
-  "defaults": { "kana": "historical", "kanji": "original", "ruby": true, "writingMode": "horizontal" },
+  "content": {
+    "format": "narou-text",
+    "titleSource": "first-line",
+    "variants": [
+      { "id": "original", "label": "原文", "role": "source", "src": "./lyrics-historical.txt" },
+      { "id": "modernized", "label": "現代表記", "role": "reading", "src": "./lyrics-modern.txt" }
+    ]
+  },
+  "defaults": { "variantId": "original", "kanji": "original", "ruby": true, "writingMode": "horizontal" },
   "links": { "YouTube": "https://www.youtube.com/", "ニコニコ": "https://www.nicovideo.jp/" }
 }

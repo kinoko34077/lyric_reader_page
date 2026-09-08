@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="description" content="外部の歌詞テキストを読むための静的リーダー">
     <title>歌詞リーダー</title>
-    <link rel="stylesheet" href="assets/css/reader.css?v=20260908-016">
+    <link rel="stylesheet" href="assets/css/reader.css?v=20260908-019">
   </head>
   <body>
     <header class="site-header" id="site-header">
@@ -43,7 +43,6 @@
           <legend>配色</legend>
           <label><span>背景色</span><input id="background-color" type="color" value="#f5f0e6" aria-label="背景色"></label>
           <label><span>文字色</span><input id="text-color" type="color" value="#272522" aria-label="文字色"></label>
-          <label class="color-check-row"><input id="ruby-color-toggle" type="checkbox" checked><span>ルビ色</span><input id="ruby-color" type="color" value="#716b60" aria-label="ルビ色"></label>
         </fieldset>
         <fieldset>
           <legend>フォント</legend>
@@ -63,7 +62,7 @@
         </fieldset>
         <fieldset>
           <legend>文書操作</legend>
-          <button class="action-button" id="copy-all-button" type="button">全文をPortable Textでコピー</button>
+          <button class="action-button" id="copy-all-button" type="button">本文をコピー</button>
           <button class="action-button" id="download-button" type="button">本文TXTのダウンロード開始</button>
           <button class="action-button" id="download-reader-button" type="button">Reader文書のダウンロード開始</button>
           <button class="action-button" id="share-button" type="button">共有リンクをコピー</button>
@@ -76,6 +75,7 @@
           <legend>編集操作</legend>
           <button class="action-button" id="undo-button" type="button" disabled>元に戻す</button>
           <button class="action-button" id="redo-button" type="button" disabled>やり直す</button>
+          <label><span>Palette Bank</span><select id="palette-bank" aria-label="Palette Bank"><option value="default">default</option></select></label>
           <label><span>Palette Slot</span><select id="palette-slot" aria-label="Palette Slot"><option value="0">Slot 0</option><option value="1">Slot 1</option><option value="2">Slot 2</option><option value="3">Slot 3</option></select></label>
           <label><span>Slot色</span><input id="palette-color" type="color" value="#d02020" aria-label="Palette Slotの色"></label>
           <button class="action-button" id="palette-save-button" type="button">Palette Slotを更新</button>
@@ -84,6 +84,7 @@
           <button class="action-button" id="style-button" type="button">選択範囲にStyle</button>
           <label><span>Glyph名</span><input id="glyph-name" type="text" value="hare-special" pattern="[A-Za-z0-9_-]+" aria-label="Glyph名"></label>
           <button class="action-button" id="glyph-button" type="button">選択範囲にGlyph</button>
+          <label><span>組文字mode</span><select id="combine-mode" aria-label="組文字mode"><option value="straight">直行</option><option value="parallel">併置</option><option value="z">Z字</option></select></label>
           <button class="action-button" id="combine-button" type="button">選択範囲を組文字</button>
           <button class="action-button" id="clear-annotation-button" type="button">選択範囲の装飾を解除</button>
         </fieldset>
@@ -93,6 +94,6 @@
 
     <footer class="site-footer" id="site-footer"><span>外部データをブラウザ上で読み込んで表示しています</span><nav class="footer-links" id="footer-links" aria-label="楽曲リンク"></nav></footer>
     <div class="drop-overlay" id="drop-overlay" hidden><strong>TXT / Reader JSONをドロップ</strong><span>画面のどこに置いても本文を開けます</span></div>
-    <script type="module" src="assets/js/app.js?v=20260908-016"></script>
+    <script type="module" src="assets/js/app.js?v=20260908-019"></script>
   </body>
 </html>
