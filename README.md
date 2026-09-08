@@ -44,19 +44,19 @@ Reader Coreは`historical` / `modern`へ固定せず、文書定義のGeneric Va
 
 WriterではTitle・本文を直接編集し、外部HTML pasteはplain textとして扱います。Writerは現段階ではBeta扱いで、Reader KernelのSource保全・Projection・安全性を優先します。EditorのCaret、IME、Undo、Draft完全復旧、複雑なVariant編集はReader完成後に必要性を見て強化します。画面上のGlyphや新字体をSourceへ書き戻さない原則と、Rubyの通常Presentation / 部分Overrideは維持します。
 
-全文CopyはPortable Text（Presentation除去・Ruby保持）です。正常なSourceではPresentationだけを除去し、不正Presentationを含むReaderでも例外にせず原文を保全してCopyできます。標準TXTダウンロードはPresentation入りAuthor Sourceそのもの、`.lyric.txt`ダウンロードはJSON Headerとactive VariantのAuthor SourceをまとめたCanonical Containerです。旧Range Annotationは移行・保存用に保持できますが、表示時には描画せずSource Presentationへ二重適用しません。Reader文書ダウンロードはOSへの保存完了ではなく、ブラウザがダウンロードを開始したcheckpointです。Portable Text専用の保存UIは置いていません。
+全文CopyはPortable Text（Presentation除去・Ruby保持）です。正常なSourceではPresentationだけを除去し、不正Presentationを含むReaderでも例外にせず原文を保全してCopyできます。標準TXTダウンロードはPresentation入りAuthor Sourceそのもの、`.lyric.txt`ダウンロードはJSON Headerとactive VariantのAuthor SourceをまとめたCanonical Containerです。旧Range AnnotationはReaderのruntime/state/payloadから撤去し、入力に残っていてもPresentationとして扱いません。Reader文書ダウンロードはOSへの保存完了ではなく、ブラウザがダウンロードを開始したcheckpointです。ダウンロード開始後も未保存状態とDraft Recoveryは維持します。Portable Text専用の保存UIは置いていません。
 
 ## Registry
 
 RegistryはPalette / Palette Bank / Named Style / Outline / Gradient / Glyph / Fontを型付き・許可リスト付きで検証します。Palette 0/1は常在し、欠落時は`#ffffff` / `#000000`、2以上の欠損SlotはSlot 1へFallbackします。Styleは継承・cycle検出・複数指定Conflict Warningに対応し、Direct PropertyがStyleより優先されます。Outlineは相対幅と複数Layer、CombineはStraight / Parallel / Zを扱います。未知Fieldは安全な拡張領域へ保持しますが、解釈・実行はしません。
 
-Glyphはtext、SVG、raster image、font glyphを受け付け、未登録・未読込・Asset失敗時は元Source文字列へFallbackします。欠損Registry参照、Font未読込、Asset失敗は本文を止めず、表示専用の`⚠` Warning markerへ集約します。外部Fontの自動読込は初期OFFですが、許可中のURL本文再読込・切替後はRegistry Fontの解決を再実行します。SVGはinline DOMへ挿入せずImage contextで表示し、任意HTML / CSS / Script / Event Handler / 危険protocolは受け付けません。
+Glyphはtext、SVG、raster image、font glyphを受け付け、未登録・未読込・Asset失敗時は元Source文字列へFallbackします。欠損Registry参照、Font未読込、Asset失敗は本文を止めず、表示専用の`⚠` Warning markerへ集約します。文書指定の外部Fontは初期状態で自動読込し、ユーザーが明示的にOFFにした場合だけ停止します。URL本文の再読込・切替後もRegistry Fontの解決を再実行します。SVGはinline DOMへ挿入せずImage contextで表示し、任意HTML / CSS / Script / Event Handler / 危険protocolは受け付けません。
 
 ## State・サイズ・互換性
 
 Reader Document / Draftはversion 3です。既知の旧versionは明示Migrationし、未知versionも理解可能な本文・VariantをBest-effortで現行versionへ変換し、警告を出します。Reader JSON / Manifestの未知トップレベルFieldも不活性な拡張として保持し、Canonical Reader JSON保存で消さないようにします。Draftは永続保存ではなくRecovery用途です。localStorage失敗時も編集は継続し、同一文書の別Tab更新は警告します。Historyは最大40件・概算8MBで、別文書へ漏れません。
 
-現行Runtimeの上限はSource 500,000 code units / 2MB、Manifest JSON 200,000 code units / 512KB、Reader Document JSON 2,000,000 code units / 4.5MBです。これらは本Repositoryの安全上限であり、Source、Manifest、Reader Document、Registry、Assetを同一上限で扱いません。
+通常のReader対応目安はSource約50,000文字までです。それを超えるSourceは処理を試みるBest Effortで、性能保証には含めません。現行Runtimeには極端に巨大・悪意ある入力を止める安全上限としてSource 500,000 code units / 2MB、Manifest JSON 200,000 code units / 512KB、Reader Document JSON 2,000,000 code units / 4.5MBがあります。これらは本Repositoryの安全上限であり、Source、Manifest、Reader Document、Registry、Assetを同一上限で扱いません。
 
 ## 開発・検証
 

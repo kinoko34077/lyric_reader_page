@@ -46,8 +46,8 @@ Portable / Plain / Author Projection
 - Reader Documentの未知versionは理解可能な本文を現行形式へBest-effort変換し、未知version警告を保持
 - Reader JSON / Manifestの未知トップレベルFieldは不活性拡張として保持し、Draft / History経由のCanonical保存でも消さない
 - Registryの未知Fieldは不活性拡張として保持し、既知のAllowlist外の処理を実行しない
-- Registry Fontの未ロード時は標準FontへFallbackし、表示用Warning markerを残す。許可中のURL本文再読込・切替後はRegistry Font解決を再実行する
-- 旧Range Annotationは保存互換だけを残し、Rendererでは描画せずAuthor Source / IR Presentationとの二重適用を防ぐ
+- Registry Fontの未ロード時は標準FontへFallbackし、表示用Warning markerを残す。文書指定Fontは既定で自動取得し、ユーザーがOFFにした場合を除き、URL本文再読込・切替後もRegistry Font解決を再実行する
+- 旧Range Annotationはruntime state、History、Draft、payloadから撤去し、入力に残る旧フィールドもPresentationとして扱わない
 - 任意HTML / JavaScript / 危険protocolの実行禁止
 
 ### Gate
@@ -62,7 +62,7 @@ Portable / Plain / Author Projection
 
 ### 現在地
 
-既存のAdapter、IR、Projection、Registry、Renderer、Fallbackに加え、実データ相当のGolden Fixtureを追加済み。Variant、Remote Font、Asset failure、未知Registry extension、欠損Style / Font参照もfixtureへ含め、現段階はKernel Gateの回帰を継続しながらReader実用化へ進める状態。
+既存のAdapter、IR、Projection、Registry、Renderer、Fallbackに加え、実作品相当の長文Golden Fixtureを追加済み。Variant、Remote Font、Asset failure、未知Registry extension、欠損Style / Font参照もfixtureへ含め、現段階はKernel Gateの回帰を継続しながらReader実用化へ進める状態。
 
 ## Stage 2 — 最低限のPresentation
 

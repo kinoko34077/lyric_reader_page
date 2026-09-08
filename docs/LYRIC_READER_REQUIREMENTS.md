@@ -9,6 +9,9 @@
 - `Source → Syntax Adapter → Syntax非依存IR → Reader Core` の境界を維持する。Renderer、Editor、Registry、Variant処理へ表面SyntaxのDelimiter知識を持ち込まない。
 - Author Source、Portable Text、Plain Textを分離する。Portable TextはPresentationを除去してRuby等の意味を残し、Plain TextはRuby記法も除去する。
 - 失敗途中の状態をCurrent Documentへcommitしない。Source保存、Round-trip、文書分離、Unicode/Grapheme境界、参照整合性、進捗表示を共通Invariantとする。
+- Readerの優先経路はInput → Syntax Adapter / Parser → IR → Registry Resolver → Renderer → Projectionとする。WriterのCaret / IME / Undo / Draft高度化はReader完成後のBeta改善へ回す。
+- 読み込みは現行Syntax、Legacy Syntax、旧Reader Document、理解可能な未知VersionをFail-softで受け付け、保存は現行Canonical形式へ統一する。未知指定・未知Fieldは黙って別の意味へ変換せず、警告または不活性保持とする。
+- 旧Range AnnotationはPresentationの入力経路として廃止する。旧フィールドが入力に残っていてもruntime state、History、Draft、Canonical payloadへ持ち込まない。
 
 ## 2. 文書・Title・Metadata
 
@@ -30,6 +33,7 @@
 - Portable Text専用の保存/Export UIは置かない。通常の本文CopyがPortable Projectionを使う。
 - `toPortableText()`等のProjection APIは内部境界として維持する。
 - Reader Document/Draftはversionを持ち、既知versionは明示Migrationし、未知の将来versionも理解可能なSource / VariantをBest-effortで現行形式へ変換して警告する。不正文書はfail-safeにCurrentへ反映しない。DownloadはOSへの保存完了ではなく「ダウンロード開始」のcheckpointと表示する。
+- TXT / Reader JSON / `.lyric.txt`のダウンロード開始は回復保存の成功を意味しない。開始後もDirty状態とDraft Recoveryを消去しない。
 
 ## 5. 暫定Syntax Adapter
 
@@ -79,6 +83,7 @@ v0.xの既定表面は次の形式とする。
 - Glyph Resolverはtext、SVG、raster image、font glyphをTyped definitionとして扱える。Glyphは常にSource文字列を意味上の基準とする。
 - 複数文字/複数Graphemeを一つのVisual Objectへ置換できる。Asset失敗・未登録・未許可Font時は元Source文字列を表示する。
 - 外部AssetはHTTPS/安全なURL検証、サイズ・件数制限、Image contextへの隔離、失敗時Fallbackを行う。Font生成はReaderの責務外。
+- 文書で指定されたHTTPS Fontは既定で自動取得する。取得失敗時は標準Fontと元Source表示へFallbackし、ユーザーの明示OFFだけを自動取得停止として扱う。
 - CombineはStraight、Parallel、Z arrangementの3Mode以上を持ち、縦書き・横書きへRendererが適応する。非対応時は元文字列へFallbackし、Sourceへ縦横別記法を重複保存しない。
 - GlyphのScreen Reader Accessible Nameは`HOLD-G5`。Sourceを意味基準とすることだけ確定する。
 
@@ -93,7 +98,7 @@ v0.xの既定表面は次の形式とする。
 
 ## 11. 現行Runtime制限
 
-以下は本RepositoryのRuntime上限であり、別Repositoryの数値を仕様上限へ昇格させない。
+通常のReader対応目安はSource約50,000文字までとし、それを超える入力はBest Effort扱いとする。以下は本RepositoryのRuntime安全上限であり、別Repositoryの数値を性能保証へ昇格させない。
 
 - Source: 500,000 UTF-16 code units / 2,000,000 UTF-8 bytes
 - Manifest JSON: 200,000 code units / 512,000 bytes

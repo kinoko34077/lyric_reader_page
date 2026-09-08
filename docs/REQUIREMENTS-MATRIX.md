@@ -36,7 +36,7 @@
 | Ruby Base / Reading partial | scoped Ruby decorations、`selectionOffsets`, `applyRubyPresentation` | Ruby range / clearing / projection tests、Chrome Writer | Base/Readingを別範囲で装飾。通常適用は双方、部分選択はOverride | iOS/Androidのtouch+IME未検証 |
 | Ruby dedicated color removal | UIから専用色を撤去、`rt{color:inherit}` | HTML grep、browser settings AX | Ruby色専用Controlなし。一般Presentationへ統合 | Accessibility NameはHOLD-G5 |
 | Portable / Plain projection | Adapter `toPortableText`, `toPlainText`, `rawText` | projection tests、Chrome Copy path | PortableはRuby保持/Presentation除去、PlainはRuby除去 | Clipboard権限failureの実機確認待ち |
-| Legacy Range Annotation | `runtime-integrity.js` payload compatibility、`reader-view.js` excludes legacy paint | `dom-reader-json.test.mjs`, runtime integrity tests | Old annotation data is retained for migration/storage but cannot override Source Presentation at render time | Legacy payload cleanup can follow Reader completion |
+| Legacy Range Annotation | 廃止。runtime state、History、Draft、payload、Rendererから撤去 | `document-state.test.mjs`, full suite | 旧フィールドは入力時に無視され、Source Presentationへ影響しない | 旧ファイルの再保存時に旧フィールドは失われる |
 | Palette 0/1 / missing fallback | `normalizeRegistry`, `paletteValue` | registry tests | `#fff/#000`常在、2以上欠損はSlot 1へfallback | UIの追加Slot表示は安全上限内 |
 | Palette Bank / names / explicit ref | `banks`, `paletteNames`, `bank` Presentation、settings UI | registry tests、Chrome fixture | Bank切替と名前表示、Source explicit bank resolve | 同時編集のmulti-tab UXは警告のみ |
 | Named Style precedence / inheritance | `resolvedStyle`, `resolvePresentation` | registry tests | Direct > Style、cycle/depth/missing refを検出 | Style property別の詳細Cascadeは今後拡張 |
@@ -46,7 +46,7 @@
 | Gradient provisional safety | Registry stops、logical direction、fallback、forced-colors CSS | registry tests、quality fixture browser | HEX stopとPalette stop、Palette 0 fallbackを確認 | `HOLD-GRADIENT`/`HOLD-F6`を最終仕様化しない |
 | Typed Glyph / source fallback | `normalizeGlyph`, `reader-view` image/font/text branches | registry tests、editor-source tests、Chrome missing asset/font fixture | text/SVG/image/font、複数字列、失敗時元Sourceを確認 | External Origin/CORSはHOLD-G2-detail |
 | Combine 3 modes | `normalizeCombine`, Renderer/CSS `straight/parallel/z` | syntax/registry tests、Chrome fixture | 横/縦とも同じSource指定でmode classとunit mappingを生成 | Browser差異・長大Combineの性能はGate 8対象 |
-| Security allowlist | Registry validation、safe URL、safe annotation CSS、image-context SVG | registry security tests、full suite | Script/HTML/CSS injection/dangerous protocol/prototype keyを拒否 | 外部CORS/MIMEのlive probeは外部依存 |
+| Security allowlist | Registry validation、safe URL、Presentation property allowlist、image-context SVG | registry security tests、full suite | Script/HTML/CSS injection/dangerous protocol/prototype keyを拒否 | 外部CORS/MIMEのlive probeは外部依存 |
 | Storage / draft failure atomicity | `storageGet/Set/Remove`, staged load/restore | state tests、app failure paths | Storage失敗を編集失敗へ波及させず通知。不正文書はCurrentを保持 | Private mode/evictionの実機確認待ち |
 | Input size separation | `parseJsonText(kind)`, `validateSourceText`, local preflight | data-loader/large-source tests | Manifest、Reader JSON、Sourceを個別上限で検証。Local JSONも同一pipeline | Browser File APIの異常実装はGate 8対象 |
 | CI / build truth | `.nvmrc`, `.github/workflows/deploy-pages.yml`, build-id test | `node --check`, full test, build-id, `git diff --check` | Quality成功をDeploy jobへ依存。ID不整合を検出 | Push後のGitHub Actions/Pages live run確認が外部依存 |

@@ -41,3 +41,11 @@ test("download initiation preserves dirty and Draft recovery state", () => {
   assert.match(exports, /Reader文書ダウンロードを開始しました/);
   assert.match(exports, /\.lyric\.txtダウンロードを開始しました/);
 });
+
+test("document-declared Fonts auto-load by default while explicit opt-out remains supported", () => {
+  const app = fs.readFileSync(path.join(root, "assets/js/app.js"), "utf8");
+  assert.match(app, /remoteFontsAllowed: true/);
+  assert.match(app, /remoteFontsAllowed: saved\.remoteFontsAllowed !== false/);
+  assert.match(app, /state\.remoteFontsAllowed = true;/);
+  assert.match(app, /if \(!state\.remoteFontsAllowed\) \{ state\.loadedRegistryFonts = loaded; return loaded; \}/);
+});

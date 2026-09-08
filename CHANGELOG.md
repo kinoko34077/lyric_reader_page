@@ -19,6 +19,8 @@
 - format未指定の直接TXT URLもローカルTXTと同じSyntax自動判定を通し、Legacy本文をvNextとして誤解釈しないようにした。
 - format未指定のReader JSON / Container / ManifestもSourceからAdapterを検出し、明示formatを優先するRead-many入力境界へ揃えた。
 - URL本文の新規読込・再読込後も、外部Font許可時はRegistry Fontの取得・Fallback判定を再実行するようにした。
+- 文書指定の外部Fontを既定で自動取得するようにし、ユーザーが明示的にOFFにした場合だけ停止する。取得失敗時は標準Fontと元Source表示へFallbackする。
+- TXT / Reader JSON / `.lyric.txt`のダウンロード開始時にDirty状態やDraft Recoveryを消去しないよう修正した。保存完了ではなく開始checkpointという表示契約を維持する。
 - Reader JSONの未知トップレベルFieldを不活性な拡張として保持し、Document state・Draft・Historyを経由したCanonical保存でも消さないようにした。
 - URL Manifest読込でも同じ未知トップレベルField保持を適用し、入力経路による情報欠落をなくした。
 - 欠損Style / Palette / Glyph / Font / Assetを本文表示継続のまま`⚠` Warning markerへ統一し、markerをPortable Copy・Author Source投影から除外。
@@ -28,7 +30,8 @@
 - Reader読込時の一部不正Presentationを原文テキストへFail-soft Fallbackし、表示用Warning markerを残すようにした。Editorのstrict parse / round-trip契約は維持。
 - 不正Presentationを含むSourceのPortable Copyもsafe projectionへ切り替え、例外ではなく原文を保全して返すようにした。
 - 公開quality fixtureへ未知Registry extension、欠損Style / Font参照を追加し、Variant・Asset failureと合わせてFail-soft経路を常時検証。
-- 旧Range Annotationの描画を停止し、Reader上のPresentationはAuthor Source / IR経路へ一本化。旧Annotation payloadは移行・保存用に保持するが、Source Presentationへ二重適用しない。
+- 旧Range Annotationをruntime state、History、Draft、payload、Rendererから撤去し、Reader上のPresentationをAuthor Source / IR経路へ一本化した。入力に残る旧フィールドは無視する。
+- Readerの通常対応目安をSource約50,000文字までとし、現行500,000 code units等の制限は極端な入力を止める安全上限としてBest Effort範囲と分離した。
 - 詳細は[`docs/READER-KERNEL-ROADMAP.md`](docs/READER-KERNEL-ROADMAP.md)を参照。
 
 ## [Unreleased] — 2026-09-08

@@ -14,6 +14,7 @@
 | Registry validation / typed resolution | `tests/registry.test.mjs`, Golden test | PASS |
 | Malformed input / parser bounds / unsafe Registry | fuzz, limits, security tests | PASS |
 | Browser / mobile Reader smoke | Chromium/local Viewer smoke is PASS; WebKit/iOS/Android unavailable | PARTIAL |
+| Download recovery truthfulness | `tests/build-id.test.mjs` | PASS |
 
 判定は現在の作業ツリーで実行した結果に基づきます。`PASS`は実装・自動テスト・必要なBrowser観測が揃った範囲だけに付け、外部Browser・実機・権限が必要な確認は`BLOCKED`へ分離します。Stage A〜Eは別Repositoryの指示に合わせた呼称で、Local Gateとの対応は以下の通りです。
 
@@ -117,7 +118,7 @@ IME、touch selection、OSのsoft keyboard下でのCaretはWebKit/iOS/Android実
 ### Observed
 
 - `tests/registry.test.mjs`でHEX/Palette Outline、複数Layer、Gradient stop、fallback、Glyph 4型、missing reference、Asset上限を確認。
-- Chromium quality fixtureでTitleのOutline/Gradient、missing SVGの`glyph-failed`と元文字、remote Font未許可時の元文字、欠損Style / FontのWarning marker、未知Registry extensionの不活性保持、Parallel/Zの`.combine-unit`を確認。
+- Chromium quality fixtureでTitleのOutline/Gradient、missing SVGの`glyph-failed`と元文字、文書指定remote Fontの自動取得失敗時の元文字、欠損Style / FontのWarning marker、未知Registry extensionの不活性保持、Parallel/Zの`.combine-unit`を確認。
 - `reader.css`のforced-colors fallbackはGradientを解除しCanvasTextへ戻す規則を持つ。
 
 ### Remaining
