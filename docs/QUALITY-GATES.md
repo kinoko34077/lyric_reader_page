@@ -1,8 +1,23 @@
 # Quality Gate 証跡
 
+## Current priority profile — Reader Kernel
+
+2026-09-09以降は、汎用Writer完成ではなくReader Kernelを優先する。厳格対象はInput → Syntax Adapter / Parser → IR → Registry Resolver → Renderer → Projectionであり、WriterのCaret / IME / Undo、Draft / History高度化、複雑なVariant編集UI、Style rename UI、3つ以上のStyle競合表示はReader完成条件から外し、Beta改善へ回す。旧Stage A〜Eの表は既存実装の監査履歴として残し、Reader Kernelの判定は[`READER-KERNEL-ROADMAP.md`](READER-KERNEL-ROADMAP.md)とGolden Fixtureを正本とする。
+
+### Reader Kernel Gate
+
+| Check | Evidence | Status |
+| --- | --- | --- |
+| Parse / serialize / reparse closure | `tests/syntax-adapter.test.mjs`, `tests/reader-kernel-golden.test.mjs` | PASS |
+| Portable / Plain projection preserves intended text | Syntax / Golden tests | PASS |
+| Renderer DOM → Author Source → Reader JSON | `tests/dom-reader-json.test.mjs` | PASS |
+| Registry validation / typed resolution | `tests/registry.test.mjs`, Golden test | PASS |
+| Malformed input / parser bounds / unsafe Registry | fuzz, limits, security tests | PASS |
+| Browser / mobile Reader smoke | Chromium/local is partial; WebKit/iOS/Android unavailable | PENDING |
+
 判定は現在の作業ツリーで実行した結果に基づきます。`PASS`は実装・自動テスト・必要なBrowser観測が揃った範囲だけに付け、外部Browser・実機・権限が必要な確認は`BLOCKED`へ分離します。Stage A〜Eは別Repositoryの指示に合わせた呼称で、Local Gateとの対応は以下の通りです。
 
-## Gate summary
+## Historical Stage A–E summary
 
 | Stage | Local Gate | Status | Evidence |
 | --- | --- | --- | --- |

@@ -1,5 +1,7 @@
 # Lyric Reader 要件トレーサビリティ
 
+> 2026-09-09以降の優先判定は[`READER-KERNEL-ROADMAP.md`](READER-KERNEL-ROADMAP.md)に従う。下表のStage A〜Eは既存要件の監査履歴であり、Writer周辺の未完了項目をReader Kernelの完成阻害とは扱わない。
+
 基準は[`LYRIC_READER_REQUIREMENTS.md`](LYRIC_READER_REQUIREMENTS.md)と、添付引継ぎ資料の確定事項です。旧仕様・旧ADRの記述は履歴として扱います。各行は「要件 → 実装 → テスト → 現在の観測 → 残存リスク」を対応づけます。
 
 ## Stage / Gate status

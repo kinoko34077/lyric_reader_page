@@ -1,0 +1,15 @@
+晴々撥条《はれ〴〵バネ》
+曲前フリ
+｜氣乘ノ理《きのり〳〵》！
+K:如何《どう》も！私KiNoTch.と、此方《コチラ》重音テトです
+T:うい。(会釈《ゑしゃく》)
+
+[晴々撥条《はれ〴〵バネ》:style=title,c=2]
+[ベうーん〴〵:glyph=hare]
+[12:combine=parallel]
+[👨‍👩‍👧‍👦:combine=z]
+[複数行の
+Presentation対象:style=styled]
+[文字\[と\:\]記法:style=styled]
+[如何《どう》:base-range=0-1,base-c=2,ruby-range=0-1,ruby-c=3]
+通常本文と羽根｜撥条《バネ》を含むSource
