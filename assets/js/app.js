@@ -1,10 +1,10 @@
-import { isReaderJsonFile, loadInput, parseJsonText, validateSourceText } from "./data-loader.js?v=20260908-014";
-import { firstLineInfo } from "./content-boundary.js?v=20260908-014";
-import { boundedHistory, clone, documentIdentity, documentPayload, draftDiffers, draftPayload, localSourceIdentity, migrateReaderDocument, normalizeDraft } from "./document-state.js?v=20260908-014";
-import { applyPresentation, assertCapabilities, clearPresentation, getSyntaxAdapter, graphemes, parseSource, serializeSource, toPortableText } from "./syntax-adapter.js?v=20260908-014";
-import { renderLyrics, rawText } from "./reader-view.js?v=20260908-014";
-import { normalizeRegistry, validateRegistry } from "./registry.js?v=20260908-014";
-import { renderedBodySource as serializeRenderedBodySource } from "./editor-source.js?v=20260908-014";
+import { isReaderJsonFile, loadInput, parseJsonText, validateSourceText } from "./data-loader.js?v=20260908-015";
+import { firstLineInfo } from "./content-boundary.js?v=20260908-015";
+import { boundedHistory, clone, documentIdentity, documentPayload, draftDiffers, draftPayload, localSourceIdentity, migrateReaderDocument, normalizeDraft } from "./document-state.js?v=20260908-015";
+import { applyPresentation, assertCapabilities, clearPresentation, getSyntaxAdapter, graphemes, parseSource, serializeSource, toPortableText } from "./syntax-adapter.js?v=20260908-015";
+import { renderLyrics, rawText } from "./reader-view.js?v=20260908-015";
+import { normalizeRegistry, validateRegistry } from "./registry.js?v=20260908-015";
+import { renderedBodySource as serializeRenderedBodySource } from "./editor-source.js?v=20260908-015";
 
 const $ = id => document.getElementById(id);
 const params = new URLSearchParams(location.search);
@@ -45,7 +45,7 @@ function markDirty({ source = false, document = false } = {}) { state.sourceDirt
 function clearDirty({ source = false, document = false } = {}) { if (source) state.sourceDirty = false; if (document) state.documentDirty = false; state.dirty = isDirty(); if (!state.dirty && state.data) state.savedCheckpoint = documentPayload(state.data, titleSourceText(), state.annotations, state.kana); }
 function setCleanCheckpoint() { if (!state.data) return; state.sourceDirty = false; state.documentDirty = false; state.dirty = false; state.savedCheckpoint = documentPayload(state.data, titleSourceText(), state.annotations, state.kana); }
 function updateDirtyFromCheckpoint() { if (!state.savedCheckpoint) return; const current = documentPayload(state.data, titleSourceText(), state.annotations, state.kana); const clean = JSON.stringify(current) === JSON.stringify(state.savedCheckpoint); state.sourceDirty = !clean; state.documentDirty = !clean; state.dirty = !clean; }
-function updateStatus(text) { const fallback = state.sourceDirty && state.documentDirty ? "未保存の本文・文書変更" : (state.sourceDirty ? "未保存の本文" : (state.documentDirty ? "未保存の文書変更" : "読み込み済み")); setStatus(text || fallback); document.body.dataset.dirty = String(isDirty()); }
+function updateStatus(text) { const fallback = !state.storageAvailable ? "自動復元利用不可（編集継続可）" : (state.draftStorageWarning ? "別タブでDraft更新を検知（現在の編集を優先）" : (state.sourceDirty && state.documentDirty ? "未保存の本文・文書変更" : (state.sourceDirty ? "未保存の本文" : (state.documentDirty ? "未保存の文書変更" : "読み込み済み")))); setStatus(text || fallback); document.body.dataset.dirty = String(isDirty()); }
 function confirmReplaceCurrent() { return !isDirty() || confirm("未保存の変更があります。現在の本文を置き換えますか？"); }
 function validatedManifest(manifest) { const result = validateRegistry(manifest?.registry || {}); if (!result.valid) throw new Error(`Reader定義のRegistryが不正です。${result.errors.join(" ")}`); return { ...manifest, registry: normalizeRegistry(manifest.registry || {}) }; }
 
