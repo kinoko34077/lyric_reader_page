@@ -13,6 +13,12 @@
 - Rubyの部分選択で読み情報を失わないよう、Rubyを不可分な単位として保持。
 - 5000行の長文、2000件の連続Presentation、Ruby混在Projectionを含む大規模回帰テストを追加。
 - 全文コピーの表示名を実際のPortable Text出力に合わせて修正。
+- タイトルも本文と同じSyntax Adapter / IR / Rendererを通し、タイトルRuby・Glyph・Style・Gradient・Outlineを表示可能化。
+- 通常文字のRendererを1文字1要素からSource text run単位へ変更し、Source mappingの範囲を維持。
+- Adapter Router、JSDoc Typed IR、範囲split / wrap / unwrap処理を追加。交換境界をADRへ記録。
+- Registryをstrict validation化し、Palette Slot編集と選択範囲へのSlot適用をUI上分離。
+- Reader JSONをversion 2へ更新し、version 1とversionなし文書のmigration、将来versionのfail-closedを追加。
+- Registry / ThemeのNamed Fontを読み込み、失敗時は標準フォントへfallback。
 
 ### Reader基盤
 
@@ -83,7 +89,7 @@
 
 - historical / modern両VariantをReader JSONへ保存。
 - Metadata、Theme、Default View、Link、Registry領域をReader JSONへ保存。
-- Palette / Style / Glyph / Font / Gradient / Outline Registryの受け皿を追加。
+- Palette / Style / Glyph / Font / Gradient / Outline Registryを検証し、Styleから参照して表示。
 - Palette、Style、Glyphの許可済みデータのみを検証・正規化。
 - 不正な色、名前、Presentation属性を拒否。
 - 任意HTML、Script、CSSを実行・適用しない。
