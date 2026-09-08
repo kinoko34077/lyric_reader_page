@@ -1,3 +1,7 @@
-export const BUILD_ID = "20260908-013";
+export const BUILD_ID = "20260908-014";
 export const MAX_SOURCE_BYTES = 2_000_000;
 export const MAX_SOURCE_CHARS = 500_000;
+export const MAX_MANIFEST_JSON_BYTES = 512_000;
+export const MAX_MANIFEST_JSON_CHARS = 200_000;
+export const MAX_READER_DOCUMENT_JSON_BYTES = 4_500_000;
+export const MAX_READER_DOCUMENT_JSON_CHARS = 2_000_000;

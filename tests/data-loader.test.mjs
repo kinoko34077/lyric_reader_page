@@ -1,11 +1,14 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { isReaderJsonFile, parseJsonText } from "../assets/js/data-loader.js";
+import { isReaderJsonFile, parseJsonText, validateSourceText } from "../assets/js/data-loader.js";
 
 test("JSON parser accepts valid data and rejects malformed input", () => {
   assert.deepEqual(parseJsonText('{"title":"demo"}'), { title: "demo" });
   assert.throws(() => parseJsonText("{invalid"), /JSON文書の形式が不正/);
   assert.throws(() => parseJsonText("x".repeat(500_001)), /JSON文書が大きすぎ/);
+  assert.deepEqual(parseJsonText(JSON.stringify({ content: { historical: "x".repeat(400_000), modern: "y".repeat(400_000) } }), "reader-document").content.historical.length, 400_000);
+  assert.throws(() => parseJsonText("x".repeat(500_001), "manifest"), /JSON文書が大きすぎ/);
+  assert.throws(() => validateSourceText("x".repeat(500_001)), /本文が長すぎ/);
 });
 
 test("provisional presentation at the start of a TXT is never classified as JSON", () => {

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="description" content="外部の歌詞テキストを読むための静的リーダー">
     <title>歌詞リーダー</title>
-    <link rel="stylesheet" href="assets/css/reader.css?v=20260908-013">
+    <link rel="stylesheet" href="assets/css/reader.css?v=20260908-014">
   </head>
   <body>
     <header class="site-header" id="site-header">
@@ -58,13 +58,14 @@
             <option value="custom">外部フォント</option>
           </select></label>
           <label class="font-url-row"><span>フォントURL</span><input id="font-url" type="url" inputmode="url" placeholder="https://…/font.woff2" aria-label="外部フォントURL"></label>
+          <label class="check-row"><input id="remote-font-toggle" type="checkbox"><span>外部フォントの自動読込を許可</span></label>
           <button class="action-button" id="font-load-button" type="button">外部フォントを適用</button>
         </fieldset>
         <fieldset>
           <legend>文書操作</legend>
           <button class="action-button" id="copy-all-button" type="button">全文をPortable Textでコピー</button>
-          <button class="action-button" id="download-button" type="button">本文TXTを保存</button>
-          <button class="action-button" id="download-reader-button" type="button">Reader文書を保存</button>
+          <button class="action-button" id="download-button" type="button">本文TXTのダウンロード開始</button>
+          <button class="action-button" id="download-reader-button" type="button">Reader文書のダウンロード開始</button>
           <button class="action-button" id="share-button" type="button">共有リンクをコピー</button>
           <label class="url-row"><span>Source URL</span><input id="source-url" type="url" inputmode="url" placeholder="https://…/lyrics.txt" aria-label="Source URL"></label>
           <button class="action-button" id="source-copy-button" type="button">Source URLをコピー</button>
@@ -92,6 +93,6 @@
 
     <footer class="site-footer" id="site-footer"><span>外部データをブラウザ上で読み込んで表示しています</span><nav class="footer-links" id="footer-links" aria-label="楽曲リンク"></nav></footer>
     <div class="drop-overlay" id="drop-overlay" hidden><strong>TXT / Reader JSONをドロップ</strong><span>画面のどこに置いても本文を開けます</span></div>
-    <script type="module" src="assets/js/app.js?v=20260908-013"></script>
+    <script type="module" src="assets/js/app.js?v=20260908-014"></script>
   </body>
 </html>

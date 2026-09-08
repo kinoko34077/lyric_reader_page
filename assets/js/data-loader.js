@@ -1,4 +1,4 @@
-import { MAX_SOURCE_BYTES, MAX_SOURCE_CHARS } from "./config.js?v=20260908-013";
+import { MAX_MANIFEST_JSON_BYTES, MAX_MANIFEST_JSON_CHARS, MAX_READER_DOCUMENT_JSON_BYTES, MAX_READER_DOCUMENT_JSON_CHARS, MAX_SOURCE_BYTES, MAX_SOURCE_CHARS } from "./config.js?v=20260908-014";
 
 const allowedUrl = (value, base = location.href) => {
   const url = new URL(value, base);
@@ -6,10 +6,21 @@ const allowedUrl = (value, base = location.href) => {
   return url;
 };
 
-export function parseJsonText(text) {
+export function parseJsonText(text, kind = "manifest") {
   if (typeof text !== "string") throw new Error("JSON本文が文字列ではありません。");
-  if (text.length > MAX_SOURCE_CHARS || new TextEncoder().encode(text).byteLength > MAX_SOURCE_BYTES) throw new Error("JSON文書が大きすぎます。");
+  const documentKind = kind === "reader-document";
+  const maxChars = documentKind ? MAX_READER_DOCUMENT_JSON_CHARS : MAX_MANIFEST_JSON_CHARS;
+  const maxBytes = documentKind ? MAX_READER_DOCUMENT_JSON_BYTES : MAX_MANIFEST_JSON_BYTES;
+  if (text.length > maxChars || new TextEncoder().encode(text).byteLength > maxBytes) throw new Error("JSON文書が大きすぎます。");
   try { return JSON.parse(text); } catch { throw new Error("JSON文書の形式が不正です。"); }
+}
+
+export function validateSourceText(text) {
+  if (typeof text !== "string") throw new Error("本文が文字列ではありません。");
+  const length = new TextEncoder().encode(text).byteLength;
+  if (length > MAX_SOURCE_BYTES) throw new Error("本文が大きすぎます。");
+  if (text.length > MAX_SOURCE_CHARS) throw new Error("本文が長すぎます。");
+  return text;
 }
 
 /** '[' is valid Author Source, so local classification must not sniff JSON by first character. */
@@ -29,8 +40,7 @@ export async function fetchText(resource, base) {
   const length = Number(response.headers.get("content-length") || 0);
   if (length > MAX_SOURCE_BYTES) throw new Error("本文が大きすぎます。");
   const text = await response.text();
-  if (text.length > MAX_SOURCE_CHARS) throw new Error("本文が長すぎます。");
-  return { text, url: url.href };
+  return { text: validateSourceText(text), url: url.href };
 }
 
 export async function loadInput(hash = location.hash) {

@@ -1,7 +1,24 @@
 /** JSON-safe identity and draft primitives shared by the Writer state boundary. */
 export function documentIdentity(data = {}) {
   const manifestId = data.manifest?.id || data.manifest?.meta?.id || "";
-  return [manifestId, data.sourceUrl || "", data.sourceName || ""].join("|");
+  return [manifestId, data.sourceIdentity || "", data.sourceUrl || "", data.sourceName || ""].join("|");
+}
+
+export const MAX_HISTORY_ENTRIES = 40;
+export const MAX_HISTORY_BYTES = 8_000_000;
+
+export function localSourceIdentity(name, size, lastModified, hash = "") {
+  return `local:${String(name || "本文")}:${Number(size) || 0}:${Number(lastModified) || 0}:${String(hash || "unknown")}`;
+}
+
+export function boundedHistory(history, index, next, limits = {}) {
+  const maxEntries = limits.maxEntries || MAX_HISTORY_ENTRIES;
+  const maxBytes = limits.maxBytes || MAX_HISTORY_BYTES;
+  let items = [...(history || []).slice(0, (index ?? history?.length - 1) + 1), next];
+  const bytes = value => { try { return JSON.stringify(value).length; } catch { return Number.MAX_SAFE_INTEGER; } };
+  if (bytes(next) > maxBytes) return { history: [next], index: 0 };
+  while (items.length > maxEntries || bytes(items) > maxBytes) items.shift();
+  return { history: items, index: items.length - 1 };
 }
 
 export function clone(value) {
@@ -15,6 +32,7 @@ export function documentPayload(data, title, annotations = [], activeVariant = "
     historical: clone(data?.historical || { text: "" }),
     modern: clone(data?.modern || { text: "" }),
     modernAvailable: Boolean(data?.modernAvailable),
+    sourceIdentity: String(data?.sourceIdentity || ""),
     titleSource: data?.titleSource || "meta",
     manifest: clone(data?.manifest || {}),
     annotations: clone(annotations) || []

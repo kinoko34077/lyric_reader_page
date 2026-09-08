@@ -22,10 +22,12 @@ test("large mixed source preserves Author Source and projections", () => {
   assert.equal(plain.split("\n").length, 5000);
 });
 
-test("many adjacent presentation nodes do not merge or disappear", () => {
+test("many adjacent presentation nodes normalize without losing source", () => {
   const source = Array.from({ length: 2000 }, (_, index) => `[${index % 10}]{combine}`).join("");
   const document = parseSource(source);
-  assert.equal(document.nodes.length, 2000);
-  assert.equal(serializeSource(document), source);
-  assert.equal(toPortableText(document), "0123456789".repeat(200));
+  assert.equal(document.nodes.length, 1);
+  assert.equal(serializeSource(document), `[${Array.from({ length: 2000 }, (_, index) => index % 10).join("") }]{combine}`);
+  const portable = toPortableText(document);
+  assert.equal(portable.length, 2000);
+  assert.equal(portable, source.replace(/\[(\d)\]\{combine\}/g, "$1"));
 });

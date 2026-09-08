@@ -49,3 +49,8 @@ test("registry references stay data-only and can be restored as a history value"
   source.registry.palettes["1"] = "#000000";
   assert.equal(snapshot.registry.palettes["1"], "#d02020");
 });
+
+test("registry rejects prototype-polluting keys and oversized glyph fallback", () => {
+  assert.equal(validateRegistry({ styles: { __proto__: { color: 2 }, constructor: { color: 2 } } }).valid, false);
+  assert.equal(validateRegistry({ glyphs: { hare: { text: "x".repeat(4_097) } } }).valid, false);
+});

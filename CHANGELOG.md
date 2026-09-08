@@ -4,6 +4,20 @@
 
 現在の`main`までの変更履歴です。正式なPresentation構文は未確定のため、以下の`[] {}`記法はv0.xの暫定実装です。
 
+### 境界条件監査の追加修正
+
+- Parserをregex依存から制限付きbalanced scannerへ変更し、Presentation対象内改行、escaped literal、入力時のnested Presentationを扱えるようにした。
+- EditorのPresentation操作は既存属性をflatに統合し、空Span除去・隣接同値Span統合を行う。編集結果が再Parser可能であるRound-trip Closureを回帰テスト化した。
+- Source境界をgrapheme cluster（`Intl.Segmenter`、未対応時はcode point fallback）へ統一。Rubyはsemantic nodeとして不可分に保持し、結合濁点・IVS・ZWJ絵文字を分割しない。
+- ローカルDraft identityへファイル名・サイズ・更新時刻・SHA-256（非対応時は決定的fallback）を組み込み、同名ファイル衝突を回避。localStorage失敗時も編集を継続し、同一文書の別タブ更新は警告する。
+- Historyを最大40件・約8MBへ制限。Manifest JSONとReader Document JSONの上限を分離し、ローカルReader JSONも同一validation pipelineへ通した。
+- Registryのprototype pollution予約名、Registry総量、Glyph fallback長を拒否。Gradientのlogical inline方向、forced-colors時のfallback、Outlineのem基準を明示した。
+- 外部フォントの自動読込を初期OFFにし、設定で明示許可した場合だけ外部リクエストを行う。手動適用はユーザー操作として継続。
+- 外部HTML pasteをplain textへ限定し、Writerのcaret復元、autocorrect / spellcheck抑制、Clipboard API失敗時の選択コピーfallbackを追加。
+- Node 22.14.0を`.nvmrc`とCIで固定し、Build ID整合テストを追加。`Tests green`と`Pages deployed`はCI上の別jobとして維持する。
+
+今回のSource serializerは意味的canonicalizeを採用する。属性順や同一Presentationの隣接境界は正規化されるが、Portable TextとPlain Textの文字意味は保持する。未登録Presentationは黙って削除せず、Registry validationまたはParser validationで拒否する。SVG assetは現行v0.xでは受け付けず、Glyphは安全なfallback文字列のみとする。
+
 ### 監査後の安定化
 
 - 監査時点のQuality Gate実行結果：27 tests passed / 0 failed。JS構文検査とUnit/Integration testをCIで実行し、成功時のみPagesをDeployする構成へ変更。
