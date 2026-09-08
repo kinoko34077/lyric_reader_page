@@ -33,7 +33,7 @@ Portable / Plain / Author Projection
 
 ### 必須
 
-- TXT / URL / Reader JSONの入力境界
+- TXT / URL / Reader JSONの入力境界（format未指定の直接TXT URLもLegacy Adapterを自動判定）
 - vNext / Legacy Syntax Adapter分離
 - Ruby、Escape、Nested、Multiline、Presentation参照
 - Typed IR、Serializer、Portable / Plain Projection

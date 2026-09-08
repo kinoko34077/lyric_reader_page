@@ -123,7 +123,8 @@ export async function fetchText(resource, base) {
   const length = Number(response.headers.get("content-length") || 0);
   if (length > MAX_SOURCE_BYTES) throw new Error("本文が大きすぎます。");
   const text = await readResponseText(response, MAX_SOURCE_BYTES, "本文が大きすぎます。");
-  return { text: validateSourceText(text), url: url.href };
+  const source = validateSourceText(text);
+  return { text: source, url: url.href, format: detectSyntaxAdapter(source).id };
 }
 
 export async function loadInput(hash = location.hash) {
@@ -141,7 +142,7 @@ export async function loadInput(hash = location.hash) {
   if (sourceRef) {
     const source = await fetchText(sourceRef);
     const variants = [{ id: "variant-A", label: "Variant A", role: "", source }];
-    return { manifest: { title: "外部本文", autoTitle: true, content: { format: "narou-text" } }, variants, activeVariantId: variants[0].id, links: [], variantOverrides: {}, titleSource: "first-line", sourceMetadata: {}, sourceUrl: source.url };
+    return { manifest: { title: "外部本文", autoTitle: true, content: { format: source.format || "narou-text" } }, variants, activeVariantId: variants[0].id, links: [], variantOverrides: {}, titleSource: "first-line", sourceMetadata: {}, sourceUrl: source.url };
   }
   const fallback = await fetchText("data/demo/reader.json");
   const manifestUrl = new URL("data/demo/reader.json", location.href);

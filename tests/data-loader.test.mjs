@@ -75,6 +75,20 @@ test("local plain TXT detects legacy syntax while preserving vNext defaults", ()
   assert.equal(current.format, "narou-text");
 });
 
+test("direct remote TXT detects legacy syntax when no manifest format is provided", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalLocation = globalThis.location;
+  try {
+    globalThis.location = { href: "https://reader.example.test/" };
+    globalThis.fetch = async () => new Response("題\n[文字]{c=2}", { status: 200, headers: { "content-length": "16" } });
+    const loaded = await loadInput("#src=https%3A%2F%2Freader.example.test%2Fold.txt");
+    assert.equal(loaded.manifest.content.format, "narou-legacy");
+  } finally {
+    globalThis.fetch = originalFetch;
+    globalThis.location = originalLocation;
+  }
+});
+
 test("manifest loading keeps generic Variant metadata and rejects duplicate IDs", async () => {
   const originalFetch = globalThis.fetch;
   const originalLocation = globalThis.location;

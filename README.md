@@ -8,7 +8,7 @@ Reader優先の現在ロードマップは[`docs/READER-KERNEL-ROADMAP.md`](docs
 
 - デモ: `index.html`
 - 外部Manifest: `index.html#m=https%3A%2F%2Fexample.com%2Freader.json`
-- 外部TXT: `index.html#src=https%3A%2F%2Fexample.com%2Flyrics.txt`
+- 外部TXT: `index.html#src=https%3A%2F%2Fexample.com%2Flyrics.txt`。Manifestでformatを指定しない直接TXT URLは、ローカルTXTと同じく現行 / Legacy Syntaxを自動判定します。
 - Writer: `index.html?mode=writer`
 - ローカルTXT / JSON: 「開く」または画面全体へのドラッグ＆ドロップ。TXTは現行`[対象:指定]`と旧`[対象]{指定}`を自動判定して読み込みます。
 - `.lyric.txt`: JSON HeaderとAuthor SourceをまとめたCanonical Containerとして読み込み・書き出し
