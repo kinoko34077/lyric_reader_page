@@ -25,11 +25,15 @@ body.chrome-hidden .site-footer { transform: translateY(105%); }
 .reader-shell.is-vertical .reader-heading { max-width: none; min-height: 0; margin: 0 0 .3rem; padding: 0 0 .2rem; border-bottom: 0; border-left: 1px solid var(--rule); }
 .reader-shell.is-vertical .reader-heading h1 { margin-inline: 0 .45em; }
 .reader-shell.is-vertical .lyrics { writing-mode: vertical-rl; }
+.reader-shell.is-vertical .source-editor { writing-mode: horizontal-tb; }
 .draft-notice { display: flex; align-items: center; gap: .45rem; margin: 0 0 .25rem; padding: .25rem .4rem; border: 1px solid var(--accent); color: var(--accent); font-size: .76rem; }
 .draft-notice .action-button { width: auto; margin: 0; padding: .15rem .45rem; }
 .eyebrow, .song-description { margin: 0; color: var(--muted); font-size: .82rem; }
 h1 { margin: .1rem 0; font-size: clamp(1.35rem, 3vw, 2.3rem); font-weight: 500; }
 .lyrics { flex: 1 0 auto; min-block-size: calc(100dvh - 4.1rem); max-width: none; overflow: visible; overscroll-behavior: contain; white-space: pre-wrap; overflow-wrap: anywhere; font-size: var(--reader-size); line-height: 2.05; letter-spacing: .04em; outline: none; }
+.source-editor { flex: 1 0 auto; min-block-size: calc(100dvh - 4.1rem); width: 100%; resize: none; padding: .8rem; border: 1px solid var(--rule); border-radius: .25rem; background: color-mix(in srgb, var(--paper) 94%, white); color: var(--ink); font: .88rem/1.75 ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: 0; white-space: pre; writing-mode: horizontal-tb; direction: ltr; overflow: auto; outline: none; }
+.source-editor:focus { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent); }
+.source-editor[aria-invalid="true"] { border-color: #b04a24; }
 .lyrics::-webkit-scrollbar, .settings-panel::-webkit-scrollbar { width: .45rem; height: .45rem; }
 .lyrics::-webkit-scrollbar-track, .settings-panel::-webkit-scrollbar-track { background: transparent; }
 .lyrics::-webkit-scrollbar-thumb, .settings-panel::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--accent) 48%, transparent); border-radius: 99px; }

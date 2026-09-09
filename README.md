@@ -10,6 +10,7 @@ Reader優先の現在ロードマップは[`docs/READER-KERNEL-ROADMAP.md`](docs
 - 外部Manifest: `index.html#m=https%3A%2F%2Fexample.com%2Freader.json`
 - 外部TXT: `index.html#src=https%3A%2F%2Fexample.com%2Flyrics.txt`。Manifestでformatを指定しない直接TXT URLは、ローカルTXTと同じく現行 / Legacy Syntaxを自動判定します。
 - Writer: `index.html?mode=writer`
+- Source Editor: `index.html?mode=source` または画面上部の`Source`。Author Sourceを直接編集し、parse成功時だけ現在のVariantへ反映します。無効なPresentationは現在文書へ反映せず、Source Editor上で警告します。
 - ローカルTXT / JSON: 「開く」または画面全体へのドラッグ＆ドロップ。TXTは現行`[対象:指定]`と旧`[対象]{指定}`を自動判定して読み込みます。
 - `.lyric.txt`: JSON HeaderとAuthor SourceをまとめたCanonical Containerとして読み込み・書き出し
 
@@ -42,7 +43,7 @@ Reader Coreは`historical` / `modern`へ固定せず、文書定義のGeneric Va
 
 表示設定では横書き / 縦書き、Variant、字体、ルビ、文字サイズ、背景色、文字色、フォント、Palette Bankを切り替えられます。Header/Footerは読書中に自動収納され、設定Panelは独立してスクロールします。縦横切替時もTitle・Metadata・本文の向きが同期します。
 
-WriterではTitle・本文を直接編集し、外部HTML pasteはplain textとして扱います。Writerは現段階ではBeta扱いで、Reader KernelのSource保全・Projection・安全性を優先します。EditorのCaret、IME、Undo、Draft完全復旧、複雑なVariant編集はReader完成後に必要性を見て強化します。画面上のGlyphや新字体をSourceへ書き戻さない原則と、Rubyの通常Presentation / 部分Overrideは維持します。
+WriterではTitle・本文を直接編集し、外部HTML pasteはplain textとして扱います。`Source`モードではAuthor Sourceをそのまま編集し、parse成功時だけ現在のVariantへ反映します。Writerは現段階ではBeta扱いで、Reader KernelのSource保全・Projection・安全性を優先します。EditorのCaret、IME、Undo、Draft完全復旧、複雑なVariant編集はReader完成後に必要性を見て強化します。画面上のGlyphや新字体をSourceへ書き戻さない原則と、Rubyの通常Presentation / 部分Overrideは維持します。
 
 全文CopyはPortable Text（Presentation除去・Ruby保持）です。正常なSourceではPresentationだけを除去し、不正Presentationを含むReaderでも例外にせず原文を保全してCopyできます。標準TXTダウンロードはPresentation入りAuthor Sourceそのもの、`.lyric.txt`ダウンロードはJSON Headerとactive VariantのAuthor SourceをまとめたCanonical Containerです。旧Range AnnotationはReaderのruntime/state/payloadから撤去し、入力に残っていてもPresentationとして扱いません。Reader文書ダウンロードはOSへの保存完了ではなく、ブラウザがダウンロードを開始したcheckpointです。ダウンロード開始後も未保存状態とDraft Recoveryは維持します。Portable Text専用の保存UIは置いていません。
 

@@ -61,6 +61,7 @@ git diff --check
 - 各環境で、Page / Console error、Ruby、Palette / Style / Outline / Combine、欠損Glyph / Fontの本文Fallback、Variant切替、設定Panelのviewport内表示と内部scroll、縦書き時のTitle / 本文writing-mode同期、意図しない横overflow、Portable Copy経路を確認する。
 - ローカル実行時は一時ディレクトリへ横書き・縦書き・失敗時のScreenshotを保存する。`MOBILE_GATE_OUTPUT`で保存先を変更できる。
 - `MOBILE_GATE_URL`を指定すれば公開Pages等の配信先へ同じGateを実行できる。
+- 同じGate内でSourceモードを開き、Author Sourceの原文表示、parse成功後のVariant反映、Viewer復帰後の本文表示まで確認する。無効入力をCurrent Documentへ反映しない契約は`tests/source-editor.test.mjs`で確認する。
 - Playwright WebKitはSafari本体ではないため、実機iPhone Safari / Android ChromeはReader v0.xの自動Gateとは分離したRelease Smokeとして扱う。Writer、IME、Caret、soft keyboardはこのGateの対象外。
 - 2026-09-09にPowerShellで`$env:MOBILE_GATE_URL='https://kinoko34077.github.io/lyric_reader_page/?mode=viewer'; npm run test:mobile`を実行し、公開Pagesでも`chromium-pixel-5` / `webkit-iphone-13`がPASSした。公開HTMLとローカルのbuild markerは`20260908-019`で一致している。
 - GitHub Actionsの`quality` jobでもPlaywright依存・Chromium / WebKitを導入して同じGateを実行し、成功時だけPages deployへ進む。
@@ -166,6 +167,5 @@ http://127.0.0.1:4173/?mode=writer#m=%2Ftests%2Ffixtures%2Fquality-manifest.json
 2. 日本語IME composition、smart punctuation/autocorrect、native Undo、Ruby部分選択の各OS実装。
 3. Browserのforced-colors/high-contrast実環境、印刷、FontFace/CORS、Clipboard permission拒否の実環境。
 4. External SVG/Fontの実配信元によるCORS/MIME/Origin試験。
-5. Push後のGitHub Actions quality/deploy runと、Pagesの新Build IDを伴うlive smoke。
 
 解除条件は、対象実機/Browserまたは外部配信環境を用意して上記手順を実行し、観測結果をこの文書へ追記することです。これら以外のリポジトリ内作業をこのBLOCKED理由で省略してはいけません。

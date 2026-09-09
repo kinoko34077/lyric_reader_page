@@ -74,6 +74,10 @@ Palette、Style、Glyph、Combine、Font、Outlineを閲覧用途として維持
 
 ## Stage 4 — Editor改善
 
+### Writer Beta — Source Editor slice
+
+Source Editorの最初の実装として、`?mode=source`とヘッダーの`Source`切替を追加した。Author Sourceはtextareaへそのまま表示し、parse成功時だけ現在のVariantへ反映する。無効なPresentationはCurrent Documentへcommitせず、入力欄へエラー状態を残す。Source変更後はViewerへ戻って再parse済みの表示を確認できる。
+
 実利用でReader Kernelを壊すP0が発生した場合だけ即時修正する。Caret、IME、Native Undo、Draft完全復旧、Style rename transaction、複雑なVariant authoring、詳細Accessibility、印刷・forced-colorsはReader完成後に必要性を見て対応する。Writer Betaでは`K1`（文書を開く操作自体のUndo）と`K6`（Tab単位Draft分離）を別途実装する。
 
 ## Severity

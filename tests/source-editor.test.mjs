@@ -1,0 +1,40 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
+import { getSyntaxAdapter } from "../assets/js/syntax-adapter.js";
+import { parseSourceEditorInput } from "../assets/js/source-editor.js";
+
+const root = process.cwd();
+
+test("Source editor commits the exact Author Source only after a successful parse", () => {
+  const adapter = getSyntaxAdapter("narou-text");
+  const source = "題名\\n[如何《どう》:c=2]";
+  const result = parseSourceEditorInput(source, adapter);
+
+  assert.equal(result.ok, true);
+  assert.equal(result.source, source);
+  assert.equal(result.document.nodes.length, 2);
+});
+
+test("Source editor rejects invalid presentation without producing a commit candidate", () => {
+  const adapter = getSyntaxAdapter("narou-text");
+  const source = "題名\\n[x:base-range=0-3]";
+  const result = parseSourceEditorInput(source, adapter);
+
+  assert.equal(result.ok, false);
+  assert.equal(result.source, source);
+  assert.equal(result.document, undefined);
+  assert.match(result.error.message, /Presentation指定に有効な属性がありません/);
+});
+
+test("Source mode has an explicit textarea and application route", () => {
+  const html = fs.readFileSync(path.join(root, "index.html"), "utf8");
+  const app = fs.readFileSync(path.join(root, "assets/js/app.js"), "utf8");
+
+  assert.match(html, /id="source-mode-switch"/);
+  assert.match(html, /id="source-editor"/);
+  assert.match(app, /mode === "source"/);
+  assert.match(app, /source-editor/);
+  assert.match(app, /parseSourceEditorInput/);
+});

@@ -11,7 +11,7 @@
 - URL / ManifestのFetch本文をストリーム単位でサイズ制限し、`Content-Length`が無い過大入力も全量展開前に拒否。超過時はStreamもcancelする。
 - 画像Glyphの読込失敗をDOM Integration testで検証し、Ruby付きPortable Sourceへ確実に戻ることを回帰保護。
 - Golden fixtureをWriter Renderer→DOM→Author Source→再Parseへ通すIntegration testを追加し、属性順のcanonical化を越えた意味Round-tripを検証。
-- 現在HEADをDesktop Chromiumのlocal Viewerでsmoke確認し、設定Panelの単独開閉、縦書き時のTitle/本文方向同期、Console error/warn 0件をQuality Gateへ記録。Mobile/WebKitは未検証のまま。
+- 現在HEADをDesktop Chromiumのlocal Viewerと自動Mobile Gate（Chromium Pixel 5 / WebKit iPhone 13相当）でsmoke確認し、設定Panelの単独開閉、縦書き時のTitle/本文方向同期、Console error/warn 0件をQuality Gateへ記録。実機iPhone Safari / Android ChromeはRelease Smokeとして別扱い。
 - Canonical Container `LYRIC-READER/1`（JSON Header + 空行delimiter + Author Source Body）を追加し、active Variant以外のSource、未知Header、未知Version警告を保持。
 - `.lyric.txt`またはmagic検出されたローカル入力をContainerとしてReader Documentへ変換し、既存TXT / Reader JSON経路と共存させた。
 - `.lyric.txt`のCanonical Container書き出しUIを追加し、既存のTXT / Reader JSON / Portable Copy操作を維持。
@@ -40,6 +40,7 @@
 - Playwrightを開発専用依存として追加し、`npm run test:mobile`でChromium Pixel 5相当とWebKit iPhone 13相当のAutomated Mobile Viewer Gateを追加した。本文、Ruby、Presentation、Fallback、Variant、設定Panel、縦書きTitle/本文同期、横overflow、Portable Copyを各環境で確認する。
 - Mobile Gateの実機境界を明文化した。Playwright WebKitはSafari本体ではないため、実機iPhone Safari / Android Chrome、IME、soft keyboard、Clipboard権限はReader自動Gateと分離したRelease Smokeとして扱う。
 - GitHub Actionsのquality jobへPlaywrightブラウザ導入とAutomated Mobile Viewer Gateを追加し、Mobile Gate成功をPages deployの前提へ組み込んだ。
+- Writer Betaの第1段階としてSource Editorを追加した。`?mode=source`またはヘッダーの`Source`からAuthor Sourceを直接編集でき、parse成功時だけ現在のVariantへ反映し、無効なPresentationはCurrent Documentへcommitしない。Chromium / WebKitのMobile GateにもSource編集→Viewer復帰を追加した。
 - 詳細は[`docs/READER-KERNEL-ROADMAP.md`](docs/READER-KERNEL-ROADMAP.md)を参照。
 
 ## [Unreleased] — 2026-09-08

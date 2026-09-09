@@ -91,6 +91,18 @@ async function checkScenario(scenario, targetUrl) {
     assert.ok(initial.glyphFallbackCount > 0 && initial.fontFallbackCount > 0, `${scenario.id}: failed Glyph/Font must fallback`);
     assert.ok(initial.warningCount > 0, `${scenario.id}: fallback warning must be visible`);
 
+    await page.locator("#source-mode-switch").click();
+    await page.locator("#source-editor").waitFor({ state: "visible" });
+    const originalSource = await page.locator("#source-editor").inputValue();
+    assert.match(originalSource, /晴々撥条|如何《どう》/);
+    const editedSource = `${originalSource}\n[Source Gate:style=demo-chorus]`;
+    await page.locator("#source-editor").fill(editedSource);
+    await page.waitForFunction(() => document.body.dataset.dirty === "true");
+    assert.match(await page.locator("#source-status").textContent() || "", /未保存/);
+    await page.locator("#source-mode-switch").click();
+    await page.locator("#lyrics").waitFor({ state: "visible" });
+    assert.match(await page.locator("#lyrics").innerText(), /Source Gate/);
+
     await page.locator("#settings-toggle").click();
     const settings = await page.locator("#settings-panel").evaluate(element => { const rect = element.getBoundingClientRect(); return { visible: rect.width > 0 && rect.height > 0, withinViewport: rect.left >= -2 && rect.right <= innerWidth + 2 && rect.top >= -2 && rect.bottom <= innerHeight + 2, scrollable: element.scrollHeight > element.clientHeight }; });
     assert.equal(settings.visible, true, `${scenario.id}: settings must be visible`);
@@ -123,7 +135,8 @@ async function checkScenario(scenario, targetUrl) {
     return { id: scenario.id, status: "PASS", screenshot: screenshotBase, initial, vertical };
   } catch (error) {
     await page.screenshot({ path: `${screenshotBase}-failure.png`, fullPage: false }).catch(() => {});
-    const message = `${scenario.id}: ${error instanceof Error ? error.message : String(error)}`.replace(/[\r\n]+/g, " ");
+    const state = await page.evaluate(() => ({ mode: document.body.dataset.mode || "", sourceHidden: document.querySelector("#source-editor")?.hidden ?? null, lyricsHidden: document.querySelector("#lyrics")?.hidden ?? null, sourceLength: document.querySelector("#source-editor")?.value.length ?? 0, status: document.querySelector("#source-status")?.textContent || "" })).catch(() => ({}));
+    const message = `${scenario.id}: ${error instanceof Error ? error.message : String(error)} state=${JSON.stringify(state)} console=${JSON.stringify(consoleErrors)} page=${JSON.stringify(pageErrors)}`.replace(/[\r\n]+/g, " ");
     if (process.env.GITHUB_ACTIONS) console.log(`::error title=Mobile Viewer Gate failure::${message}`);
     throw new Error(message);
   } finally {

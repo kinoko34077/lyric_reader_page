@@ -5,21 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="description" content="外部の歌詞テキストを読むための静的リーダー">
     <title>歌詞リーダー</title>
-    <link rel="stylesheet" href="assets/css/reader.css?v=20260908-019">
+    <link rel="stylesheet" href="assets/css/reader.css?v=20260909-020">
   </head>
   <body>
     <header class="site-header" id="site-header">
       <a class="site-title" href="./">歌詞リーダー</a>
-      <div class="header-tools"><button class="header-button" id="open-file-button" type="button">開く</button><input id="source-file" type="file" accept=".txt,.lyric.txt,.json,text/plain,application/json" hidden><button class="header-button" id="reload-button" type="button">再読込</button><p class="source-status" id="source-status" aria-live="polite">読み込み中…</p><button class="header-button" id="settings-toggle" type="button" aria-expanded="false" aria-controls="settings-panel">表示設定</button><button class="header-button" id="mode-switch" type="button">編集</button></div>
+      <div class="header-tools"><button class="header-button" id="open-file-button" type="button">開く</button><input id="source-file" type="file" accept=".txt,.lyric.txt,.json,text/plain,application/json" hidden><button class="header-button" id="reload-button" type="button">再読込</button><p class="source-status" id="source-status" aria-live="polite">読み込み中…</p><button class="header-button" id="settings-toggle" type="button" aria-expanded="false" aria-controls="settings-panel">表示設定</button><button class="header-button" id="mode-switch" type="button">編集</button><button class="header-button" id="source-mode-switch" type="button" aria-pressed="false">Source</button></div>
     </header>
 
     <main class="reader-shell" id="reader-shell">
-      <section class="reader-heading" aria-labelledby="song-title">
+      <section class="reader-heading" id="reader-heading" aria-labelledby="song-title">
         <p class="eyebrow" id="song-artist"></p>
         <h1 id="song-title" contenteditable="false">歌詞リーダー</h1>
         <p class="song-description" id="song-description"></p>
       </section>
       <div class="draft-notice" id="draft-notice" hidden role="status"><span>未保存の編集があります</span><button class="action-button" id="draft-restore" type="button">復元</button><button class="action-button" id="draft-discard" type="button">破棄</button></div>
+      <textarea class="source-editor" id="source-editor" hidden aria-label="Author Source" spellcheck="false" autocorrect="off" autocapitalize="off"></textarea>
       <article class="lyrics" id="lyrics" tabindex="0" aria-label="歌詞本文"></article>
       <p class="reader-error" id="reader-error" role="alert" hidden></p>
     </main>
@@ -95,6 +96,6 @@
 
     <footer class="site-footer" id="site-footer"><span>外部データをブラウザ上で読み込んで表示しています</span><nav class="footer-links" id="footer-links" aria-label="楽曲リンク"></nav></footer>
     <div class="drop-overlay" id="drop-overlay" hidden><strong>TXT / .lyric.txt / Reader JSONをドロップ</strong><span>画面のどこに置いても本文を開けます</span></div>
-    <script type="module" src="assets/js/app.js?v=20260908-019"></script>
+    <script type="module" src="assets/js/app.js?v=20260909-020"></script>
   </body>
 </html>
