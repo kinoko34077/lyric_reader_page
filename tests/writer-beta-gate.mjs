@@ -37,7 +37,7 @@ async function startLocalServer() {
 }
 
 function expectedAssetFailure(url) {
-  return /invalid\.example|missing-glyph\.svg/.test(url);
+  return /invalid\.example|missing-glyph\.svg|missing-reader\.txt/.test(url);
 }
 
 async function clickHeaderButton(page, selector) {
@@ -107,6 +107,17 @@ async function runGate(targetUrl) {
     await page.waitForFunction(() => /Variant Gate/.test(document.querySelector("#source-editor")?.value || ""), null, { timeout: 30_000 });
     await page.locator("#variant-mode").selectOption("original");
     await page.waitForFunction(() => /Writer Gate/.test(document.querySelector("#source-editor")?.value || ""), null, { timeout: 30_000 });
+    await clickHeaderButton(page, "#settings-toggle");
+
+    const sourceBeforeRemoteFailure = await page.locator("#source-editor").inputValue();
+    const invalidRemoteUrl = `${new URL(targetUrl).origin}/tests/fixtures/missing-reader.txt`;
+    await clickHeaderButton(page, "#settings-toggle");
+    await page.locator("#source-url").fill(invalidRemoteUrl);
+    page.once("dialog", dialog => dialog.accept());
+    await page.locator("#url-open-button").click({ force: true });
+    await page.locator("#reader-error").waitFor({ state: "visible", timeout: 30_000 });
+    assert.match(await page.locator("#reader-error").textContent() || "", /本文を取得できませんでした/);
+    assert.equal(await page.locator("#source-editor").inputValue(), sourceBeforeRemoteFailure, "invalid URL document must not replace the current source");
     await clickHeaderButton(page, "#settings-toggle");
 
     await clickHeaderButton(page, "#source-mode-switch");

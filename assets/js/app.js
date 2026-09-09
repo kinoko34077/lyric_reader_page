@@ -56,6 +56,7 @@ function draftKey() { const identity = state.data?.sourceIdentity || (state.data
 function syncSourceInput() { const source = state.data?.sourceUrl || ""; const shareable = /^https?:\/\//i.test(source); $("source-url").value = shareable ? source : ""; $("share-button").disabled = !shareable; $("source-copy-button").disabled = !shareable; $("reload-button").disabled = !shareable; $("reload-source-button").disabled = !shareable; }
 function setStatus(text) { $("source-status").textContent = text; }
 function clearReaderError() { const error = $("reader-error"); error.hidden = true; error.textContent = ""; }
+function showReaderError(error, fallback = "読み込みに失敗しました。既存の本文は保持されています。", status = "読込失敗") { const message = error instanceof Error ? error.message : fallback; const target = $("reader-error"); target.hidden = false; target.textContent = message || fallback; setStatus(status); }
 function isDirty() { return state.sourceDirty || state.documentDirty; }
 function markDirty({ source = false, document = false } = {}) { state.sourceDirty ||= source; state.documentDirty ||= document; state.dirty = isDirty(); }
 function clearDirty({ source = false, document = false } = {}) { if (source) state.sourceDirty = false; if (document) state.documentDirty = false; state.dirty = isDirty(); if (!state.dirty && state.data) state.savedCheckpoint = documentPayload(state.data, titleSourceText(), state.activeVariantId); }
@@ -163,8 +164,67 @@ async function loadWebFont(font) { if (!WEB_FONT_URLS[font]) return; const id = 
 async function loadRemoteFont(url) { let target; try { target = new URL(url); } catch { throw new Error("HTTPSのフォントURLのみ指定できます。"); } if (target.protocol !== "https:") throw new Error("HTTPSのフォントURLのみ指定できます。"); const token = ++fontRequestToken; const face = new FontFace("ReaderCustom", `url(${JSON.stringify(target.href)})`); await face.load(); if (token !== fontRequestToken) return; document.fonts.add(face); state.font = "custom"; state.fontUrl = target.href; applyAppearance(); savePreferences(); }
 async function loadRegistryFonts() { const loaded = new Set(); if (!state.remoteFontsAllowed) { state.loadedRegistryFonts = loaded; return loaded; } for (const [name, definition] of Object.entries(state.data?.manifest?.registry?.fonts || {})) { try { const face = new FontFace(`ReaderFont-${name}`, `url(${JSON.stringify(definition.url)})`); await face.load(); document.fonts.add(face); loaded.add(name); } catch { /* Text remains readable with the original Source fallback. */ } } state.loadedRegistryFonts = loaded; return loaded; }
 async function loadConfiguredFont() { await loadRegistryFonts(); if (state.remoteFontsAllowed && state.font === "custom" && state.fontUrl) { try { await loadRemoteFont(state.fontUrl); } catch (error) { state.font = "serif"; state.fontUrl = ""; syncControls(); applyAppearance(); throw error; } } else if (state.remoteFontsAllowed && WEB_FONT_URLS[state.font]) await loadWebFont(state.font); }
-async function reloadSource() { if (!state.data?.sourceUrl || state.data.sourceUrl === "local:" || state.data.sourceUrl === "reader:") { setStatus("現在の本文はローカル編集用です"); return; } if (isDirty() && !confirm("未保存の変更があります。外部本文を再読込しますか？")) return; try { const loaded = await loadInput(); loaded.manifest = validatedManifest(loaded.manifest); const nextData = normalizeDocumentData(loaded); validateLoadedVariants(nextData.manifest, nextData.variants); checkpointBeforeDocumentOpen(); state.loadedRegistryFonts = new Set(); state.data = nextData; clearReaderError(); state.activeVariantId = normalizeActiveVariantId(state.data.variants, loaded.activeVariantId); state.data.titleSource = loaded.titleSource || "first-line"; if (state.data.titleSource === "first-line") state.data.manifest.title = resolveTitle({ source: activeVariant(state.data).source.text }); clearDirty({ source: true, document: true }); applyManifest(state.data.manifest, true, true); applyAppearance(); render({ offset: 0, top: 0, left: 0 }); void loadConfiguredFont().then(() => render(captureScroll())).catch(error => { render(captureScroll()); setStatus(error instanceof Error ? error.message : "フォントを読み込めませんでした"); }); setCleanCheckpoint(); showDraftIfNeeded(); updateStatus("再読込しました"); pushHistory(); } catch (error) { setStatus(error instanceof Error ? error.message : "再読込に失敗しました"); } }
-async function openUrlSource() { const value = $("source-url").value.trim(); try { const url = new URL(value); if (!["http:", "https:"].includes(url.protocol)) throw new Error("HTTP(S) URLのみ指定できます。"); if (!confirmReplaceCurrent()) return; const loaded = await loadInput(`#src=${encodeURIComponent(url.href)}`); loaded.manifest = validatedManifest(loaded.manifest); const nextData = normalizeDocumentData(loaded); validateLoadedVariants(nextData.manifest, nextData.variants); checkpointBeforeDocumentOpen(); state.loadedRegistryFonts = new Set(); state.data = nextData; clearReaderError(); state.activeVariantId = normalizeActiveVariantId(state.data.variants, loaded.activeVariantId); state.data.titleSource = loaded.titleSource || "first-line"; if (state.data.titleSource === "first-line") state.data.manifest.title = resolveTitle({ source: activeVariant(state.data).source.text }); clearDirty({ source: true, document: true }); applyManifest(state.data.manifest, true, true); applyAppearance(); render({ offset: 0, top: 0, left: 0 }); void loadConfiguredFont().then(() => render(captureScroll())).catch(error => { render(captureScroll()); setStatus(error instanceof Error ? error.message : "フォントを読み込めませんでした"); }); setCleanCheckpoint(); const pageUrl = new URL(location.href); pageUrl.hash = `src=${encodeURIComponent(url.href)}`; history.replaceState(null, "", `${pageUrl.pathname}${pageUrl.search}${pageUrl.hash}`); showDraftIfNeeded(); updateStatus("URL本文を読み込みました"); pushHistory(); } catch (error) { setStatus(error instanceof Error ? error.message : "URL本文を読み込めませんでした"); } }
+async function reloadSource() {
+  if (!state.data?.sourceUrl || state.data.sourceUrl === "local:" || state.data.sourceUrl === "reader:") { setStatus("現在の本文はローカル編集用です"); return; }
+  if (isDirty() && !confirm("未保存の変更があります。外部本文を再読込しますか？")) return;
+  try {
+    const loaded = await loadInput();
+    loaded.manifest = validatedManifest(loaded.manifest);
+    const nextData = normalizeDocumentData(loaded);
+    validateLoadedVariants(nextData.manifest, nextData.variants);
+    checkpointBeforeDocumentOpen();
+    state.loadedRegistryFonts = new Set();
+    state.data = nextData;
+    clearReaderError();
+    state.activeVariantId = normalizeActiveVariantId(state.data.variants, loaded.activeVariantId);
+    state.data.titleSource = loaded.titleSource || "first-line";
+    if (state.data.titleSource === "first-line") state.data.manifest.title = resolveTitle({ source: activeVariant(state.data).source.text });
+    clearDirty({ source: true, document: true });
+    applyManifest(state.data.manifest, true, true);
+    applyAppearance();
+    render({ offset: 0, top: 0, left: 0 });
+    void loadConfiguredFont().then(() => render(captureScroll())).catch(error => { render(captureScroll()); setStatus(error instanceof Error ? error.message : "フォントを読み込めませんでした"); });
+    setCleanCheckpoint();
+    showDraftIfNeeded();
+    updateStatus("再読込しました");
+    pushHistory();
+  } catch (error) {
+    showReaderError(error, "再読込に失敗しました。既存の本文は保持されています。", "再読込失敗");
+  }
+}
+async function openUrlSource() {
+  const value = $("source-url").value.trim();
+  try {
+    const url = new URL(value);
+    if (!["http:", "https:"].includes(url.protocol)) throw new Error("HTTP(S) URLのみ指定できます。");
+    if (!confirmReplaceCurrent()) return;
+    const loaded = await loadInput(`#src=${encodeURIComponent(url.href)}`);
+    loaded.manifest = validatedManifest(loaded.manifest);
+    const nextData = normalizeDocumentData(loaded);
+    validateLoadedVariants(nextData.manifest, nextData.variants);
+    checkpointBeforeDocumentOpen();
+    state.loadedRegistryFonts = new Set();
+    state.data = nextData;
+    clearReaderError();
+    state.activeVariantId = normalizeActiveVariantId(state.data.variants, loaded.activeVariantId);
+    state.data.titleSource = loaded.titleSource || "first-line";
+    if (state.data.titleSource === "first-line") state.data.manifest.title = resolveTitle({ source: activeVariant(state.data).source.text });
+    clearDirty({ source: true, document: true });
+    applyManifest(state.data.manifest, true, true);
+    applyAppearance();
+    render({ offset: 0, top: 0, left: 0 });
+    void loadConfiguredFont().then(() => render(captureScroll())).catch(error => { render(captureScroll()); setStatus(error instanceof Error ? error.message : "フォントを読み込めませんでした"); });
+    setCleanCheckpoint();
+    const pageUrl = new URL(location.href);
+    pageUrl.hash = `src=${encodeURIComponent(url.href)}`;
+    history.replaceState(null, "", `${pageUrl.pathname}${pageUrl.search}${pageUrl.hash}`);
+    showDraftIfNeeded();
+    updateStatus("URL本文を読み込みました");
+    pushHistory();
+  } catch (error) {
+    showReaderError(error, "URL本文を読み込めませんでした。既存の本文は保持されています。", "URL本文の読込失敗");
+  }
+}
 
 function caretOffset() { const selection = window.getSelection(); if (!selection || !selection.rangeCount) return null; const range = selection.getRangeAt(0); const owner = (range.startContainer.nodeType === Node.ELEMENT_NODE ? range.startContainer : range.startContainer.parentElement)?.closest("[data-source-start]"); if (!owner) return null; const prefix = document.createRange(); prefix.selectNodeContents(owner); try { prefix.setEnd(range.startContainer, range.startOffset); return Math.min(Number(owner.dataset.sourceEnd), Number(owner.dataset.sourceStart) + graphemes(prefix.toString()).length); } catch { return Number(owner.dataset.sourceStart); } }
 function restoreCaret(offset) {
