@@ -40,7 +40,9 @@
 - Playwrightを開発専用依存として追加し、`npm run test:mobile`でChromium Pixel 5相当とWebKit iPhone 13相当のAutomated Mobile Viewer Gateを追加した。本文、Ruby、Presentation、Fallback、Variant、設定Panel、縦書きTitle/本文同期、横overflow、Portable Copyを各環境で確認する。
 - Mobile Gateの実機境界を明文化した。Playwright WebKitはSafari本体ではないため、実機iPhone Safari / Android Chrome、IME、soft keyboard、Clipboard権限はReader自動Gateと分離したRelease Smokeとして扱う。
 - GitHub Actionsのquality jobへPlaywrightブラウザ導入とAutomated Mobile Viewer Gateを追加し、Mobile Gate成功をPages deployの前提へ組み込んだ。
-- Writer Betaの第1段階としてSource Editorを追加した。`?mode=source`またはヘッダーの`Source`からAuthor Sourceを直接編集でき、parse成功時だけ現在のVariantへ反映し、無効なPresentationはCurrent Documentへcommitしない。Chromium / WebKitのMobile GateにもSource編集→Viewer復帰を追加した。
+- Writer Betaの第1段階としてSource Editorを追加した。`?mode=source`またはヘッダーの`Source`からAuthor Sourceを直接編集でき、parse成功時だけ現在のVariantへ反映し、無効なPresentationはCurrent Documentへcommitしない。Source Editorの確認はReader Mobile Gateから分離した`npm run test:writer`へ移した。
+- Reader Release GateとWriter Beta GateをCIジョブとして分離した。Pages deployは`reader-quality`だけに依存し、Writer Betaの失敗は記録しつつReader公開を止めない。Productionはno-build / runtime dependencyなし、Playwrightはdevelopment-only依存という方針をADR 0004へ同期した。
+- Reader安定点`925cfc7`へ`stable`ブランチと`reader-v0.1.0`タグを作成し、Reader v0.xのFreeze checkpointを固定した。`main`はWriter Betaの継続開発に使用する。
 - 詳細は[`docs/READER-KERNEL-ROADMAP.md`](docs/READER-KERNEL-ROADMAP.md)を参照。
 
 ## [Unreleased] — 2026-09-08

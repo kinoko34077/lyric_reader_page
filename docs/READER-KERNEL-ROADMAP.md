@@ -62,7 +62,7 @@ Portable / Plain / Author Projection
 
 ### 現在地
 
-既存のAdapter、IR、Projection、Registry、Renderer、Fallbackに加え、実作品相当の長文Golden Fixtureを追加済み。Variant、Remote Font、Asset failure、未知Registry extension、欠損Style / Font参照もfixtureへ含め、現段階はKernel Gateの回帰を継続しながらReader実用化へ進める状態。Parser / Registry libraryは比較の結果、現行のbounded local実装をv0.xでfreezeした（[`ADR 0004`](adr/0004-reader-kernel-library-freeze.md)）。
+既存のAdapter、IR、Projection、Registry、Renderer、Fallbackに加え、実作品相当の長文Golden Fixtureを追加済み。Variant、Remote Font、Asset failure、未知Registry extension、欠損Style / Font参照もfixtureへ含め、Reader Release GateはChromium mobile / WebKit iPhone emulationまで自動化済み。Parser / Registry libraryは比較の結果、現行のbounded local実装をv0.xでfreezeした（[`ADR 0004`](adr/0004-reader-kernel-library-freeze.md)）。安定点`925cfc7`は`stable`ブランチと`reader-v0.1.0`タグで固定し、以後の`main`はWriter Betaを進める。
 
 ## Stage 2 — 最低限のPresentation
 
@@ -70,13 +70,13 @@ Palette、Style、Glyph、Combine、Font、Outlineを閲覧用途として維持
 
 ## Stage 3 — Readerとしての実用化
 
-横書き、縦書き、Ruby表示、Variant切替、字体、文字サイズ、Palette、Copy、TXT download、URL/File open、Desktop閲覧、およびChromium mobile / WebKit iPhone emulationによるMobile Viewer Gateを確認する。実機iPhone Safari / Android ChromeはRelease Smokeへ分離し、EditorはBetaとして扱う。
+横書き、縦書き、Ruby表示、Variant切替、字体、文字サイズ、Palette、Copy、TXT download、URL/File open、Desktop閲覧、およびChromium mobile / WebKit iPhone emulationによるReader Mobile Release Gateを確認する。実機iPhone Safari / Android ChromeはRelease Smokeへ分離し、EditorはBetaとして扱う。
 
 ## Stage 4 — Editor改善
 
 ### Writer Beta — Source Editor slice
 
-Source Editorの最初の実装として、`?mode=source`とヘッダーの`Source`切替を追加した。Author Sourceはtextareaへそのまま表示し、parse成功時だけ現在のVariantへ反映する。無効なPresentationはCurrent Documentへcommitせず、入力欄へエラー状態を残す。Source変更後はViewerへ戻って再parse済みの表示を確認できる。
+Source Editorの最初の実装として、`?mode=source`とヘッダーの`Source`切替を追加した。Author Sourceはtextareaへそのまま表示し、parse成功時だけ現在のVariantへ反映する。無効なPresentationはCurrent Documentへcommitせず、入力欄へエラー状態を残す。Source変更後はViewerへ戻って再parse済みの表示を確認できる。Reader Mobile Gateとは別に、`npm run test:writer`でSource EditorのChromium Beta Gateを実行する。
 
 実利用でReader Kernelを壊すP0が発生した場合だけ即時修正する。Caret、IME、Native Undo、Draft完全復旧、Style rename transaction、複雑なVariant authoring、詳細Accessibility、印刷・forced-colorsはReader完成後に必要性を見て対応する。Writer Betaでは`K1`（文書を開く操作自体のUndo）と`K6`（Tab単位Draft分離）を別途実装する。
 
