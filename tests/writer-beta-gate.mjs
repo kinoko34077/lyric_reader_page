@@ -383,6 +383,21 @@ async function runGate(targetUrl) {
 
     await clickHeaderButton(page, "#source-mode-switch");
     await clickHeaderButton(page, "#mode-switch");
+    await selectLyricsText("Writer Gate");
+    await page.locator("#lyrics").evaluate(element => {
+      const event = new Event("paste", { bubbles: true, cancelable: true });
+      Object.defineProperty(event, "clipboardData", { value: { getData: type => type === "text/plain" ? "Writer Paste" : "<strong>unsafe html</strong>" } });
+      element.dispatchEvent(event);
+    });
+    await clickHeaderButton(page, "#source-mode-switch");
+    const pasteSource = await page.locator("#source-editor").inputValue();
+    assert.match(pasteSource, /\[Writer Paste:style=demo-chorus\]/, `Plain-text paste lost the existing Presentation: ${pasteSource.slice(-500)}`);
+    assert.doesNotMatch(pasteSource, /unsafe html|<strong>/, "WYSIWYG paste must not import HTML into Author Source");
+    await page.locator("#source-editor").fill(clearedAuthorSource);
+    await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source, clearedAuthorSource, { timeout: 30_000 });
+
+    await clickHeaderButton(page, "#source-mode-switch");
+    await clickHeaderButton(page, "#mode-switch");
     await selectLyricsText("Reader Smoke");
     await page.locator("#outline-name").fill("thin");
     await page.locator("#outline-button").click({ force: true });
