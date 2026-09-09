@@ -66,6 +66,7 @@ git diff --check
 - 2026-09-09にPowerShellで`$env:MOBILE_GATE_URL='https://kinoko34077.github.io/lyric_reader_page/?mode=viewer'; npm run test:mobile`を実行し、公開Pagesでも`chromium-pixel-5` / `webkit-iphone-13`がPASSした。公開HTMLとローカルのbuild markerは`20260908-019`で一致している。
 - GitHub Actionsの`quality` jobでもPlaywright依存・Chromium / WebKitを導入して同じGateを実行し、成功時だけPages deployへ進む。
 - [`ebe1db4`のGitHub Actions run](https://github.com/kinoko34077/lyric_reader_page/actions/runs/34304668464)で、quality（全Test・syntax check・Automated Mobile Viewer Gate）と後続Pages deployがPASSした。
+- [`56e754f`のGitHub Actions run](https://github.com/kinoko34077/lyric_reader_page/actions/runs/34338680157)で、Source Editor統合後のquality（全Test・syntax check・Automated Mobile Viewer Gate）と後続Pages deployがPASSし、公開PagesでもSource編集→Viewer復帰を確認した。
 
 ## Stage A — Baseline / semantic model
 
