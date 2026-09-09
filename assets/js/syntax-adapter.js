@@ -82,6 +82,12 @@ function assertSourceSize(source) {
   if (new TextEncoder().encode(source).byteLength > MAX_SOURCE_BYTES) throw new Error("本文が大きすぎます。");
 }
 
+function withSourceIndex(error, index) {
+  const result = error instanceof Error ? error : new Error(String(error));
+  if (!Number.isInteger(result.sourceIndex)) result.sourceIndex = Math.max(0, Number(index) || 0);
+  return result;
+}
+
 const PRESENTATION_KEYS = new Set(["c", "bank", "style", "glyph", "combine", "font", "weight", "outline", "gradient"]);
 const SAFE_NAME = /^[\w-]+$/;
 const RESERVED_NAMES = new Set(["__proto__", "constructor", "prototype"]);
@@ -228,9 +234,9 @@ function isEscaped(source, index) {
   return slashes % 2 === 1;
 }
 
-function parseProvisional(source, depth = 0, stats = { nodes: 0 }) {
-  if (source.length > PARSER_LIMITS.maxSourceLength) throw new Error("Sourceが大きすぎます。");
-  if (depth > PARSER_LIMITS.maxDepth) throw new Error("Presentationの入れ子が深すぎます。");
+function parseProvisional(source, depth = 0, stats = { nodes: 0 }, sourceOffset = 0) {
+  if (source.length > PARSER_LIMITS.maxSourceLength) throw withSourceIndex(new Error("Sourceが大きすぎます。"), sourceOffset);
+  if (depth > PARSER_LIMITS.maxDepth) throw withSourceIndex(new Error("Presentationの入れ子が深すぎます。"), sourceOffset);
   const nodes = []; const pairs = bracketPairs(source); let cursor = 0; let plainStart = 0;
   const flushPlain = end => { if (end > plainStart) appendNodes(nodes, plainNodes(source.slice(plainStart, end), stats), stats); };
   while (cursor < source.length) {
@@ -238,12 +244,19 @@ function parseProvisional(source, depth = 0, stats = { nodes: 0 }) {
     const close = pairs.get(cursor); if (close === undefined) { cursor++; continue; }
     const colon = topLevelColon(source, cursor + 1, close);
     if (colon < 0) { cursor++; continue; }
-    const presentation = parsePresentation(source.slice(colon + 1, close));
+    let presentation;
+    try { presentation = parsePresentation(source.slice(colon + 1, close)); }
+    catch (error) { throw withSourceIndex(error, sourceOffset + colon + 1); }
     if (!presentation) { cursor = close + 1; continue; }
     flushPlain(cursor);
-    const children = parseProvisional(source.slice(cursor + 1, colon), depth + 1, stats);
-    if ((presentation.base || presentation.ruby) && (children.length !== 1 || children[0].type !== "ruby")) throw new Error("親文字・ルビ範囲指定の対象はRubyである必要があります。");
-    const rubyDecorated = decorateRubyChildren(children, presentation);
+    let children;
+    try {
+      children = parseProvisional(source.slice(cursor + 1, colon), depth + 1, stats, sourceOffset + cursor + 1);
+      if ((presentation.base || presentation.ruby) && (children.length !== 1 || children[0].type !== "ruby")) throw new Error("親文字・ルビ範囲指定の対象はRubyである必要があります。");
+    } catch (error) { throw withSourceIndex(error, sourceOffset + cursor); }
+    let rubyDecorated;
+    try { rubyDecorated = decorateRubyChildren(children, presentation); }
+    catch (error) { throw withSourceIndex(error, sourceOffset + cursor); }
     appendNodes(nodes, [rubyDecorated || { type: "span", children, presentation }], stats);
     cursor = close + 1; plainStart = cursor;
   }
@@ -270,9 +283,9 @@ function omitRange(presentation) {
   return rest;
 }
 
-function parseLegacy(source, depth = 0, stats = { nodes: 0 }) {
-  if (source.length > PARSER_LIMITS.maxSourceLength) throw new Error("Sourceが大きすぎます。");
-  if (depth > PARSER_LIMITS.maxDepth) throw new Error("Presentationの入れ子が深すぎます。");
+function parseLegacy(source, depth = 0, stats = { nodes: 0 }, sourceOffset = 0) {
+  if (source.length > PARSER_LIMITS.maxSourceLength) throw withSourceIndex(new Error("Sourceが大きすぎます。"), sourceOffset);
+  if (depth > PARSER_LIMITS.maxDepth) throw withSourceIndex(new Error("Presentationの入れ子が深すぎます。"), sourceOffset);
   const nodes = []; const pairs = bracketPairs(source); let cursor = 0; let plainStart = 0;
   const flushPlain = end => { if (end > plainStart) appendNodes(nodes, plainNodes(source.slice(plainStart, end), stats), stats); };
   while (cursor < source.length) {
@@ -280,12 +293,19 @@ function parseLegacy(source, depth = 0, stats = { nodes: 0 }) {
     const closeBracket = pairs.get(cursor); if (closeBracket === undefined || source[closeBracket + 1] !== "{") { cursor++; continue; }
     const closeAttribute = findLegacyBrace(source, closeBracket + 1);
     if (closeAttribute < 0) { cursor++; continue; }
-    const presentation = parsePresentation(source.slice(closeBracket + 2, closeAttribute));
+    let presentation;
+    try { presentation = parsePresentation(source.slice(closeBracket + 2, closeAttribute)); }
+    catch (error) { throw withSourceIndex(error, sourceOffset + closeBracket + 2); }
     if (!presentation) { cursor = closeAttribute + 1; continue; }
     flushPlain(cursor);
-    const children = parseLegacy(source.slice(cursor + 1, closeBracket), depth + 1, stats);
-    if ((presentation.base || presentation.ruby) && (children.length !== 1 || children[0].type !== "ruby")) throw new Error("親文字・ルビ範囲指定の対象はRubyである必要があります。");
-    const rubyDecorated = decorateRubyChildren(children, presentation);
+    let children;
+    try {
+      children = parseLegacy(source.slice(cursor + 1, closeBracket), depth + 1, stats, sourceOffset + cursor + 1);
+      if ((presentation.base || presentation.ruby) && (children.length !== 1 || children[0].type !== "ruby")) throw new Error("親文字・ルビ範囲指定の対象はRubyである必要があります。");
+    } catch (error) { throw withSourceIndex(error, sourceOffset + cursor); }
+    let rubyDecorated;
+    try { rubyDecorated = decorateRubyChildren(children, presentation); }
+    catch (error) { throw withSourceIndex(error, sourceOffset + cursor); }
     appendNodes(nodes, [rubyDecorated || { type: "span", children, presentation }], stats);
     cursor = closeAttribute + 1; plainStart = cursor;
   }

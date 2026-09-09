@@ -41,6 +41,7 @@
 - Mobile Gateの実機境界を明文化した。Playwright WebKitはSafari本体ではないため、実機iPhone Safari / Android Chrome、IME、soft keyboard、Clipboard権限はReader自動Gateと分離したRelease Smokeとして扱う。
 - GitHub Actionsのquality jobへPlaywrightブラウザ導入とAutomated Mobile Viewer Gateを追加し、Mobile Gate成功をPages deployの前提へ組み込んだ。
 - Writer Betaの第1段階としてSource Editorを追加した。`?mode=source`またはヘッダーの`Source`からAuthor Sourceを直接編集でき、parse成功時だけ現在のVariantへ反映し、無効なPresentationはCurrent Documentへcommitしない。Source Editorの確認はReader Mobile Gateから分離した`npm run test:writer`へ移した。
+- Source Editorのparse失敗へParser由来のSource indexを伝播し、行・列付きのエラー表示へ改善した。既存のCurrent Document保護とWriter Beta Gateを維持する。
 - Reader Release GateとWriter Beta GateをCIジョブとして分離した。Pages deployは`reader-quality`だけに依存し、Writer Betaの失敗は記録しつつReader公開を止めない。Productionはno-build / runtime dependencyなし、Playwrightはdevelopment-only依存という方針をADR 0004へ同期した。
 - Reader安定点`925cfc7`へ`stable`ブランチと`reader-v0.1.0`タグを作成し、Reader v0.xのFreeze checkpointを固定した。`main`はWriter Betaの継続開発に使用する。
 - Writer Betaの`K6`を実装し、`sessionStorage`由来のタブ固有IDをDraftキーへ含めた。同一文書を複数Tabで編集してもDraftが上書き・復元候補へ混入せず、同一Tabのreloadではキーを維持する。`K1`は次のWriter Beta sliceで実装した。

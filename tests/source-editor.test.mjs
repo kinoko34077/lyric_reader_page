@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { getSyntaxAdapter } from "../assets/js/syntax-adapter.js";
-import { parseSourceEditorInput } from "../assets/js/source-editor.js";
+import { parseSourceEditorInput, sourceErrorLocation } from "../assets/js/source-editor.js";
 
 const root = process.cwd();
 
@@ -26,6 +26,18 @@ test("Source editor rejects invalid presentation without producing a commit cand
   assert.equal(result.source, source);
   assert.equal(result.document, undefined);
   assert.match(result.error.message, /Presentation指定に有効な属性がありません/);
+});
+
+test("Source editor reports the source line and column for parse failures", () => {
+  const adapter = getSyntaxAdapter("narou-text");
+  const source = "題名\n[x:style=bad name]";
+  const result = parseSourceEditorInput(source, adapter);
+
+  assert.equal(result.ok, false);
+  assert.deepEqual(sourceErrorLocation(source, result.error), result.error.sourceLocation);
+  assert.equal(result.error.sourceLocation.line, 2);
+  assert.ok(result.error.sourceLocation.column >= 4);
+  assert.match(result.error.message, /行2・列\d+/);
 });
 
 test("Source mode has an explicit textarea and application route", () => {

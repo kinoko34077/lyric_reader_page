@@ -113,6 +113,7 @@ async function runGate(targetUrl) {
     await page.locator("#source-editor").fill(invalidSource);
     await page.waitForFunction(() => document.querySelector("#source-editor")?.getAttribute("aria-invalid") === "true");
     assert.match(await page.locator("#source-status").textContent() || "", /Sourceを反映できません/);
+    assert.match(await page.locator("#source-status").textContent() || "", /行\d+・列\d+/);
 
     await clickHeaderButton(page, "#source-mode-switch");
     await page.locator("#lyrics").waitFor({ state: "visible" });
