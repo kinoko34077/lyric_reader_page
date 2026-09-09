@@ -78,7 +78,7 @@ Palette、Style、Glyph、Combine、Font、Outlineを閲覧用途として維持
 
 Source Editorの最初の実装として、`?mode=source`とヘッダーの`Source`切替を追加した。Author Sourceはtextareaへそのまま表示し、parse成功時だけ現在のVariantへ反映する。無効なPresentationはCurrent Documentへcommitせず、入力欄へエラー状態を残す。Source変更後はViewerへ戻って再parse済みの表示を確認できる。Reader Mobile Gateとは別に、`npm run test:writer`でSource EditorのChromium Beta Gateを実行する。
 
-実利用でReader Kernelを壊すP0が発生した場合だけ即時修正する。Caret、IME、Native Undo、Draft完全復旧、Style rename transaction、複雑なVariant authoring、詳細Accessibility、印刷・forced-colorsはReader完成後に必要性を見て対応する。Writer Betaでは`K6`（Tab単位Draft分離）を実装済み。`K1`（文書を開く操作自体のUndo）は引き続きDeferredとする。
+実利用でReader Kernelを壊すP0が発生した場合だけ即時修正する。Caret、IME、Draft完全復旧、Style rename transaction、複雑なVariant authoring、詳細Accessibility、印刷・forced-colorsはReader完成後に必要性を見て対応する。Writer Betaでは`K6`（Tab単位Draft分離）と`K1`（文書を開く操作自体のUndo）を実装済み。Native Undoの完全整合は引き続き後回しとする。
 
 ## Severity
 

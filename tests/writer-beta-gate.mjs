@@ -96,7 +96,19 @@ async function runGate(targetUrl) {
       await secondTab.close();
     }
 
+    await clickHeaderButton(page, "#mode-switch");
+    await clickHeaderButton(page, "#settings-toggle");
+    const remoteSourceUrl = `${new URL(targetUrl).origin}/data/demo/lyrics-historical.txt`;
+    await page.locator("#source-url").fill(remoteSourceUrl);
+    page.once("dialog", dialog => dialog.accept());
+    await page.locator("#url-open-button").click({ force: true });
+    await page.waitForFunction(() => /曲前フリ/.test(document.querySelector("#song-title")?.textContent || ""), null, { timeout: 30_000 });
+    assert.match(await page.locator("#source-status").textContent() || "", /URL本文を読み込みました/);
+    await page.locator("#undo-button").click({ force: true });
     await clickHeaderButton(page, "#source-mode-switch");
+    await page.waitForFunction(() => /Writer Gate/.test(document.querySelector("#source-editor")?.value || ""), null, { timeout: 30_000 });
+    assert.match(await page.locator("#source-editor").inputValue(), /Writer Gate/);
+
     const invalidSource = `${editedSource}\n[x:base-range=0-3]`;
     await page.locator("#source-editor").fill(invalidSource);
     await page.waitForFunction(() => document.querySelector("#source-editor")?.getAttribute("aria-invalid") === "true");

@@ -33,7 +33,7 @@
 - 公開quality fixtureへ未知Registry extension、欠損Style / Font参照を追加し、Variant・Asset failureと合わせてFail-soft経路を常時検証。
 - 旧Range Annotationをruntime state、History、Draft、payload、Rendererから撤去し、Reader上のPresentationをAuthor Source / IR経路へ一本化した。入力に残る旧フィールドは無視する。
 - Readerの通常対応目安をSource約50,000文字までとし、現行500,000 code units等の制限は極端な入力を止める安全上限としてBest Effort範囲と分離した。
-- Writer系の正本をReader優先方針へ同期し、`K1`（文書OpenのUndo）と`K6`（Tab単位Draft分離）をWriter BetaのDeferred要件として明記した。現行Readerの文書単位History・暫定Tab警告とは混同しない。
+- Writer系の正本をReader優先方針へ同期し、`K1`（文書OpenのUndo）と`K6`（Tab単位Draft分離）をWriter Beta側の要件としてReader Release Gateから分離した。現行Readerの完成条件とは混同しない。
 - Parser generator / Schema validatorを一度比較し、Static PagesのNo-build配布、独自Projection、Fail-soft Registry policyを理由に現行bounded local実装をv0.xでfreezeした。判断を[`docs/adr/0004-reader-kernel-library-freeze.md`](docs/adr/0004-reader-kernel-library-freeze.md)へ記録した。
 - 公開Demoの実作品本文末尾へReader SmokeセクションとRegistry定義を追加し、Palette/Bank、Style、Outline、Combine、Glyph、missing Asset/Font、Variantの実入力経路を`tests/demo-smoke.test.mjs`で回帰確認するようにした。
 - 現行Demoを新規Desktop Chrome tabで再確認し、Reader Smoke、設定Panel単独スクロール、縦書きTitle/本文同期、Variant切替、欠損Asset時の本文継続を観測した。iPhone Safari / Android Chromeは実行環境外として未検証のまま記録した。
@@ -43,7 +43,8 @@
 - Writer Betaの第1段階としてSource Editorを追加した。`?mode=source`またはヘッダーの`Source`からAuthor Sourceを直接編集でき、parse成功時だけ現在のVariantへ反映し、無効なPresentationはCurrent Documentへcommitしない。Source Editorの確認はReader Mobile Gateから分離した`npm run test:writer`へ移した。
 - Reader Release GateとWriter Beta GateをCIジョブとして分離した。Pages deployは`reader-quality`だけに依存し、Writer Betaの失敗は記録しつつReader公開を止めない。Productionはno-build / runtime dependencyなし、Playwrightはdevelopment-only依存という方針をADR 0004へ同期した。
 - Reader安定点`925cfc7`へ`stable`ブランチと`reader-v0.1.0`タグを作成し、Reader v0.xのFreeze checkpointを固定した。`main`はWriter Betaの継続開発に使用する。
-- Writer Betaの`K6`を実装し、`sessionStorage`由来のタブ固有IDをDraftキーへ含めた。同一文書を複数Tabで編集してもDraftが上書き・復元候補へ混入せず、同一Tabのreloadではキーを維持する。`K1`（文書OpenのUndo）は引き続きDeferred。
+- Writer Betaの`K6`を実装し、`sessionStorage`由来のタブ固有IDをDraftキーへ含めた。同一文書を複数Tabで編集してもDraftが上書き・復元候補へ混入せず、同一Tabのreloadではキーを維持する。`K1`は次のWriter Beta sliceで実装した。
+- Writer Betaの`K1`を実装し、文書Open前のSnapshotへSource URL / name / identityを保持するようにした。URL本文を開いた後のUndoで元文書のAuthor Source・文書Identity・表示状態へ戻れることを`tests/writer-beta-gate.mjs`で確認する。
 - 詳細は[`docs/READER-KERNEL-ROADMAP.md`](docs/READER-KERNEL-ROADMAP.md)を参照。
 
 ## [Unreleased] — 2026-09-08

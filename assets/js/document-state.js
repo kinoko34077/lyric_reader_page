@@ -57,6 +57,8 @@ export function documentPayload(data, title, activeVariant = null) {
     variantOverrides: clone(normalized.variantOverrides),
     metadata: clone(normalized.metadata),
     sourceMetadata: clone(data?.sourceMetadata || {}),
+    sourceUrl: String(data?.sourceUrl || ""),
+    sourceName: String(data?.sourceName || ""),
     sourceIdentity: String(data?.sourceIdentity || ""),
     titleSource: data?.titleSource || "first-line",
     manifest: clone(data?.manifest || {}),

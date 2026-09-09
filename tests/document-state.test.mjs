@@ -5,12 +5,12 @@ import { boundedHistory, documentIdentity, documentPayload, draftDiffers, draftP
 const data = {
   manifest: { id: "song-a", registry: { palettes: { "2": "#d02020" } } },
   historical: { text: "古い" }, modern: { text: "現代" }, modernAvailable: true,
-  titleSource: "meta", sourceUrl: "reader:", sourceName: "a.reader.json"
+  titleSource: "meta", sourceUrl: "reader:", sourceName: "a.reader.json", sourceIdentity: "source-a"
 };
 
 test("document identity and payload keep variants, registry, and active variant together", () => {
   const sourceMetadataData = { ...data, sourceMetadata: { title: "Source title", note: "原注" } };
-  assert.equal(documentIdentity(data), "song-a||reader:|a.reader.json");
+  assert.equal(documentIdentity(data), "song-a|source-a|reader:|a.reader.json");
   const payload = documentPayload(sourceMetadataData, "題", "modern");
   assert.equal(payload.activeVariantId, "modern");
   assert.equal(payload.variants[0].source.text, "古い");
@@ -18,6 +18,13 @@ test("document identity and payload keep variants, registry, and active variant 
   assert.equal(payload.manifest.registry.palettes["2"], "#d02020");
   assert.deepEqual(payload.sourceMetadata, { title: "Source title", note: "原注" });
   assert.equal(Object.hasOwn(payload, "annotations"), false);
+});
+
+test("history payload retains source routing fields for document-open Undo", () => {
+  const payload = documentPayload(data, "題", "modern");
+  assert.equal(payload.sourceUrl, "reader:");
+  assert.equal(payload.sourceName, "a.reader.json");
+  assert.equal(payload.sourceIdentity, "source-a");
 });
 
 test("draft round-trip detects registry-only and variant-only changes", () => {
