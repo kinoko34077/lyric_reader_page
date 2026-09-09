@@ -120,7 +120,9 @@ async function checkScenario(scenario, targetUrl) {
     return { id: scenario.id, status: "PASS", screenshot: screenshotBase, initial, vertical };
   } catch (error) {
     await page.screenshot({ path: `${screenshotBase}-failure.png`, fullPage: false }).catch(() => {});
-    throw new Error(`${scenario.id}: ${error instanceof Error ? error.message : String(error)}`);
+    const message = `${scenario.id}: ${error instanceof Error ? error.message : String(error)}`.replace(/[\r\n]+/g, " ");
+    if (process.env.GITHUB_ACTIONS) console.log(`::error title=Mobile Viewer Gate failure::${message}`);
+    throw new Error(message);
   } finally {
     await context.close();
     await browser.close();
