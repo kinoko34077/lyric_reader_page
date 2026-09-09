@@ -49,6 +49,7 @@
 - Writer BetaのDraft復元を全Variant・Registry・Metadata・Theme・Source routing fieldsへ拡張し、Source Editorのreload→Draft復元でVariant別編集も戻ることを`tests/writer-beta-gate.mjs`で確認する。
 - Writer Beta GateへStorage故障注入を追加し、localStorageの読込・書込・削除が失敗しても自動復元不可の通知だけで編集・Viewer反映を継続することを確認する。
 - `K6`のTab単位Draft分離と矛盾する別Tab共有警告経路を削除し、別Tab間のDraft共有・競合解消をWriter Betaの未提供範囲として明文化した。
+- 不正文書のローカル読込候補をCurrent Documentへ反映せず、正常なDocument / URL読込成功時には以前の読込エラー表示を解除することをWriter Beta Gateで確認する。
 - 詳細は[`docs/READER-KERNEL-ROADMAP.md`](docs/READER-KERNEL-ROADMAP.md)を参照。
 
 ## [Unreleased] — 2026-09-08

@@ -95,6 +95,10 @@ async function runGate(targetUrl) {
 
     await page.reload({ waitUntil: "domcontentloaded", timeout: 30_000 });
     await page.locator("#source-editor").waitFor({ state: "visible", timeout: 30_000 });
+    await page.locator("#source-file").setInputFiles({ name: "broken.reader.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify({ version: 3, content: { variants: [] } })) });
+    await page.locator("#reader-error").waitFor({ state: "visible", timeout: 30_000 });
+    assert.match(await page.locator("#reader-error").textContent() || "", /本文がありません/);
+    assert.equal(await page.locator("#source-editor").inputValue(), originalSource, "invalid document must not replace the current source");
     await page.locator("#draft-notice").waitFor({ state: "visible", timeout: 30_000 });
     await page.locator("#draft-restore").click();
     await page.waitForFunction(() => /Writer Gate/.test(document.querySelector("#source-editor")?.value || ""), null, { timeout: 30_000 });
@@ -134,6 +138,7 @@ async function runGate(targetUrl) {
     await page.waitForFunction(() => /曲前フリ/.test(document.querySelector("#song-title")?.textContent || ""), null, { timeout: 30_000 });
     await page.waitForFunction(() => /URL本文を読み込みました/.test(document.querySelector("#source-status")?.textContent || ""), null, { timeout: 30_000 });
     assert.match(await page.locator("#source-status").textContent() || "", /URL本文を読み込みました/);
+    assert.equal(await page.locator("#reader-error").isHidden(), true, "successful document load must clear an earlier load error");
     await page.locator("#undo-button").click({ force: true });
     await clickHeaderButton(page, "#source-mode-switch");
     await page.waitForFunction(() => /Writer Gate/.test(document.querySelector("#source-editor")?.value || ""), null, { timeout: 30_000 });
