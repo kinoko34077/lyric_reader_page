@@ -52,6 +52,7 @@
 - `K6`のTab単位Draft分離と矛盾する別Tab共有警告経路を削除し、別Tab間のDraft共有・競合解消をWriter Betaの未提供範囲として明文化した。
 - 不正文書のローカル読込候補をCurrent Documentへ反映せず、正常なDocument / URL読込成功時には以前の読込エラー表示を解除することをWriter Beta Gateで確認する。
 - URL本文の取得失敗も`reader-error`へ詳細表示し、既存Documentを保持したまま再試行できるようにした。成功したURL読込では同じエラー表示を解除する。
+- ADR 0002の未知Reader Document version方針を、現行のBest-effort変換・読込不能時のみCurrent保持する実装と要件書へ同期。
 - 詳細は[`docs/READER-KERNEL-ROADMAP.md`](docs/READER-KERNEL-ROADMAP.md)を参照。
 
 ## [Unreleased] — 2026-09-08

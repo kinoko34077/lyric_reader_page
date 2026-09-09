@@ -12,7 +12,7 @@ Author Source is the semantic source of truth for title, body, Ruby, links, and 
 
 Variant correspondence uses semantic link IDs and member anchors, not character offsets. A link can carry shared Presentation. A Variant may carry an explicit override, which is merged over the shared default without mutating other Variants.
 
-Reader Document and Draft payloads use model version 3. Versions 1 and 2 migrate explicitly; future versions fail closed.
+Reader Document and Draft payloads use model version 3. Versions 1 and 2 migrate explicitly; future versions are converted best-effort when their Source / Variant content is understandable, with a warning retained. Candidates that cannot produce a readable Variant Set fail closed without replacing the current document.
 
 ## Consequences
 
