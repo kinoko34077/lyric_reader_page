@@ -343,6 +343,24 @@ async function runGate(targetUrl) {
     await page.locator("#source-editor").fill(clearedAuthorSource);
     await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source, clearedAuthorSource, { timeout: 30_000 });
 
+    await clickHeaderButton(page, "#source-mode-switch");
+    await clickHeaderButton(page, "#mode-switch");
+    await selectLyricsText("Reader Smoke");
+    await page.locator("#outline-name").fill("thin");
+    await page.locator("#outline-button").click({ force: true });
+    await clickHeaderButton(page, "#source-mode-switch");
+    const outlineSource = await page.locator("#source-editor").inputValue();
+    assert.match(outlineSource, /\[Reader Smoke:outline=thin\]/, `Outline authoring was not serialized: ${outlineSource.slice(-500)}`);
+    await clickHeaderButton(page, "#source-mode-switch");
+    const outlined = page.locator('#lyrics .source-presentation[data-outline="thin"]').filter({ hasText: "Reader Smoke" });
+    await outlined.waitFor({ state: "visible", timeout: 30_000 });
+    assert.ok(await outlined.evaluate(element => element.style.webkitTextStroke || element.style.textStroke || element.style.textShadow), "Outline authoring must reach the resolved viewer style");
+    await clickHeaderButton(page, "#mode-switch");
+    await selectLyricsText("Reader Smoke");
+    await page.locator("#clear-presentation-button").click({ force: true });
+    await clickHeaderButton(page, "#source-mode-switch");
+    await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source, clearedAuthorSource, { timeout: 30_000 });
+
     await page.screenshot({ path: screenshot, fullPage: false });
     assert.deepEqual({ consoleErrors, pageErrors, failedRequests, badResponses }, { consoleErrors: [], pageErrors: [], failedRequests: [], badResponses: [] });
     return { status: "PASS", targetUrl, screenshot };

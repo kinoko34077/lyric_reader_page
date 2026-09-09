@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="description" content="外部の歌詞テキストを読むための静的リーダー">
     <title>歌詞リーダー</title>
-    <link rel="stylesheet" href="assets/css/reader.css?v=20260910-021">
+    <link rel="stylesheet" href="assets/css/reader.css?v=20260910-022">
   </head>
   <body>
     <header class="site-header" id="site-header">
@@ -88,6 +88,8 @@
           <button class="action-button" id="glyph-button" type="button">選択範囲にGlyph</button>
           <label><span>組文字mode</span><select id="combine-mode" aria-label="組文字mode"><option value="straight">直行</option><option value="parallel">併置</option><option value="z">Z字</option></select></label>
           <button class="action-button" id="combine-button" type="button">選択範囲を組文字</button>
+          <label><span>Outline名</span><input id="outline-name" type="text" value="thin" pattern="[A-Za-z0-9_-]+" aria-label="Outline名"></label>
+          <button class="action-button" id="outline-button" type="button">選択範囲に縁取り</button>
           <button class="action-button" id="clear-presentation-button" type="button">選択範囲の装飾を解除</button>
         </fieldset>
         <nav class="song-links" id="song-links" aria-label="楽曲リンク"></nav>
@@ -96,6 +98,6 @@
 
     <footer class="site-footer" id="site-footer"><span>外部データをブラウザ上で読み込んで表示しています</span><nav class="footer-links" id="footer-links" aria-label="楽曲リンク"></nav></footer>
     <div class="drop-overlay" id="drop-overlay" hidden><strong>TXT / .lyric.txt / Reader JSONをドロップ</strong><span>画面のどこに置いても本文を開けます</span></div>
-    <script type="module" src="assets/js/app.js?v=20260910-021"></script>
+    <script type="module" src="assets/js/app.js?v=20260910-022"></script>
   </body>
 </html>
