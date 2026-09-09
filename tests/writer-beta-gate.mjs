@@ -215,6 +215,59 @@ async function runGate(targetUrl) {
     assert.doesNotMatch(viewerText, /base-range=0-3/);
     assert.equal(await page.locator("#source-editor").getAttribute("aria-invalid"), null);
 
+    const selectLyricsText = async text => {
+      const selected = await page.locator("#lyrics").evaluate((root, value) => {
+        const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+        while (walker.nextNode()) {
+          const node = walker.currentNode;
+          const start = node.nodeValue?.indexOf(value) ?? -1;
+          if (start < 0) continue;
+          const range = document.createRange();
+          range.setStart(node, start);
+          range.setEnd(node, start + value.length);
+          const selection = window.getSelection();
+          selection.removeAllRanges();
+          selection.addRange(range);
+          document.dispatchEvent(new Event("selectionchange"));
+          return true;
+        }
+        return false;
+      }, text);
+      assert.equal(selected, true, `Writer must be able to select ${text}`);
+    };
+
+    await clickHeaderButton(page, "#mode-switch");
+    await page.locator("#lyrics").waitFor({ state: "visible" });
+    await selectLyricsText("Reader Smoke");
+    await page.locator("#style-name").fill("demo-chorus");
+    await page.locator("#style-button").click({ force: true });
+    await clickHeaderButton(page, "#source-mode-switch");
+    await page.waitForFunction(() => /\[Reader Smoke:style=demo-chorus\]/.test(document.querySelector("#source-editor")?.value || ""), null, { timeout: 30_000 });
+
+    await clickHeaderButton(page, "#source-mode-switch");
+    await clickHeaderButton(page, "#mode-switch");
+    await selectLyricsText("Reader Smoke");
+    await page.locator("#palette-slot").selectOption("2");
+    assert.equal(await page.locator("#palette-slot").inputValue(), "2", "Palette Slot selection must survive control synchronization");
+    await page.locator("#apply-palette-button").click({ force: true });
+    await clickHeaderButton(page, "#source-mode-switch");
+    await page.waitForFunction(() => /\[Reader Smoke:(?:c=2(?:,bank=default)?,style=demo-chorus|style=demo-chorus,c=2(?:,bank=default)?)\]/.test(document.querySelector("#source-editor")?.value || ""), null, { timeout: 30_000 });
+
+    await clickHeaderButton(page, "#source-mode-switch");
+    await clickHeaderButton(page, "#mode-switch");
+    await selectLyricsText("Reader Smoke");
+    await page.locator("#clear-presentation-button").click({ force: true });
+    await clickHeaderButton(page, "#source-mode-switch");
+    const clearedAuthorSource = await page.locator("#source-editor").inputValue();
+    assert.match(clearedAuthorSource, /Reader Smoke/);
+    assert.doesNotMatch(clearedAuthorSource, /\[Reader Smoke:/);
+
+    await clickHeaderButton(page, "#source-mode-switch");
+    await page.locator("#lyrics").waitFor({ state: "visible" });
+    await clickHeaderButton(page, "#source-mode-switch");
+    await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source, clearedAuthorSource, { timeout: 30_000 });
+    assert.equal(await page.locator("#source-editor").inputValue(), clearedAuthorSource, "Viewer round-trip must preserve the exact Author Source");
+
     await page.screenshot({ path: screenshot, fullPage: false });
     assert.deepEqual({ consoleErrors, pageErrors, failedRequests, badResponses }, { consoleErrors: [], pageErrors: [], failedRequests: [], badResponses: [] });
     return { status: "PASS", targetUrl, screenshot };
@@ -251,6 +304,7 @@ async function runStorageFailureGate(targetUrl) {
   try {
     await page.goto(targetUrl, { waitUntil: "domcontentloaded", timeout: 30_000 });
     await page.locator("#source-editor").waitFor({ state: "visible", timeout: 30_000 });
+    await page.waitForFunction(() => /晴々撥条|如何《どう》/.test(document.querySelector("#source-editor")?.value || ""), null, { timeout: 30_000 });
     const original = await page.locator("#source-editor").inputValue();
     await page.locator("#source-editor").fill(`${original}\n[Storage Failure Gate]`);
     await page.waitForFunction(() => document.body.dataset.dirty === "true");

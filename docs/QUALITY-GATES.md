@@ -72,10 +72,16 @@ git diff --check
 
 ### Writer Beta Gate
 
-- `npm run test:writer`で、ChromiumのSource Editorを単独検証する。parse成功時の反映、Variant別Source、Draft復元、文書Open Undo、不正文書・URL取得失敗時のCurrent Document保護と成功後のエラー解除、Storage書込み不能時の編集継続を含む。
+- `npm run test:writer`で、ChromiumのWriter Beta Browser Gateを単独検証する。parse成功時の反映、Variant別Source、Draft復元、文書Open Undo、不正文書・URL取得失敗時のCurrent Document保護と成功後のエラー解除、Storage書込み不能時の編集継続、Viewer上のStyle / Palette適用・Presentation解除、Source→Viewer→SourceのAuthor Source保持を含む。
 - `?mode=source`からAuthor Sourceを読み込み、parse成功した編集だけがViewerへ反映されること、無効入力は`aria-invalid`とエラー表示になりCurrent Documentへ反映されないことを確認する。
 - Writer Beta Gateは`writer-beta`ジョブとしてReader Release Gateから分離し、現段階では`continue-on-error: true`の助言的チェックとする。失敗はActionsへ記録するが、ReaderのPages deployを止めない。
 - Source Editorの単体・統合契約は`tests/source-editor.test.mjs`と`tests/writer-beta-gate.mjs`を正本とする。
+
+### Stable branch / release checkpoint policy
+
+- 現在の`stable`はReader安定点`925cfc7`、`reader-v0.1.0`は同じReader checkpointを指す。Writer変更は`main`だけへ積み、Reader tagへ逆流させない。
+- `stable`はReader Release Gateを通過した明示的な安定版更新だけを受け付ける。GitHub側ではdirect push・force push・branch deletionを禁止するBranch Rulesetを設定し、`reader-v0.1.0`等のReader release tagはimmutableとして扱う。
+- Branch protectionはリポジトリのリモート設定であり、ローカルのworkflowやテストだけでは有効化・観測できない。設定後はGitHubのBranch Ruleset画面または管理APIで、`stable`のpush制限・force push禁止・削除禁止を別途確認する。
 
 ## Stage A — Baseline / semantic model
 

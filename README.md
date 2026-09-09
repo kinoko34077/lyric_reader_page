@@ -10,7 +10,7 @@ Reader優先の現在ロードマップは[`docs/READER-KERNEL-ROADMAP.md`](docs
 - 外部Manifest: `index.html#m=https%3A%2F%2Fexample.com%2Freader.json`
 - 外部TXT: `index.html#src=https%3A%2F%2Fexample.com%2Flyrics.txt`。Manifestでformatを指定しない直接TXT URLは、ローカルTXTと同じく現行 / Legacy Syntaxを自動判定します。
 - Writer: `index.html?mode=writer`
-- Source Editor: `index.html?mode=source` または画面上部の`Source`。Author Sourceを直接編集し、parse成功時だけ現在のVariantへ反映します。無効なPresentationは現在文書へ反映せず、Source Editor上で行・列付きの警告を示します。
+- Source Editor: `index.html?mode=source` または画面上部の`Source`。Author Sourceを直接編集し、parse成功時だけ現在のVariantへ反映します。無効なPresentationは現在文書へ反映せず、Source Editor上で行・列・失敗位置付近の文脈付き警告を示し、可能な場合は該当位置を選択します。
 - ローカルTXT / JSON: 「開く」または画面全体へのドラッグ＆ドロップ。TXTは現行`[対象:指定]`と旧`[対象]{指定}`を自動判定して読み込みます。
 - `.lyric.txt`: JSON HeaderとAuthor SourceをまとめたCanonical Containerとして読み込み・書き出し
 
@@ -43,7 +43,7 @@ Reader Coreは`historical` / `modern`へ固定せず、文書定義のGeneric Va
 
 表示設定では横書き / 縦書き、Variant、字体、ルビ、文字サイズ、背景色、文字色、フォント、Palette Bankを切り替えられます。Header/Footerは読書中に自動収納され、設定Panelは独立してスクロールします。縦横切替時もTitle・Metadata・本文の向きが同期します。
 
-WriterではTitle・本文を直接編集し、外部HTML pasteはplain textとして扱います。`Source`モードではAuthor Sourceをそのまま編集し、parse成功時だけ現在のVariantへ反映します。parse失敗時は行・列を含む警告を表示し、Current Documentを変更しません。Writerは現段階ではBeta扱いで、Reader KernelのSource保全・Projection・安全性を優先します。EditorのCaret、IME、Draft完全復旧、複雑なVariant編集はReader完成後に必要性を見て強化します。画面上のGlyphや新字体をSourceへ書き戻さない原則と、Rubyの通常Presentation / 部分Overrideは維持します。
+WriterではTitle・本文を直接編集し、外部HTML pasteはplain textとして扱います。`Source`モードではAuthor Sourceをそのまま編集し、parse成功時だけ現在のVariantへ反映します。parse失敗時は行・列・失敗位置付近の文脈を含む警告を表示し、可能な場合はtextareaの該当位置を選択したうえでCurrent Documentを変更しません。Viewer上のStyle / Palette適用とPresentation解除もAuthor Sourceへ再parse可能な形式で反映します。Writerは現段階ではBeta扱いで、Reader KernelのSource保全・Projection・安全性を優先します。EditorのCaret、IME、Draft完全復旧、複雑なVariant編集はReader完成後に必要性を見て強化します。画面上のGlyphや新字体をSourceへ書き戻さない原則と、Rubyの通常Presentation / 部分Overrideは維持します。
 
 全文CopyはPortable Text（Presentation除去・Ruby保持）です。正常なSourceではPresentationだけを除去し、不正Presentationを含むReaderでも例外にせず原文を保全してCopyできます。標準TXTダウンロードはPresentation入りAuthor Sourceそのもの、`.lyric.txt`ダウンロードはJSON Headerとactive VariantのAuthor SourceをまとめたCanonical Containerです。旧Range AnnotationはReaderのruntime/state/payloadから撤去し、入力に残っていてもPresentationとして扱いません。Reader文書ダウンロードはOSへの保存完了ではなく、ブラウザがダウンロードを開始したcheckpointです。ダウンロード開始後も未保存状態とDraft Recoveryは維持します。Portable Text専用の保存UIは置いていません。
 
@@ -72,7 +72,7 @@ git diff --check
 ```
 
 `npm run test:mobile`はローカルの公開Demoを検証し、PlaywrightのChromium mobile / WebKit iPhone emulationを実行します。公開Pagesなど別の配信先を検証する場合は、PowerShellで`$env:MOBILE_GATE_URL="https://example.com/lyric_reader_page/?mode=viewer"; npm run test:mobile`のように指定します。実機ブラウザ、IME、soft keyboardはこの自動Gateに含めません。
-`npm run test:writer`はSource EditorのWriter Beta Gateです。Readerの自動Mobile Gateとは独立しており、parse成功時の反映、Variant別Source、Draft復元、文書Open Undo、不正入力のCurrent Document保護、Storage書込み不能時の編集継続をChromiumで確認します。Writer Beta Gateの失敗は現段階ではReader Pages公開を止めません。
+`npm run test:writer`はWriter Beta Browser Gateです。Readerの自動Mobile Gateとは独立しており、parse成功時の反映、Variant別Source、Draft復元、文書Open Undo、不正入力のCurrent Document保護、Storage書込み不能時の編集継続、Viewer上のStyle / Palette適用・Presentation解除、Source→Viewer→SourceのAuthor Source保持をChromiumで確認します。Writer Beta Gateの失敗は現段階ではReader Pages公開を止めません。
 
 CIでは`.nvmrc`のNode 22.14.0を使い、`reader-quality`（JavaScript構文検査、Reader専用Unit / Integration、Shared Contract、Reader自動Mobile Gate）が成功した場合だけPages Deployへ進みます。`writer-unit`と`writer-beta`は常に実行する別の助言的ジョブで、Writerの失敗はReader Pages公開を止めません。Unit / IntegrationのPASSとPages公開、Chromium以外の実機・IME・forced-colors・Clipboard権限検証は別状態として記録します。
 
