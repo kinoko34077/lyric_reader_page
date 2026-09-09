@@ -47,6 +47,7 @@
 - Writer Betaの`K6`を実装し、`sessionStorage`由来のタブ固有IDをDraftキーへ含めた。同一文書を複数Tabで編集してもDraftが上書き・復元候補へ混入せず、同一Tabのreloadではキーを維持する。`K1`は次のWriter Beta sliceで実装した。
 - Writer Betaの`K1`を実装し、文書Open前のSnapshotへSource URL / name / identityを保持するようにした。URL本文を開いた後のUndoで元文書のAuthor Source・文書Identity・表示状態へ戻れることを`tests/writer-beta-gate.mjs`で確認する。
 - Writer BetaのDraft復元を全Variant・Registry・Metadata・Theme・Source routing fieldsへ拡張し、Source Editorのreload→Draft復元でVariant別編集も戻ることを`tests/writer-beta-gate.mjs`で確認する。
+- Writer Beta GateへStorage故障注入を追加し、localStorageの読込・書込・削除が失敗しても自動復元不可の通知だけで編集・Viewer反映を継続することを確認する。
 - 詳細は[`docs/READER-KERNEL-ROADMAP.md`](docs/READER-KERNEL-ROADMAP.md)を参照。
 
 ## [Unreleased] — 2026-09-08

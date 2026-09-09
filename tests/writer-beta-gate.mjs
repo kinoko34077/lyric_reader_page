@@ -132,6 +132,7 @@ async function runGate(targetUrl) {
     page.once("dialog", dialog => dialog.accept());
     await page.locator("#url-open-button").click({ force: true });
     await page.waitForFunction(() => /曲前フリ/.test(document.querySelector("#song-title")?.textContent || ""), null, { timeout: 30_000 });
+    await page.waitForFunction(() => /URL本文を読み込みました/.test(document.querySelector("#source-status")?.textContent || ""), null, { timeout: 30_000 });
     assert.match(await page.locator("#source-status").textContent() || "", /URL本文を読み込みました/);
     await page.locator("#undo-button").click({ force: true });
     await clickHeaderButton(page, "#source-mode-switch");
@@ -166,10 +167,47 @@ async function runGate(targetUrl) {
   }
 }
 
+async function runStorageFailureGate(targetUrl) {
+  const browser = await chromium.launch({ headless: true });
+  const context = await browser.newContext({ locale: "ja-JP", colorScheme: "light" });
+  await context.addInitScript(() => {
+    const local = window.localStorage;
+    for (const method of ["getItem", "setItem", "removeItem"]) {
+      const original = Storage.prototype[method];
+      Storage.prototype[method] = function (...args) {
+        if (this === local) throw new Error("Storage blocked by Writer Beta failure injection");
+        return original.apply(this, args);
+      };
+    }
+  });
+  const page = await context.newPage();
+  const consoleErrors = [];
+  const pageErrors = [];
+  page.on("console", message => { if (message.type() === "error" && !expectedAssetFailure(message.location().url) && !/Failed to load resource:/i.test(message.text())) consoleErrors.push(message.text()); });
+  page.on("pageerror", error => pageErrors.push(String(error)));
+  try {
+    await page.goto(targetUrl, { waitUntil: "domcontentloaded", timeout: 30_000 });
+    await page.locator("#source-editor").waitFor({ state: "visible", timeout: 30_000 });
+    const original = await page.locator("#source-editor").inputValue();
+    await page.locator("#source-editor").fill(`${original}\n[Storage Failure Gate]`);
+    await page.waitForFunction(() => document.body.dataset.dirty === "true");
+    assert.match(await page.locator("#source-status").textContent() || "", /自動復元用Storage/);
+    assert.match(await page.locator("#source-editor").inputValue(), /Storage Failure Gate/);
+    await clickHeaderButton(page, "#source-mode-switch");
+    await page.locator("#lyrics").waitFor({ state: "visible" });
+    assert.match(await page.locator("#lyrics").innerText(), /Storage Failure Gate/);
+    assert.deepEqual({ consoleErrors, pageErrors }, { consoleErrors: [], pageErrors: [] });
+    return { status: "PASS", targetUrl };
+  } finally {
+    await context.close();
+    await browser.close();
+  }
+}
+
 const local = requestedUrl ? null : await startLocalServer();
 const targetUrl = requestedUrl || local.url;
 try {
-  console.log(JSON.stringify(await runGate(targetUrl), null, 2));
+  console.log(JSON.stringify({ writer: await runGate(targetUrl), storageFailure: await runStorageFailureGate(targetUrl) }, null, 2));
 } finally {
   if (local) await new Promise(resolve => local.server.close(resolve));
 }
