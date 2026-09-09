@@ -71,10 +71,39 @@ async function runGate(targetUrl) {
     const originalSource = await page.locator("#source-editor").inputValue();
     assert.match(originalSource, /晴々撥条|如何《どう》/);
 
+    await clickHeaderButton(page, "#settings-toggle");
+    assert.ok(await page.locator("#variant-mode option").count() >= 2, "Source Editor must expose the document Variant Set");
+    await page.locator("#variant-mode").selectOption("modernized");
+    await page.waitForFunction(() => /こちらへ来たのだろう/.test(document.querySelector("#source-editor")?.value || ""), null, { timeout: 30_000 });
+    const modernSource = await page.locator("#source-editor").inputValue();
+    assert.notEqual(modernSource, originalSource);
+    await page.locator("#source-editor").fill(`${modernSource}\n[Variant Gate:style=demo-chorus]`);
+    await page.waitForFunction(() => /Variant Gate/.test(document.querySelector("#source-editor")?.value || ""), null, { timeout: 30_000 });
+    await page.locator("#variant-mode").selectOption("original");
+    await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source, originalSource, { timeout: 30_000 });
+    assert.doesNotMatch(await page.locator("#source-editor").inputValue(), /Variant Gate/);
+    await page.locator("#variant-mode").selectOption("modernized");
+    await page.waitForFunction(() => /Variant Gate/.test(document.querySelector("#source-editor")?.value || ""), null, { timeout: 30_000 });
+    await page.locator("#variant-mode").selectOption("original");
+    await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source, originalSource, { timeout: 30_000 });
+    await clickHeaderButton(page, "#settings-toggle");
+
     const editedSource = `${originalSource}\n[Writer Gate:style=demo-chorus]`;
     await page.locator("#source-editor").fill(editedSource);
     await page.waitForFunction(() => document.body.dataset.dirty === "true");
     assert.match(await page.locator("#source-status").textContent() || "", /未保存/);
+
+    await page.reload({ waitUntil: "domcontentloaded", timeout: 30_000 });
+    await page.locator("#source-editor").waitFor({ state: "visible", timeout: 30_000 });
+    await page.locator("#draft-notice").waitFor({ state: "visible", timeout: 30_000 });
+    await page.locator("#draft-restore").click();
+    await page.waitForFunction(() => /Writer Gate/.test(document.querySelector("#source-editor")?.value || ""), null, { timeout: 30_000 });
+    await clickHeaderButton(page, "#settings-toggle");
+    await page.locator("#variant-mode").selectOption("modernized");
+    await page.waitForFunction(() => /Variant Gate/.test(document.querySelector("#source-editor")?.value || ""), null, { timeout: 30_000 });
+    await page.locator("#variant-mode").selectOption("original");
+    await page.waitForFunction(() => /Writer Gate/.test(document.querySelector("#source-editor")?.value || ""), null, { timeout: 30_000 });
+    await clickHeaderButton(page, "#settings-toggle");
 
     await clickHeaderButton(page, "#source-mode-switch");
     await page.locator("#lyrics").waitFor({ state: "visible" });

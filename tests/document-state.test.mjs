@@ -27,6 +27,19 @@ test("history payload retains source routing fields for document-open Undo", () 
   assert.equal(payload.sourceIdentity, "source-a");
 });
 
+test("Draft payload keeps the document-level presentation and metadata boundary", () => {
+  const draft = draftPayload({
+    ...data,
+    metadata: { artist: "Artist", note: "Note" },
+    manifest: { ...data.manifest, theme: { background: "#101010", color: "#eeeeee" } }
+  }, "題", "modern");
+
+  assert.deepEqual(draft.document.metadata, { artist: "Artist", note: "Note" });
+  assert.deepEqual(draft.document.manifest.theme, { background: "#101010", color: "#eeeeee" });
+  assert.equal(draft.document.variants.length, 2);
+  assert.deepEqual(draft.document.manifest.registry.palettes["2"], "#d02020");
+});
+
 test("draft round-trip detects registry-only and variant-only changes", () => {
   const draft = draftPayload(data, "題", "modern");
   assert.equal(draftDiffers(draft, draft.document), false);
