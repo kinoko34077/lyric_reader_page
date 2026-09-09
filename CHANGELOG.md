@@ -58,6 +58,7 @@
 - Writer Browser GateへViewer上の選択範囲へのStyle / Palette / Glyph / Combine適用、Ruby Reading部分のScoped Style適用、Presentation解除、既存Presentation内の本文直接置換・キャレット入力を追加し、GUI操作後もAuthor Sourceの意味文字列が再読込可能な形で保たれることを確認した。欠損Glyphは元文字へFallbackし、Z字Combineでも複数DOM nodeをまたぐ選択を扱える。Ruby scoped属性は`ruby-range` / `ruby-style`として再parse可能な形を確認した。contenteditableの`beforeinput`で既存Presentation wrapperを保全し、Palette Slotの選択値が同期処理でSlot 0へ戻らないよう修正した。
 - Writer BetaのPresentation AuthoringへOutline適用を追加し、既存のStyle / Palette / Glyph / Combine / Ruby操作と同じくAuthor Sourceへ再parse可能な`outline=name`として保存し、Resolverの相対em縁取りまでChromium Gateで確認した。
 - Writer BetaのWYSIWYG貼り付けをPlain Text経路としてBrowser Gateへ固定し、選択範囲のPresentationを保ったままHTML/DOM情報をAuthor Sourceへ持ち込まないことを確認した。
+- WriterのTitle直接編集をBrowser Gateへ追加し、第1行だけを更新して本文・既存Presentationを保持し、Sourceへ往復できることを確認した。
 - ADR 0002の未知Reader Document version方針を、現行のBest-effort変換・読込不能時のみCurrent保持する実装と要件書へ同期。
 - 詳細は[`docs/READER-KERNEL-ROADMAP.md`](docs/READER-KERNEL-ROADMAP.md)を参照。
 

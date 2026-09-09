@@ -398,6 +398,18 @@ async function runGate(targetUrl) {
 
     await clickHeaderButton(page, "#source-mode-switch");
     await clickHeaderButton(page, "#mode-switch");
+    const originalTitle = (await page.locator("#song-title").innerText()).trim();
+    await selectTextIn(page.locator("#song-title"), originalTitle);
+    await page.keyboard.insertText("Writer Title");
+    await clickHeaderButton(page, "#source-mode-switch");
+    const titleSource = await page.locator("#source-editor").inputValue();
+    assert.equal(titleSource.split(/\r?\n/, 1)[0], "Writer Title", `Title editing must update only the first Author Source line: ${titleSource.slice(0, 200)}`);
+    assert.match(titleSource, /Writer Gate/, "Title editing must preserve the body Source");
+    await page.locator("#source-editor").fill(clearedAuthorSource);
+    await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source, clearedAuthorSource, { timeout: 30_000 });
+
+    await clickHeaderButton(page, "#source-mode-switch");
+    await clickHeaderButton(page, "#mode-switch");
     await selectLyricsText("Reader Smoke");
     await page.locator("#outline-name").fill("thin");
     await page.locator("#outline-button").click({ force: true });
