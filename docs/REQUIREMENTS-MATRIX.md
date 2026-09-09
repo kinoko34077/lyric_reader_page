@@ -39,7 +39,7 @@
 | Portable / Plain projection | Adapter `toPortableText`, `toPlainText`, `rawText` | projection tests、Chrome Copy path | PortableはRuby保持/Presentation除去、PlainはRuby除去 | Clipboard権限failureの実機確認待ち |
 | Legacy Range Annotation | 廃止。runtime state、History、Draft、payload、Rendererから撤去 | `document-state.test.mjs`, full suite | 旧フィールドは入力時に無視され、Source Presentationへ影響しない | 旧ファイルの再保存時に旧フィールドは失われる |
 | Palette 0/1 / missing fallback | `normalizeRegistry`, `paletteValue` | registry tests | `#fff/#000`常在、2以上欠損はSlot 1へfallback | UIの追加Slot表示は安全上限内 |
-| Palette Bank / names / explicit ref | `banks`, `paletteNames`, `bank` Presentation、settings UI | registry tests、Chrome fixture | Bank切替と名前表示、Source explicit bank resolve | 同時編集のmulti-tab UXは警告のみ |
+| Palette Bank / names / explicit ref | `banks`, `paletteNames`, `bank` Presentation、settings UI | registry tests、Chrome fixture | Bank切替と名前表示、Source explicit bank resolve | 同時編集のDraft共有・競合解消はWriter Beta範囲外 |
 | Named Style precedence / inheritance | `resolvedStyle`, `resolvePresentation` | registry tests | Direct > Style、cycle/depth/missing refを検出 | Style property別の詳細Cascadeは今後拡張 |
 | Multiple Style conflict | `styles[]`, `conflictColors`, warning mark/CSS split | registry tests、Chrome source selection | Conflictをlast-winsで隠さずWarningと二色splitを表示 | 3+ conflictのVisual規則はHOLD |
 | Style rename transaction | `renameStyleInDocument` | registry rename test | Registry、Source、Variant、Link、Override、extendsを一括更新 | UI rename dialogは未提供（API境界は実装済み） |

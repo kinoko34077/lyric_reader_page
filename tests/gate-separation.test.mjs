@@ -21,3 +21,14 @@ test("Pages deploy depends on Reader quality while Writer Beta remains advisory"
   assert.match(workflow, /continue-on-error:\s*true/);
   assert.match(workflow, /needs:\s*reader-quality/);
 });
+
+test("Tab-local Draft policy does not depend on a cross-tab warning path", () => {
+  const app = readRepoFile("assets/js/app.js");
+  const requirements = readRepoFile("docs/LYRIC_READER_REQUIREMENTS.md");
+  const matrix = readRepoFile("docs/REQUIREMENTS-MATRIX.md");
+
+  assert.doesNotMatch(app, /draftStorageWarning|event\.key\s*===\s*draftKey\(\)/);
+  assert.doesNotMatch(requirements, /別Tab更新の警告は補助UXとして残す|別タブ更新の警告は補助UXとして残す/);
+  assert.doesNotMatch(matrix, /multi-tab UXは警告のみ/);
+  assert.match(requirements, /別Tabで編集してもDraftを共有しない/);
+});
