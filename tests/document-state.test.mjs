@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { boundedHistory, documentIdentity, documentPayload, draftDiffers, draftPayload, localSourceIdentity, migrateReaderDocument, normalizeDraft, readerDocumentExtensions } from "../assets/js/document-state.js";
+import { boundedHistory, documentIdentity, documentPayload, draftDiffers, draftPayload, draftStorageKey, localSourceIdentity, migrateReaderDocument, normalizeDraft, readerDocumentExtensions } from "../assets/js/document-state.js";
 
 const data = {
   manifest: { id: "song-a", registry: { palettes: { "2": "#d02020" } } },
@@ -64,6 +64,13 @@ test("legacy Range Annotation data is discarded during Reader migration", () => 
 test("local identity separates same-name files when metadata or content differs", () => {
   assert.notEqual(localSourceIdentity("lyrics.txt", 10, 1, "aaa"), localSourceIdentity("lyrics.txt", 10, 1, "bbb"));
   assert.notEqual(localSourceIdentity("lyrics.txt", 10, 1, "aaa"), localSourceIdentity("lyrics.txt", 11, 1, "aaa"));
+});
+
+test("Draft storage keys isolate browser Tabs while remaining stable within one Tab", () => {
+  const documentKey = "song-a||reader:|a.reader.json";
+  assert.equal(draftStorageKey(documentKey, "tab-a"), draftStorageKey(documentKey, "tab-a"));
+  assert.notEqual(draftStorageKey(documentKey, "tab-a"), draftStorageKey(documentKey, "tab-b"));
+  assert.match(draftStorageKey(documentKey, "tab-a"), /^lyric-reader:draft:/);
 });
 
 test("history is bounded by count and serialized memory size", () => {

@@ -40,6 +40,10 @@ function expectedAssetFailure(url) {
   return /invalid\.example|missing-glyph\.svg/.test(url);
 }
 
+async function clickHeaderButton(page, selector) {
+  await page.evaluate(target => { document.body.classList.remove("chrome-hidden"); document.querySelector(target)?.click(); }, selector);
+}
+
 async function runGate(targetUrl) {
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({ locale: "ja-JP", colorScheme: "light" });
@@ -72,17 +76,33 @@ async function runGate(targetUrl) {
     await page.waitForFunction(() => document.body.dataset.dirty === "true");
     assert.match(await page.locator("#source-status").textContent() || "", /未保存/);
 
-    await page.locator("#source-mode-switch").click();
+    await clickHeaderButton(page, "#source-mode-switch");
     await page.locator("#lyrics").waitFor({ state: "visible" });
     assert.match(await page.locator("#lyrics").innerText(), /Writer Gate/);
 
-    await page.locator("#source-mode-switch").click();
+    const secondTab = await context.newPage();
+    try {
+      await secondTab.goto(targetUrl, { waitUntil: "domcontentloaded", timeout: 30_000 });
+      await secondTab.locator("#source-editor").waitFor({ state: "visible", timeout: 30_000 });
+      await secondTab.waitForFunction(() => /晴々撥条|如何《どう》/.test(document.querySelector("#source-editor")?.value || ""), null, { timeout: 30_000 });
+      const secondSource = await secondTab.locator("#source-editor").inputValue();
+      await secondTab.locator("#source-editor").fill(`${secondSource}\n[Writer Gate:second-tab]`);
+      await secondTab.waitForFunction(() => document.body.dataset.dirty === "true");
+      const draftKeys = await page.evaluate(() => Object.keys(localStorage).filter(key => key.startsWith("lyric-reader:draft:")));
+      const tabKeys = draftKeys.map(key => key.split(":tab:")[1]).filter(Boolean);
+      assert.ok(tabKeys.length >= 2, "each Tab must create an independent Draft key");
+      assert.equal(new Set(tabKeys).size, tabKeys.length, "Draft keys must not share a Tab identity");
+    } finally {
+      await secondTab.close();
+    }
+
+    await clickHeaderButton(page, "#source-mode-switch");
     const invalidSource = `${editedSource}\n[x:base-range=0-3]`;
     await page.locator("#source-editor").fill(invalidSource);
     await page.waitForFunction(() => document.querySelector("#source-editor")?.getAttribute("aria-invalid") === "true");
     assert.match(await page.locator("#source-status").textContent() || "", /Sourceを反映できません/);
 
-    await page.locator("#source-mode-switch").click();
+    await clickHeaderButton(page, "#source-mode-switch");
     await page.locator("#lyrics").waitFor({ state: "visible" });
     const viewerText = await page.locator("#lyrics").innerText();
     assert.match(viewerText, /Writer Gate/);

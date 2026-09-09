@@ -1,7 +1,7 @@
 import { loadInput, parseJsonText, parseLocalInput } from "./data-loader.js";
 import { MAX_READER_DOCUMENT_JSON_BYTES, MAX_SOURCE_BYTES } from "./config.js";
 import { firstLineInfo, withFirstLineBody } from "./content-boundary.js";
-import { boundedHistory, clone, documentIdentity, documentPayload, draftDiffers, draftPayload, localSourceIdentity, migrateReaderDocument, normalizeDraft, readerDocumentExtensions } from "./document-state.js";
+import { boundedHistory, clone, documentIdentity, documentPayload, draftDiffers, draftPayload, draftStorageKey, localSourceIdentity, migrateReaderDocument, normalizeDraft, readerDocumentExtensions } from "./document-state.js";
 import { applyPresentation, applyRubyPresentation, assertCapabilities, clearPresentation, clearRubyPresentation, getSyntaxAdapter, graphemes, isSafePresentationName, parseSource, serializeSource, toPortableText, toPortableTextSafe } from "./syntax-adapter.js";
 import { renderLyrics, rawText } from "./reader-view.js";
 import { parseLyricContainer, serializeLyricContainer } from "./lyric-container.js";
@@ -22,6 +22,10 @@ const state = {
   preferencesLoaded: false, sourceDirty: false, documentDirty: false, dirty: false, draft: null, history: [], historyIndex: -1, historyDocumentId: null, savedCheckpoint: null, storageAvailable: true, draftStorageWarning: false
 };
 const PREFS_KEY = "lyric-reader:preferences:v1";
+const TAB_ID_KEY = "lyric-reader:tab-id:v1";
+function newTabId() { try { if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID(); } catch { /* fall through */ } return `tab-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`; }
+function resolveTabId() { try { if (!window.opener) { const stored = sessionStorage.getItem(TAB_ID_KEY); if (stored) return stored; } const next = newTabId(); sessionStorage.setItem(TAB_ID_KEY, next); return next; } catch { return newTabId(); } }
+const TAB_ID = resolveTabId();
 let historyTimer;
 let fontRequestToken = 0;
 
@@ -48,7 +52,7 @@ function sourceInfo(record = currentRecord()) {
 function titleSourceText(record = currentRecord()) { return state.data.titleSource === "first-line" ? resolveTitle({ source: record.source.text }) : String(sourceInfo(record).title || "無題"); }
 function currentBody() { return sourceInfo().body; }
 function currentAdapter() { return assertCapabilities(getSyntaxAdapter(state.data?.manifest?.content?.format || "narou-text"), { ruby: true, presentationMarkup: true, escapedLiterals: true }); }
-function draftKey() { const identity = state.data?.sourceIdentity || (state.data?.sourceName ? `${state.data.sourceUrl}:${state.data.sourceName}` : (state.data?.sourceUrl || location.hash || location.pathname)); return `lyric-reader:draft:${identity}`; }
+function draftKey() { const identity = state.data?.sourceIdentity || (state.data?.sourceName ? `${state.data.sourceUrl}:${state.data.sourceName}` : (state.data?.sourceUrl || location.hash || location.pathname)); return draftStorageKey(identity, TAB_ID); }
 function syncSourceInput() { const source = state.data?.sourceUrl || ""; const shareable = /^https?:\/\//i.test(source); $("source-url").value = shareable ? source : ""; $("share-button").disabled = !shareable; $("source-copy-button").disabled = !shareable; $("reload-button").disabled = !shareable; $("reload-source-button").disabled = !shareable; }
 function setStatus(text) { $("source-status").textContent = text; }
 function isDirty() { return state.sourceDirty || state.documentDirty; }

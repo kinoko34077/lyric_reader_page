@@ -15,6 +15,10 @@ export function localSourceIdentity(name, size, lastModified, hash = "") {
   return `local:${String(name || "本文")}:${Number(size) || 0}:${Number(lastModified) || 0}:${String(hash || "unknown")}`;
 }
 
+export function draftStorageKey(identity, tabId = "default") {
+  return `lyric-reader:draft:${String(identity || "default")}:tab:${String(tabId || "default")}`;
+}
+
 export function boundedHistory(history, index, next, limits = {}) {
   const maxEntries = limits.maxEntries || MAX_HISTORY_ENTRIES;
   const maxBytes = limits.maxBytes || MAX_HISTORY_BYTES;
