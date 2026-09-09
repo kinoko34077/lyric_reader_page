@@ -65,12 +65,14 @@ Reader Document / Draftはversion 3です。既知の旧versionは明示Migratio
 node --check assets/js/app.js
 node --test tests/*.test.mjs
 npm run test:mobile
+npm run test:writer
 git diff --check
 ```
 
 `npm run test:mobile`はローカルの公開Demoを検証し、PlaywrightのChromium mobile / WebKit iPhone emulationを実行します。公開Pagesなど別の配信先を検証する場合は、PowerShellで`$env:MOBILE_GATE_URL="https://example.com/lyric_reader_page/?mode=viewer"; npm run test:mobile`のように指定します。実機ブラウザ、IME、soft keyboardはこの自動Gateに含めません。
+`npm run test:writer`はSource EditorのWriter Beta Gateです。Readerの自動Mobile Gateとは独立しており、parse成功時の反映と不正入力のCurrent Document保護をChromiumで確認します。Writer Beta Gateの失敗は現段階ではReader Pages公開を止めません。
 
-CIでは`.nvmrc`のNode 22.14.0を使い、JavaScript構文検査、全Test、自動Mobile Gateが成功した場合だけPages Deployへ進みます。Unit / IntegrationのPASSとPages公開、Chromium以外の実機・IME・forced-colors・Clipboard権限検証は別状態として記録します。
+CIでは`.nvmrc`のNode 22.14.0を使い、`reader-quality`（JavaScript構文検査、全Test、Reader自動Mobile Gate）が成功した場合だけPages Deployへ進みます。`writer-beta`は別の助言的ジョブです。Unit / IntegrationのPASSとPages公開、Chromium以外の実機・IME・forced-colors・Clipboard権限検証は別状態として記録します。
 
 ## 未確定事項
 

@@ -2,7 +2,7 @@
 
 ## Current priority profile — Reader Kernel
 
-2026-09-09以降は、汎用Writer完成ではなくReader Kernelを優先する。厳格対象はInput → Syntax Adapter / Parser → IR → Registry Resolver → Renderer → Projectionであり、WriterのCaret / IME / Undo、Draft / History高度化、複雑なVariant編集UI、Style rename UI、3つ以上のStyle競合表示はReader完成条件から外し、Beta改善へ回す。旧Stage A〜Eの表は既存実装の監査履歴として残し、Reader Kernelの判定は[`READER-KERNEL-ROADMAP.md`](READER-KERNEL-ROADMAP.md)とGolden Fixtureを正本とする。
+2026-09-09以降は、汎用Writer完成ではなくReader Kernelを優先する。厳格対象はInput → Syntax Adapter / Parser → IR → Registry Resolver → Renderer → Projectionであり、WriterのCaret / IME / Undo、Draft / History高度化、複雑なVariant編集UI、Style rename UI、3つ以上のStyle競合表示はReader完成条件から外し、Beta改善へ回す。Reader Release GateとWriter Beta Gateは別ジョブ・別証跡として扱い、Writerの失敗でReader Pages公開を止めない。旧Stage A〜Eの表は既存実装の監査履歴として残し、Reader Kernelの判定は[`READER-KERNEL-ROADMAP.md`](READER-KERNEL-ROADMAP.md)とGolden Fixtureを正本とする。
 
 ### Reader Kernel Gate
 
@@ -13,7 +13,7 @@
 | Renderer DOM → Author Source → Reader JSON | `tests/dom-reader-json.test.mjs` | PASS |
 | Registry validation / typed resolution | `tests/registry.test.mjs`, Golden test | PASS |
 | Malformed input / parser bounds / unsafe Registry | fuzz, limits, security tests | PASS |
-| Browser / mobile Reader smoke | Desktop Chromium plus automated Chromium mobile / WebKit iPhone emulation | PASS (Automated Mobile Gate) |
+| Browser / mobile Reader smoke | `tests/mobile-viewer-gate.mjs`: Desktop-independent Chromium mobile / WebKit iPhone emulation | PASS (Reader Release Gate) |
 | Download recovery truthfulness | `tests/build-id.test.mjs` | PASS |
 
 判定は現在の作業ツリーで実行した結果に基づきます。`PASS`は実装・自動テスト・必要なBrowser観測が揃った範囲だけに付け、外部Browser・実機・権限が必要な確認は`BLOCKED`へ分離します。Stage A〜Eは別Repositoryの指示に合わせた呼称で、Local Gateとの対応は以下の通りです。
@@ -26,7 +26,7 @@
 | B | Gate 2: Syntax / Projection | PASS | vNext/legacy Adapter、escape、nested、multiline、unknown、fuzz、round-trip |
 | C | Gate 3–4: Editor / Ruby / Registry | PASS | Grapheme/Ruby範囲、Editor bookmark、Palette Bank、Style inheritance/conflict/rename |
 | D | Gate 5–6: Outline / Glyph / Combine | PASS | relative/multiple Outline、Gradient fallback、typed Glyph、asset fallback、Combine 3 mode |
-| E | Gate 7–8: UI / release | PASS (Automated Viewer) | Desktop Chromium、Chromium mobile、WebKit iPhone emulationで主要Viewer導線を確認。実機iPhone/Android、IME、forced-colors、Clipboard権限、live deployはRelease Smokeとして外部確認 |
+| E | Gate 7–8: UI / release | PASS (Automated Viewer) | Desktop Chromium、Chromium mobile、WebKit iPhone emulationで主要Viewer導線を確認。Source EditorはWriter Beta Gateへ分離。実機iPhone/Android、IME、forced-colors、Clipboard権限、live deployはRelease Smokeとして外部確認 |
 
 ## Automated evidence
 
@@ -36,6 +36,7 @@
 node --check assets/js/app.js
 node --test tests/*.test.mjs
 npm run test:mobile
+npm run test:writer
 git diff --check
 ```
 
@@ -44,7 +45,7 @@ git diff --check
 - `tests/build-id.test.mjs`はHTML、JS、CSS、`config.js`のcache-busting ID一致を確認する。
 - `tests/large-source.test.mjs`は長文、連続Presentation、Ruby混在Projectionの保全を確認する。
 - `git diff --check`はWhitespace errorなしを確認する。
-- 固定test件数は記録値を正本にしない。最終判定時の現在HEADの実行ログおよびCI quality jobを正本とする。
+- 固定test件数は記録値を正本にしない。最終判定時の現在HEADの実行ログおよびCI `reader-quality` jobを正本とする。
 
 ### 2026-09-09 Chromium local Viewer smoke
 
@@ -55,24 +56,30 @@ git diff --check
 - 今回の監査ターンでは既存Chrome local tabの再接続を試みたが、CDPが`Debugger unattached`を返し、別tabもtimeoutしたため、新しいBrowser PASS証跡は追加していない。
 - 今回は新規Chrome tabの`http://127.0.0.1:4173/?mode=viewer`で現行Demoを再確認した。Reader Smoke本文・欠損Asset警告付きの継続表示、表示設定Panelの単独展開と内部スクロール、縦書き時のTitle/本文同期、Variantの原文→現代表記切替をAX treeと画面で確認した。
 
-### Automated Mobile Viewer Gate
+### Automated Mobile Reader Release Gate
 
 - `npm run test:mobile`で、現在のViewerをChromium `Pixel 5`相当とPlaywright WebKit `iPhone 13`相当の2環境から検証する。
 - 各環境で、Page / Console error、Ruby、Palette / Style / Outline / Combine、欠損Glyph / Fontの本文Fallback、Variant切替、設定Panelのviewport内表示と内部scroll、縦書き時のTitle / 本文writing-mode同期、意図しない横overflow、Portable Copy経路を確認する。
 - ローカル実行時は一時ディレクトリへ横書き・縦書き・失敗時のScreenshotを保存する。`MOBILE_GATE_OUTPUT`で保存先を変更できる。
 - `MOBILE_GATE_URL`を指定すれば公開Pages等の配信先へ同じGateを実行できる。
-- 同じGate内でSourceモードを開き、Author Sourceの原文表示、parse成功後のVariant反映、Viewer復帰後の本文表示まで確認する。無効入力をCurrent Documentへ反映しない契約は`tests/source-editor.test.mjs`で確認する。
-- Playwright WebKitはSafari本体ではないため、実機iPhone Safari / Android ChromeはReader v0.xの自動Gateとは分離したRelease Smokeとして扱う。Writer、IME、Caret、soft keyboardはこのGateの対象外。
-- 2026-09-09にPowerShellで`$env:MOBILE_GATE_URL='https://kinoko34077.github.io/lyric_reader_page/?mode=viewer'; npm run test:mobile`を実行し、公開Pagesでも`chromium-pixel-5` / `webkit-iphone-13`がPASSした。公開HTMLとローカルのbuild markerは`20260908-019`で一致している。
-- GitHub Actionsの`quality` jobでもPlaywright依存・Chromium / WebKitを導入して同じGateを実行し、成功時だけPages deployへ進む。
-- [`ebe1db4`のGitHub Actions run](https://github.com/kinoko34077/lyric_reader_page/actions/runs/34304668464)で、quality（全Test・syntax check・Automated Mobile Viewer Gate）と後続Pages deployがPASSした。
-- [`56e754f`のGitHub Actions run](https://github.com/kinoko34077/lyric_reader_page/actions/runs/34338680157)で、Source Editor統合後のquality（全Test・syntax check・Automated Mobile Viewer Gate）と後続Pages deployがPASSし、公開PagesでもSource編集→Viewer復帰を確認した。
+- このGateはViewer専用で、Source Editor、Writer、IME、Caret、soft keyboardを含めない。Playwright WebKitはSafari本体ではないため、実機iPhone Safari / Android ChromeはReader v0.xの自動Gateとは分離したRelease Smokeとして扱う。
+- 2026-09-09にPowerShellで`$env:MOBILE_GATE_URL='https://kinoko34077.github.io/lyric_reader_page/?mode=viewer'; npm run test:mobile`を実行し、公開Pagesでも`chromium-pixel-5` / `webkit-iphone-13`がPASSした。公開HTMLとローカルのbuild markerは`20260909-020`で一致している。
+- GitHub Actionsの`reader-quality` jobでもPlaywright依存・Chromium / WebKitを導入して同じGateを実行し、Reader Gateの成功だけをPages deployの前提にする。
+- [`ebe1db4`のGitHub Actions run](https://github.com/kinoko34077/lyric_reader_page/actions/runs/34304668464)で、旧`quality`（全Test・syntax check・Automated Mobile Viewer Gate）と後続Pages deployがPASSした。
+- [`56e754f`のGitHub Actions run](https://github.com/kinoko34077/lyric_reader_page/actions/runs/34338680157)で、Source Editor統合前の旧`quality`（全Test・syntax check・Automated Mobile Viewer Gate）と後続Pages deployがPASSし、公開PagesでもSource編集→Viewer復帰を確認した。現行のSource Editor証跡はWriter Beta Gateで再実行する。
+
+### Writer Beta Gate
+
+- `npm run test:writer`で、ChromiumのSource Editorを単独検証する。
+- `?mode=source`からAuthor Sourceを読み込み、parse成功した編集だけがViewerへ反映されること、無効入力は`aria-invalid`とエラー表示になりCurrent Documentへ反映されないことを確認する。
+- Writer Beta Gateは`writer-beta`ジョブとしてReader Release Gateから分離し、現段階では`continue-on-error: true`の助言的チェックとする。失敗はActionsへ記録するが、ReaderのPages deployを止めない。
+- Source Editorの単体・統合契約は`tests/source-editor.test.mjs`と`tests/writer-beta-gate.mjs`を正本とする。
 
 ## Stage A — Baseline / semantic model
 
 ### PASS conditions
 
-- Node baselineが`.nvmrc`で固定され、CIのquality成功がdeployの前提になっている。
+- Node baselineが`.nvmrc`で固定され、CIの`reader-quality`成功がdeployの前提になっている。
 - Author Source、Generic Variant、Source Metadata、Title、Draft、Historyが同じDocument identity境界にある。
 - Reader JSON version migrationは未知versionでも理解可能なSource / Variantを現行形式へBest-effort変換し、警告を保持する。不正文書は従来どおりCurrentへ反映しない。
 

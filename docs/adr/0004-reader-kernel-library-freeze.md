@@ -15,8 +15,10 @@ validation library before declaring the Reader complete.
 
 The relevant constraints are:
 
-- the public target is a static browser deployment with no package manifest or
-  build step;
+- the public target is a static browser deployment with no build step and no
+  runtime npm dependency;
+- development and CI tooling may use a package manifest and development-only
+  dependencies such as Playwright;
 - the Source syntax is a small, application-specific language with balanced
   presentation ranges, Ruby, escapes, nested presentation, multiline ranges,
   and Source / Portable / Plain projections;
@@ -58,8 +60,10 @@ limits, and concrete resolution.
 ## Decision
 
 Keep the local bounded parser and local Registry normalizer / validator for
-v0.x. Do not add a parser library, JSON Schema dependency, package manifest, or
-build step solely to close this policy question.
+v0.x. Do not add a parser library or JSON Schema runtime dependency solely to
+close this policy question. The repository may keep `package.json` and a
+lockfile for development and CI tooling; those files must not become a
+production runtime or build requirement.
 
 This is a deliberate freeze, not an assertion that local code is universally
 better. The replacement boundary remains the Syntax Adapter and Registry
@@ -80,10 +84,11 @@ requirement.
 ## Consequences
 
 - The Reader can remain directly deployable as a static Pages site.
-- No additional dependency or supply-chain surface is introduced for v0.x.
-- A development-only Playwright dependency is allowed for the automated Viewer
-  Gate; it is test infrastructure and does not change the frozen Reader Kernel
-  runtime/library policy.
+- No parser or schema runtime dependency or browser bundle is introduced for
+  v0.x.
+- `package.json` / `package-lock.json` and a development-only Playwright
+  dependency are allowed for automated Gates; they are test infrastructure and
+  do not change the frozen Reader Kernel runtime/library policy.
 - Parser and Registry maintenance remains a local responsibility.
 - Writer refactors, TypeScript migration, and package architecture remain
   explicitly outside this Reader completion slice.
