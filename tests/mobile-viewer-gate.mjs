@@ -47,10 +47,11 @@ async function checkScenario(scenario, targetUrl) {
   const consoleErrors = [];
   const pageErrors = [];
   const failedRequests = [];
+  const badResponses = [];
   const successfulResponses = new Set();
-  page.on("console", message => { if (message.type() === "error" && !expectedAssetFailure(message.location().url)) consoleErrors.push(`${message.text()} (${message.location().url})`); });
+  page.on("console", message => { if (message.type() === "error" && !expectedAssetFailure(message.location().url) && !/Failed to load resource:/i.test(message.text())) consoleErrors.push(`${message.text()} (${message.location().url})`); });
   page.on("pageerror", error => pageErrors.push(String(error)));
-  page.on("response", response => { if (response.ok()) successfulResponses.add(response.url()); });
+  page.on("response", response => { if (response.ok()) successfulResponses.add(response.url()); else if (!expectedAssetFailure(response.url())) badResponses.push(`${response.status()} ${response.url()}`); });
   page.on("requestfailed", request => {
     const failure = request.failure()?.errorText || "unknown";
     const harmlessCancellation = failure === "net::ERR_ABORTED" && successfulResponses.has(request.url());
@@ -115,7 +116,7 @@ async function checkScenario(scenario, targetUrl) {
     let copied = "";
     try { copied = await page.evaluate(() => navigator.clipboard.readText()); } catch { /* Clipboard permission is browser-dependent. */ }
     if (copied) assert.match(copied, /氣乘ノ理|どう/); else assert.match(status || "", /コピー|選択/);
-    assert.deepEqual({ consoleErrors, pageErrors, failedRequests }, { consoleErrors: [], pageErrors: [], failedRequests: [] });
+    assert.deepEqual({ consoleErrors, pageErrors, failedRequests, badResponses }, { consoleErrors: [], pageErrors: [], failedRequests: [], badResponses: [] });
     return { id: scenario.id, status: "PASS", screenshot: screenshotBase, initial, vertical };
   } catch (error) {
     await page.screenshot({ path: `${screenshotBase}-failure.png`, fullPage: false }).catch(() => {});
