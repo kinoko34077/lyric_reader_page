@@ -43,6 +43,7 @@
 - GitHub Actionsのquality jobへPlaywrightブラウザ導入とAutomated Mobile Viewer Gateを追加し、Mobile Gate成功をPages deployの前提へ組み込んだ。
 - Writer Betaの第1段階としてSource Editorを追加した。`?mode=source`またはヘッダーの`Source`からAuthor Sourceを直接編集でき、parse成功時だけ現在のVariantへ反映し、無効なPresentationはCurrent Documentへcommitしない。Source Editorの確認はReader Mobile Gateから分離した`npm run test:writer`へ移した。
 - Source Editorのparse失敗へParser由来のSource indexを伝播し、行・列付きのエラー表示へ改善した。既存のCurrent Document保護とWriter Beta Gateを維持する。
+- Source Editorのparse失敗時にエラー位置へcaretを移動し、失敗箇所付近の短い改行安全なcontextを表示するようにした。Parser本体のerror contractは変更せず、Current Document保護を維持する。
 - Reader Release GateとWriter Beta GateをCIジョブとして分離した。Pages deployは`reader-quality`だけに依存し、Writer Betaの失敗は記録しつつReader公開を止めない。Productionはno-build / runtime dependencyなし、Playwrightはdevelopment-only依存という方針をADR 0004へ同期した。
 - Reader専用、Shared Contract、Writer専用Unitのテストスクリプトを分離し、Reader Pages deployはReader / Shared / Mobile Gateだけに依存する構成へ整理した。Writer Unit / Browser Gateは独立した助言ジョブとして常時実行する。
 - Reader安定点`925cfc7`へ`stable`ブランチと`reader-v0.1.0`タグを作成し、Reader v0.xのFreeze checkpointを固定した。`main`はWriter Betaの継続開発に使用する。

@@ -6,6 +6,18 @@ export function sourceErrorLocation(source, error) {
   return { offset, line: value.slice(0, offset).split("\n").length, column: offset - lineStart + 1 };
 }
 
+export function sourceErrorContext(source, error, radius = 20) {
+  const value = String(source ?? "");
+  if (!value) return "";
+  const location = sourceErrorLocation(value, error);
+  const requested = Number(radius);
+  const span = Number.isFinite(requested) ? Math.max(8, Math.min(40, Math.floor(requested))) : 20;
+  const start = Math.max(0, location.offset - span);
+  const end = Math.min(value.length, Math.max(location.offset + 1, location.offset + span));
+  const excerpt = value.slice(start, end).replace(/\r\n?|\n/g, "↵").replace(/\t/g, "⇥");
+  return `${start > 0 ? "…" : ""}${excerpt}${end < value.length ? "…" : ""}`;
+}
+
 function locatedError(source, error) {
   const cause = error instanceof Error ? error : new Error("Sourceを解析できませんでした");
   const location = sourceErrorLocation(source, cause);
@@ -13,6 +25,7 @@ function locatedError(source, error) {
   result.name = cause.name;
   result.sourceIndex = location.offset;
   result.sourceLocation = location;
+  result.sourceContext = sourceErrorContext(source, cause);
   return result;
 }
 

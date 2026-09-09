@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { getSyntaxAdapter } from "../assets/js/syntax-adapter.js";
-import { parseSourceEditorInput, sourceErrorLocation } from "../assets/js/source-editor.js";
+import { parseSourceEditorInput, sourceErrorContext, sourceErrorLocation } from "../assets/js/source-editor.js";
 
 const root = process.cwd();
 
@@ -38,6 +38,18 @@ test("Source editor reports the source line and column for parse failures", () =
   assert.equal(result.error.sourceLocation.line, 2);
   assert.ok(result.error.sourceLocation.column >= 4);
   assert.match(result.error.message, /行2・列\d+/);
+});
+
+test("Source editor exposes a compact line-safe context around parse failures", () => {
+  const adapter = getSyntaxAdapter("narou-text");
+  const source = "題名\n本文\n[x:style=bad name]\n末尾";
+  const result = parseSourceEditorInput(source, adapter);
+
+  assert.equal(result.ok, false);
+  assert.match(sourceErrorContext(source, result.error), /style=bad name/);
+  assert.doesNotMatch(sourceErrorContext(source, result.error), /[\r\n]/);
+  assert.ok(sourceErrorContext(source, result.error).length < 64);
+  assert.equal(result.error.sourceContext, sourceErrorContext(source, result.error));
 });
 
 test("Source mode has an explicit textarea and application route", () => {

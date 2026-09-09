@@ -198,6 +198,15 @@ async function runGate(targetUrl) {
     await page.waitForFunction(() => document.querySelector("#source-editor")?.getAttribute("aria-invalid") === "true");
     assert.match(await page.locator("#source-status").textContent() || "", /Sourceを反映できません/);
     assert.match(await page.locator("#source-status").textContent() || "", /行\d+・列\d+/);
+    const invalidEditorState = await page.locator("#source-editor").evaluate(element => ({
+      value: element.value,
+      selectionStart: element.selectionStart,
+      selectionEnd: element.selectionEnd
+    }));
+    const invalidMarker = invalidSource.lastIndexOf("base-range");
+    assert.equal(invalidEditorState.selectionStart, invalidMarker, "parse failure must move the caret to the reported source position");
+    assert.equal(invalidEditorState.selectionEnd, invalidMarker + 1, "the failing token should be selected when possible");
+    assert.match(await page.locator("#source-status").textContent() || "", /付近.*base-range/);
 
     await clickHeaderButton(page, "#source-mode-switch");
     await page.locator("#lyrics").waitFor({ state: "visible" });
