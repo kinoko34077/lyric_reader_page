@@ -112,10 +112,13 @@ async function checkScenario(scenario, targetUrl) {
     await page.screenshot({ path: `${screenshotBase}-vertical.png`, fullPage: false });
 
     await page.locator("#copy-all-button").click();
-    const status = await page.locator("#source-status").textContent();
     let copied = "";
     try { copied = await page.evaluate(() => navigator.clipboard.readText()); } catch { /* Clipboard permission is browser-dependent. */ }
-    if (copied) assert.match(copied, /氣乘ノ理|どう/); else assert.match(status || "", /コピー|選択/);
+    if (copied) assert.match(copied, /氣乘ノ理|どう/);
+    else {
+      await page.waitForFunction(() => /コピー|選択/.test(document.querySelector("#source-status")?.textContent || ""), null, { timeout: 5_000 });
+      assert.match(await page.locator("#source-status").textContent() || "", /コピー|選択/);
+    }
     assert.deepEqual({ consoleErrors, pageErrors, failedRequests, badResponses }, { consoleErrors: [], pageErrors: [], failedRequests: [], badResponses: [] });
     return { id: scenario.id, status: "PASS", screenshot: screenshotBase, initial, vertical };
   } catch (error) {
