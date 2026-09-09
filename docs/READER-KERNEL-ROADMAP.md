@@ -70,7 +70,7 @@ Palette、Style、Glyph、Combine、Font、Outlineを閲覧用途として維持
 
 ## Stage 3 — Readerとしての実用化
 
-横書き、縦書き、Ruby表示、Variant切替、字体、文字サイズ、Palette、Copy、TXT download、URL/File open、Desktop/Mobile閲覧を確認する。EditorはBetaとして扱い、Reader閲覧を優先する。
+横書き、縦書き、Ruby表示、Variant切替、字体、文字サイズ、Palette、Copy、TXT download、URL/File open、Desktop閲覧、およびChromium mobile / WebKit iPhone emulationによるMobile Viewer Gateを確認する。実機iPhone Safari / Android ChromeはRelease Smokeへ分離し、EditorはBetaとして扱う。
 
 ## Stage 4 — Editor改善
 

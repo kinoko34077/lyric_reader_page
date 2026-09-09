@@ -2,7 +2,7 @@
 
 外部のTXT / Reader JSON / `.lyric.txt`をブラウザから読み込み、歌詞・ルビ・各種Presentationを表示する静的Readerです。Writerでは本文を直接編集できます。ローカル本文はサーバーへ送信・保存しません。
 
-Reader優先の現在ロードマップは[`docs/READER-KERNEL-ROADMAP.md`](docs/READER-KERNEL-ROADMAP.md)、最新の確定要件は[`docs/LYRIC_READER_REQUIREMENTS.md`](docs/LYRIC_READER_REQUIREMENTS.md)、実装と検証の対応表は[`docs/REQUIREMENTS-MATRIX.md`](docs/REQUIREMENTS-MATRIX.md)、現在のQuality Gate証跡は[`docs/QUALITY-GATES.md`](docs/QUALITY-GATES.md)を参照してください。Reader読込時の一部不正Presentationは原文表示へFallbackし、Warningを残して文書全体の表示を継続します。Desktop Chromeで公開DemoのReader Smokeを確認済みですが、iPhone Safari / Android Chromeは未検証です。
+Reader優先の現在ロードマップは[`docs/READER-KERNEL-ROADMAP.md`](docs/READER-KERNEL-ROADMAP.md)、最新の確定要件は[`docs/LYRIC_READER_REQUIREMENTS.md`](docs/LYRIC_READER_REQUIREMENTS.md)、実装と検証の対応表は[`docs/REQUIREMENTS-MATRIX.md`](docs/REQUIREMENTS-MATRIX.md)、現在のQuality Gate証跡は[`docs/QUALITY-GATES.md`](docs/QUALITY-GATES.md)を参照してください。Reader読込時の一部不正Presentationは原文表示へFallbackし、Warningを残して文書全体の表示を継続します。Desktop Chromeと自動Mobile Gate（Chromium Pixel 5 / WebKit iPhone 13 emulation）でViewerを確認済みです。実機iPhone Safari / Android ChromeはRelease Smokeとして別扱いです。
 
 ## 使い方
 
@@ -63,8 +63,11 @@ Reader Document / Draftはversion 3です。既知の旧versionは明示Migratio
 ```text
 node --check assets/js/app.js
 node --test tests/*.test.mjs
+npm run test:mobile
 git diff --check
 ```
+
+`npm run test:mobile`はローカルの公開Demoを検証し、PlaywrightのChromium mobile / WebKit iPhone emulationを実行します。公開Pagesなど別の配信先を検証する場合は、PowerShellで`$env:MOBILE_GATE_URL="https://example.com/lyric_reader_page/?mode=viewer"; npm run test:mobile`のように指定します。実機ブラウザ、IME、soft keyboardはこの自動Gateに含めません。
 
 CIでは`.nvmrc`のNode 22.14.0を使い、JavaScript構文検査と全Testが成功した場合だけPages Deployへ進みます。Unit / IntegrationのPASSとPages公開、Chromium以外の実機・IME・forced-colors・Clipboard権限検証は別状態として記録します。
 

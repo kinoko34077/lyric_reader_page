@@ -13,7 +13,7 @@
 | Renderer DOM → Author Source → Reader JSON | `tests/dom-reader-json.test.mjs` | PASS |
 | Registry validation / typed resolution | `tests/registry.test.mjs`, Golden test | PASS |
 | Malformed input / parser bounds / unsafe Registry | fuzz, limits, security tests | PASS |
-| Browser / mobile Reader smoke | Chromium/local Viewer smoke is PASS; WebKit/iOS/Android unavailable | PARTIAL |
+| Browser / mobile Reader smoke | Desktop Chromium plus automated Chromium mobile / WebKit iPhone emulation | PASS (Automated Mobile Gate) |
 | Download recovery truthfulness | `tests/build-id.test.mjs` | PASS |
 
 判定は現在の作業ツリーで実行した結果に基づきます。`PASS`は実装・自動テスト・必要なBrowser観測が揃った範囲だけに付け、外部Browser・実機・権限が必要な確認は`BLOCKED`へ分離します。Stage A〜Eは別Repositoryの指示に合わせた呼称で、Local Gateとの対応は以下の通りです。
@@ -26,7 +26,7 @@
 | B | Gate 2: Syntax / Projection | PASS | vNext/legacy Adapter、escape、nested、multiline、unknown、fuzz、round-trip |
 | C | Gate 3–4: Editor / Ruby / Registry | PASS | Grapheme/Ruby範囲、Editor bookmark、Palette Bank、Style inheritance/conflict/rename |
 | D | Gate 5–6: Outline / Glyph / Combine | PASS | relative/multiple Outline、Gradient fallback、typed Glyph、asset fallback、Combine 3 mode |
-| E | Gate 7–8: UI / release | BLOCKED | Chromium主要導線はPASS。WebKit/iOS/Android/IME/forced-colors/Clipboard権限/live deployのみ外部依存 |
+| E | Gate 7–8: UI / release | PASS (Automated Viewer) | Desktop Chromium、Chromium mobile、WebKit iPhone emulationで主要Viewer導線を確認。実機iPhone/Android、IME、forced-colors、Clipboard権限、live deployはRelease Smokeとして外部確認 |
 
 ## Automated evidence
 
@@ -35,6 +35,7 @@
 ```text
 node --check assets/js/app.js
 node --test tests/*.test.mjs
+npm run test:mobile
 git diff --check
 ```
 
@@ -53,6 +54,14 @@ git diff --check
 - これはDesktop Chromiumのlocal smokeであり、Mobile / WebKit / 実配信PagesのPASS証跡ではない。
 - 今回の監査ターンでは既存Chrome local tabの再接続を試みたが、CDPが`Debugger unattached`を返し、別tabもtimeoutしたため、新しいBrowser PASS証跡は追加していない。
 - 今回は新規Chrome tabの`http://127.0.0.1:4173/?mode=viewer`で現行Demoを再確認した。Reader Smoke本文・欠損Asset警告付きの継続表示、表示設定Panelの単独展開と内部スクロール、縦書き時のTitle/本文同期、Variantの原文→現代表記切替をAX treeと画面で確認した。
+
+### Automated Mobile Viewer Gate
+
+- `npm run test:mobile`で、現在のViewerをChromium `Pixel 5`相当とPlaywright WebKit `iPhone 13`相当の2環境から検証する。
+- 各環境で、Page / Console error、Ruby、Palette / Style / Outline / Combine、欠損Glyph / Fontの本文Fallback、Variant切替、設定Panelのviewport内表示と内部scroll、縦書き時のTitle / 本文writing-mode同期、意図しない横overflow、Portable Copy経路を確認する。
+- ローカル実行時は一時ディレクトリへ横書き・縦書き・失敗時のScreenshotを保存する。`MOBILE_GATE_OUTPUT`で保存先を変更できる。
+- `MOBILE_GATE_URL`を指定すれば公開Pages等の配信先へ同じGateを実行できる。
+- Playwright WebKitはSafari本体ではないため、実機iPhone Safari / Android ChromeはReader v0.xの自動Gateとは分離したRelease Smokeとして扱う。Writer、IME、Caret、soft keyboardはこのGateの対象外。
 
 ## Stage A — Baseline / semantic model
 

@@ -12,7 +12,7 @@
 | B Syntax / Projection | Gate 2 | PASS | vNext Adapter、escape / nested / multiline / fuzz / round-trip、legacy隔離 |
 | C Editor / Ruby / Registry | Gate 3–4 | PASS | Ruby部分範囲、Grapheme、Caret bookmark、Palette Bank、Style継承・競合・rename |
 | D Presentation / Asset | Gate 5–6 | PASS | Outline、Gradient fallback、Glyph typed resolver、Asset fallback、Combine 3 mode |
-| E UI / Release | Gate 7–8 | BLOCKED | Chromiumで主要導線はPASS。WebKit/iOS/Android実機、IME、forced-colors、Clipboard権限等のみ外部検証待ち |
+| E UI / Release | Gate 7–8 | PASS (Automated Viewer) | Desktop Chromium、Chromium mobile、WebKit iPhone emulationで主要Viewer導線を確認。実機iPhone/Android、IME、forced-colors、Clipboard権限等はRelease Smoke / 外部検証 |
 
 `BLOCKED`はリポジトリ内で代替できない実機・別Browser・外部Asset/CORS・権限境界だけを指します。Unit test、offline contract、Chromium検証、fixture、failure pathの作業はこの判定に含めて完了させています。
 
@@ -51,13 +51,14 @@
 | Storage / draft failure atomicity | `storageGet/Set/Remove`, staged load/restore | state tests、app failure paths | Storage失敗を編集失敗へ波及させず通知。不正文書はCurrentを保持 | Private mode/evictionの実機確認待ち |
 | Input size separation | `parseJsonText(kind)`, `validateSourceText`, local preflight | data-loader/large-source tests | Manifest、Reader JSON、Sourceを個別上限で検証。Local JSONも同一pipeline | Browser File APIの異常実装はGate 8対象 |
 | CI / build truth | `.nvmrc`, `.github/workflows/deploy-pages.yml`, build-id test | `node --check`, full test, build-id, `git diff --check` | Quality成功をDeploy jobへ依存。ID不整合を検出 | Push後のGitHub Actions/Pages live run確認が外部依存 |
-| UI / responsive / chrome | `reader.css`, `index.html`, auto-hide/settings scroll | Chromium screenshot/AX and DOM observation | Settings独立scroll、Header/Footer収納、縦横切替、mobile幅表示を確認 | Safari/iOS/Android実機とsoft keyboard未検証 |
+| UI / responsive / chrome | `reader.css`, `index.html`, auto-hide/settings scroll | Desktop smoke、`npm run test:mobile` | Settings独立scroll、Header/Footer収納、縦横切替、Title/本文同期、Chromium Pixel 5 / WebKit iPhone 13幅表示、横overflowなしを確認 | Safari/iOS/Android実機、soft keyboard、Clipboard権限はRelease Smoke |
 
 ## Required commands
 
 ```text
 node --check assets/js/app.js
 node --test tests/*.test.mjs
+npm run test:mobile
 git diff --check
 ```
 

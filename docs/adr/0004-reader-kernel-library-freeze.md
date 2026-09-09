@@ -81,6 +81,9 @@ requirement.
 
 - The Reader can remain directly deployable as a static Pages site.
 - No additional dependency or supply-chain surface is introduced for v0.x.
+- A development-only Playwright dependency is allowed for the automated Viewer
+  Gate; it is test infrastructure and does not change the frozen Reader Kernel
+  runtime/library policy.
 - Parser and Registry maintenance remains a local responsibility.
 - Writer refactors, TypeScript migration, and package architecture remain
   explicitly outside this Reader completion slice.
