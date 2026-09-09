@@ -218,20 +218,32 @@ async function runGate(targetUrl) {
     const selectLyricsText = async text => {
       const selected = await page.locator("#lyrics").evaluate((root, value) => {
         const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-        while (walker.nextNode()) {
-          const node = walker.currentNode;
-          const start = node.nodeValue?.indexOf(value) ?? -1;
-          if (start < 0) continue;
-          const range = document.createRange();
-          range.setStart(node, start);
-          range.setEnd(node, start + value.length);
-          const selection = window.getSelection();
-          selection.removeAllRanges();
-          selection.addRange(range);
-          document.dispatchEvent(new Event("selectionchange"));
-          return true;
-        }
-        return false;
+        const nodes = [];
+        while (walker.nextNode()) nodes.push(walker.currentNode);
+        const source = nodes.map(node => node.nodeValue || "").join("");
+        const start = source.indexOf(value);
+        if (start < 0) return false;
+        const point = (offset, end = false) => {
+          let cursor = 0;
+          for (const node of nodes) {
+            const length = node.nodeValue?.length || 0;
+            const next = cursor + length;
+            if (offset < next || (end && offset === next)) return [node, offset - cursor];
+            cursor = next;
+          }
+          const last = nodes[nodes.length - 1];
+          return [last, last?.nodeValue?.length || 0];
+        };
+        const range = document.createRange();
+        const [startNode, startOffset] = point(start);
+        const [endNode, endOffset] = point(start + value.length, true);
+        range.setStart(startNode, startOffset);
+        range.setEnd(endNode, endOffset);
+        const selection = window.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
+        document.dispatchEvent(new Event("selectionchange"));
+        return true;
       }, text);
       assert.equal(selected, true, `Writer must be able to select ${text}`);
     };
@@ -262,6 +274,35 @@ async function runGate(targetUrl) {
     assert.match(clearedAuthorSource, /Reader Smoke/);
     assert.doesNotMatch(clearedAuthorSource, /\[Reader Smoke:/);
 
+    await clickHeaderButton(page, "#source-mode-switch");
+    await page.locator("#lyrics").waitFor({ state: "visible" });
+    await clickHeaderButton(page, "#mode-switch");
+    await selectLyricsText("Reader Smoke");
+    await page.locator("#glyph-name").fill("missing-svg");
+    await page.locator("#glyph-button").click({ force: true });
+    await clickHeaderButton(page, "#source-mode-switch");
+    await page.waitForFunction(() => /\[Reader Smoke:glyph=missing-svg\]/.test(document.querySelector("#source-editor")?.value || ""), null, { timeout: 30_000 });
+    await clickHeaderButton(page, "#source-mode-switch");
+    await page.locator('#lyrics .source-presentation[data-glyph="missing-svg"][data-glyph-fallback="Reader Smoke"].glyph-failed').waitFor({ state: "visible", timeout: 30_000 });
+    assert.match(await page.locator("#lyrics").innerText(), /Reader Smoke/);
+    await clickHeaderButton(page, "#mode-switch");
+    await selectLyricsText("Reader Smoke");
+    await page.locator("#clear-presentation-button").click({ force: true });
+
+    await selectLyricsText("Reader Smoke");
+    await page.locator("#combine-mode").selectOption("z");
+    await page.locator("#combine-button").click({ force: true });
+    await clickHeaderButton(page, "#source-mode-switch");
+    await page.waitForFunction(() => /\[Reader Smoke:combine=z\]/.test(document.querySelector("#source-editor")?.value || ""), null, { timeout: 30_000 });
+    await clickHeaderButton(page, "#source-mode-switch");
+    await page.locator('#lyrics .source-presentation[data-combine="z"]').filter({ hasText: "Reader Smoke" }).waitFor({ state: "visible", timeout: 30_000 });
+    assert.match(await page.locator("#lyrics").textContent() || "", /Reader Smoke/);
+    await clickHeaderButton(page, "#mode-switch");
+    await selectLyricsText("Reader Smoke");
+    await page.locator("#clear-presentation-button").click({ force: true });
+
+    await clickHeaderButton(page, "#source-mode-switch");
+    assert.equal(await page.locator("#source-editor").inputValue(), clearedAuthorSource, "clearing Writer presentations must restore the original Author Source");
     await clickHeaderButton(page, "#source-mode-switch");
     await page.locator("#lyrics").waitFor({ state: "visible" });
     await clickHeaderButton(page, "#source-mode-switch");
