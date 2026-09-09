@@ -305,6 +305,26 @@ async function runGate(targetUrl) {
     assert.doesNotMatch(clearedAuthorSource, /\[Reader Smoke:/);
 
     await clickHeaderButton(page, "#source-mode-switch");
+    await clickHeaderButton(page, "#mode-switch");
+    await selectLyricsText("Reader Smoke");
+    await page.locator("#palette-bank").selectOption("night");
+    await page.locator("#palette-slot").selectOption("2");
+    await page.locator("#apply-palette-button").click({ force: true });
+    await clickHeaderButton(page, "#source-mode-switch");
+    const bankSource = await page.locator("#source-editor").inputValue();
+    assert.match(bankSource, /\[Reader Smoke:c=2,bank=night\]/, `Palette Bank authoring was not serialized: ${bankSource.slice(-500)}`);
+    await clickHeaderButton(page, "#source-mode-switch");
+    const bankPresentation = page.locator('#lyrics .source-presentation[data-bank="night"][data-palette="2"]').filter({ hasText: "Reader Smoke" });
+    await bankPresentation.waitFor({ state: "visible", timeout: 30_000 });
+    assert.ok(await bankPresentation.evaluate(element => element.style.color), "Palette Bank authoring must reach the resolved viewer color");
+    await clickHeaderButton(page, "#mode-switch");
+    await selectLyricsText("Reader Smoke");
+    await page.locator("#clear-presentation-button").click({ force: true });
+    await page.locator("#palette-bank").selectOption("default");
+    await clickHeaderButton(page, "#source-mode-switch");
+    await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source, clearedAuthorSource, { timeout: 30_000 });
+
+    await clickHeaderButton(page, "#source-mode-switch");
     await page.locator("#lyrics").waitFor({ state: "visible" });
     await clickHeaderButton(page, "#mode-switch");
     await selectLyricsText("Reader Smoke");

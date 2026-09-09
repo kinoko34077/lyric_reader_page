@@ -59,6 +59,7 @@
 - Writer BetaのPresentation AuthoringへOutline適用を追加し、既存のStyle / Palette / Glyph / Combine / Ruby操作と同じくAuthor Sourceへ再parse可能な`outline=name`として保存し、Resolverの相対em縁取りまでChromium Gateで確認した。
 - Writer BetaのWYSIWYG貼り付けをPlain Text経路としてBrowser Gateへ固定し、選択範囲のPresentationを保ったままHTML/DOM情報をAuthor Sourceへ持ち込まないことを確認した。
 - WriterのTitle直接編集をBrowser Gateへ追加し、第1行だけを更新して本文・既存Presentationを保持し、Sourceへ往復できることを確認した。
+- WriterのPalette Authoringで選択Bank / Slot（例:`night:2`）を明示指定でき、Source・Viewerへ反映後に既定Bankと本文Sourceを復元できることをBrowser Gateへ追加した。
 - ADR 0002の未知Reader Document version方針を、現行のBest-effort変換・読込不能時のみCurrent保持する実装と要件書へ同期。
 - 詳細は[`docs/READER-KERNEL-ROADMAP.md`](docs/READER-KERNEL-ROADMAP.md)を参照。
 
