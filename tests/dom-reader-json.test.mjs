@@ -116,6 +116,18 @@ test("Author Source Presentation is the only presentation input", () => {
   } finally { restore(); }
 });
 
+test("text Glyph replacement remains text instead of becoming executable markup", () => {
+  const restore = installDocument();
+  try {
+    const container = new FakeNode("DIV");
+    const replacement = '<img src=x onerror="alert(1)">';
+    renderLyrics(container, "[本文:glyph=unsafe-text]", { mode: "viewer", registry: { glyphs: { "unsafe-text": { type: "text", text: replacement } } } });
+    assert.equal(container.textContent, replacement);
+    assert.equal(container.children.some(child => child.tagName === "IMG"), false);
+    assert.equal(container.childNodes[0].childNodes[0].nodeType, 3);
+  } finally { restore(); }
+});
+
 test("malformed Presentation falls back to visible source text with a warning", () => {
   const restore = installDocument();
   try {

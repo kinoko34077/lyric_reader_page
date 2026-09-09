@@ -31,6 +31,7 @@
 - Reader読込時の一部不正Presentationを原文テキストへFail-soft Fallbackし、表示用Warning markerを残すようにした。Editorのstrict parse / round-trip契約は維持。
 - 不正Presentationを含むSourceのPortable Copyもsafe projectionへ切り替え、例外ではなく原文を保全して返すようにした。
 - 公開quality fixtureへ未知Registry extension、欠損Style / Font参照を追加し、Variant・Asset failureと合わせてFail-soft経路を常時検証。
+- text Glyphの置換結果をHTMLとして解釈せず、危険なMarkup文字列もテキストノードのまま表示するDOM安全境界を回帰テストへ追加。
 - 旧Range Annotationをruntime state、History、Draft、payload、Rendererから撤去し、Reader上のPresentationをAuthor Source / IR経路へ一本化した。入力に残る旧フィールドは無視する。
 - Readerの通常対応目安をSource約50,000文字までとし、現行500,000 code units等の制限は極端な入力を止める安全上限としてBest Effort範囲と分離した。
 - Writer系の正本をReader優先方針へ同期し、`K1`（文書OpenのUndo）と`K6`（Tab単位Draft分離）をWriter Beta側の要件としてReader Release Gateから分離した。現行Readerの完成条件とは混同しない。
