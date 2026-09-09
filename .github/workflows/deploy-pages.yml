@@ -33,10 +33,26 @@ jobs:
         run: |
           set -euo pipefail
           find assets/js -name '*.js' -print0 | xargs -0 -n1 node --check
-      - name: Unit and integration tests
-        run: node --test tests/*.test.mjs
+      - name: Reader Unit and integration tests
+        run: npm run test:reader
+      - name: Shared contract tests
+        run: npm run test:shared
       - name: Automated mobile Viewer Gate
         run: npm run test:mobile
+  writer-unit:
+    continue-on-error: true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+      - name: Install test dependencies
+        run: npm ci
+      - name: Writer Unit tests
+        run: npm run test:writer-unit
   writer-beta:
     continue-on-error: true
     runs-on: ubuntu-latest

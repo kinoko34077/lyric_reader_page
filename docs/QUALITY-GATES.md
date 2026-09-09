@@ -34,14 +34,16 @@
 
 ```text
 node --check assets/js/app.js
-node --test tests/*.test.mjs
+npm run test:reader
+npm run test:shared
+npm run test:writer-unit
 npm run test:mobile
 npm run test:writer
 git diff --check
 ```
 
 - `node --check`は`assets/js`全ファイルへ実施。
-- `node --test tests/*.test.mjs`はUnit、Property/Round-trip、Integration、Regression fixtureを含む。
+- `npm run test:reader`はReader専用Unit / Integration、`npm run test:shared`はReaderとWriterが共有するDocument / IR / Projection契約、`npm run test:writer-unit`はDraft / History / Source EditorのWriter専用Unitを実施する。ローカルの`npm test`はこの3系統を順に実行する。
 - `tests/build-id.test.mjs`はHTML、JS、CSS、`config.js`のcache-busting ID一致を確認する。
 - `tests/large-source.test.mjs`は長文、連続Presentation、Ruby混在Projectionの保全を確認する。
 - `git diff --check`はWhitespace errorなしを確認する。
