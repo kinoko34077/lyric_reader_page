@@ -215,8 +215,8 @@ async function runGate(targetUrl) {
     assert.doesNotMatch(viewerText, /base-range=0-3/);
     assert.equal(await page.locator("#source-editor").getAttribute("aria-invalid"), null);
 
-    const selectLyricsText = async text => {
-      const selected = await page.locator("#lyrics").evaluate((root, value) => {
+    const selectTextIn = async (locator, text) => {
+      const selected = await locator.evaluate((root, value) => {
         const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
         const nodes = [];
         while (walker.nextNode()) nodes.push(walker.currentNode);
@@ -247,6 +247,7 @@ async function runGate(targetUrl) {
       }, text);
       assert.equal(selected, true, `Writer must be able to select ${text}`);
     };
+    const selectLyricsText = text => selectTextIn(page.locator("#lyrics"), text);
 
     await clickHeaderButton(page, "#mode-switch");
     await page.locator("#lyrics").waitFor({ state: "visible" });
@@ -308,6 +309,26 @@ async function runGate(targetUrl) {
     await clickHeaderButton(page, "#source-mode-switch");
     await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source, clearedAuthorSource, { timeout: 30_000 });
     assert.equal(await page.locator("#source-editor").inputValue(), clearedAuthorSource, "Viewer round-trip must preserve the exact Author Source");
+
+    await clickHeaderButton(page, "#source-mode-switch");
+    await clickHeaderButton(page, "#mode-switch");
+    const smokeRuby = page.locator('#lyrics .source-ruby').filter({ hasText: "はれ〴〵バネ" }).last();
+    await selectTextIn(smokeRuby, "はれ〴〵バネ");
+    await page.locator("#style-name").fill("demo-chorus");
+    await page.locator("#style-button").click({ force: true });
+    await clickHeaderButton(page, "#source-mode-switch");
+    const rubyAuthorSource = await page.locator("#source-editor").inputValue();
+    assert.match(rubyAuthorSource, /ruby-range=\d+-\d+,ruby-style=demo-chorus/, `Ruby presentation was not serialized: ${rubyAuthorSource.slice(-400)}`);
+    await clickHeaderButton(page, "#source-mode-switch");
+    const styledRubyParts = page.locator('.ruby-presentation-part[data-ruby-part="ruby"][data-style="demo-chorus"]');
+    await styledRubyParts.first().waitFor({ state: "visible", timeout: 30_000 });
+    assert.equal(await styledRubyParts.count(), 6, "Ruby presentation must cover each selected reading grapheme");
+    await clickHeaderButton(page, "#mode-switch");
+    await selectTextIn(page.locator('#lyrics .source-ruby').filter({ hasText: "はれ〴〵バネ" }).last(), "はれ〴〵バネ");
+    await page.locator("#clear-presentation-button").click({ force: true });
+    await clickHeaderButton(page, "#source-mode-switch");
+    await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source, clearedAuthorSource, { timeout: 30_000 });
+    assert.equal(await page.locator("#source-editor").inputValue(), clearedAuthorSource, "Ruby-only presentation clear must restore the original Author Source");
 
     await page.screenshot({ path: screenshot, fullPage: false });
     assert.deepEqual({ consoleErrors, pageErrors, failedRequests, badResponses }, { consoleErrors: [], pageErrors: [], failedRequests: [], badResponses: [] });
