@@ -69,6 +69,7 @@ async function runGate(targetUrl) {
     await page.locator("#source-editor").waitFor({ state: "visible", timeout: 30_000 });
     await page.waitForFunction(() => /晴々撥条|如何《どう》/.test(document.querySelector("#source-editor")?.value || ""), null, { timeout: 30_000 });
     const originalSource = await page.locator("#source-editor").inputValue();
+    const documentAInitialSourceUrl = await page.evaluate(() => document.querySelector("#source-url")?.value || "");
     assert.match(originalSource, /晴々撥条|如何《どう》/);
 
     await clickHeaderButton(page, "#settings-toggle");
@@ -140,6 +141,23 @@ async function runGate(targetUrl) {
       await secondTab.close();
     }
 
+    const documentABeforeOpen = await page.evaluate(() => {
+      const styled = document.querySelector('#lyrics .source-presentation[data-style="demo-title"]');
+      return {
+        activeVariant: document.querySelector("#variant-mode")?.value || "",
+        sourceUrl: document.querySelector("#source-url")?.value || "",
+        paper: getComputedStyle(document.documentElement).getPropertyValue("--paper").trim(),
+        ink: getComputedStyle(document.documentElement).getPropertyValue("--ink").trim(),
+        styleBackground: styled?.style.backgroundImage || "",
+        styleColor: styled?.style.color || "",
+        styleHasWarning: Boolean(styled?.querySelector(".view-warning"))
+      };
+    });
+    assert.equal(documentABeforeOpen.activeVariant, "original");
+    assert.equal(documentABeforeOpen.sourceUrl, documentAInitialSourceUrl, "failed URL attempts must not replace Document A routing");
+    assert.ok(documentABeforeOpen.styleBackground || documentABeforeOpen.styleColor, "Document A Registry style must resolve before opening Document B");
+    assert.equal(documentABeforeOpen.styleHasWarning, false, "Document A known Style must not warn before opening Document B");
+
     await clickHeaderButton(page, "#mode-switch");
     await clickHeaderButton(page, "#settings-toggle");
     const remoteSourceUrl = `${new URL(targetUrl).origin}/data/demo/lyrics-historical.txt`;
@@ -150,7 +168,27 @@ async function runGate(targetUrl) {
     await page.waitForFunction(() => /URL本文を読み込みました/.test(document.querySelector("#source-status")?.textContent || ""), null, { timeout: 30_000 });
     assert.match(await page.locator("#source-status").textContent() || "", /URL本文を読み込みました/);
     assert.equal(await page.locator("#reader-error").isHidden(), true, "successful document load must clear an earlier load error");
+    const documentBState = await page.evaluate(() => ({
+      activeVariant: document.querySelector("#variant-mode")?.value || "",
+      sourceUrl: document.querySelector("#source-url")?.value || "",
+      styleHasWarning: Boolean(document.querySelector('#lyrics .source-presentation[data-style="demo-title"] .view-warning'))
+    }));
+    assert.equal(documentBState.sourceUrl, remoteSourceUrl, "Document B must expose its URL routing");
+    assert.equal(documentBState.styleHasWarning, true, "Document B without the original Registry must expose a Style warning");
     await page.locator("#undo-button").click({ force: true });
+    const restoredDocumentA = await page.evaluate(() => {
+      const styled = document.querySelector('#lyrics .source-presentation[data-style="demo-title"]');
+      return {
+        activeVariant: document.querySelector("#variant-mode")?.value || "",
+        sourceUrl: document.querySelector("#source-url")?.value || "",
+        paper: getComputedStyle(document.documentElement).getPropertyValue("--paper").trim(),
+        ink: getComputedStyle(document.documentElement).getPropertyValue("--ink").trim(),
+        styleBackground: styled?.style.backgroundImage || "",
+        styleColor: styled?.style.color || "",
+        styleHasWarning: Boolean(styled?.querySelector(".view-warning"))
+      };
+    });
+    assert.deepEqual(restoredDocumentA, documentABeforeOpen, "Document-open Undo must restore the complete Document A state");
     await clickHeaderButton(page, "#source-mode-switch");
     await page.waitForFunction(() => /Writer Gate/.test(document.querySelector("#source-editor")?.value || ""), null, { timeout: 30_000 });
     assert.match(await page.locator("#source-editor").inputValue(), /Writer Gate/);

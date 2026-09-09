@@ -222,6 +222,7 @@ async function openUrlSource() {
     updateStatus("URL本文を読み込みました");
     pushHistory();
   } catch (error) {
+    syncSourceInput();
     showReaderError(error, "URL本文を読み込めませんでした。既存の本文は保持されています。", "URL本文の読込失敗");
   }
 }
