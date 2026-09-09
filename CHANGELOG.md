@@ -55,7 +55,7 @@
 - 不正文書のローカル読込候補をCurrent Documentへ反映せず、正常なDocument / URL読込成功時には以前の読込エラー表示を解除することをWriter Beta Gateで確認する。
 - URL本文の取得失敗も`reader-error`へ詳細表示し、既存Documentを保持したまま再試行できるようにした。成功したURL読込では同じエラー表示を解除する。
 - URL本文の読込失敗時に試行URLをCurrent Documentのrouting欄へ残さず、文書Open→Undoでactive Variant・routing・Registry Style・Theme表示まで元文書へ戻るWriter状態境界をBrowser Gateへ追加した。
-- Writer Browser GateへViewer上の選択範囲へのStyle / Palette / Glyph / Combine適用、Ruby Reading部分のScoped Style適用、Presentation解除、既存Presentation内の本文直接置換を追加し、GUI操作後もAuthor Sourceの意味文字列が再読込可能な形で保たれることを確認した。欠損Glyphは元文字へFallbackし、Z字Combineでも複数DOM nodeをまたぐ選択を扱える。Ruby scoped属性は`ruby-range` / `ruby-style`として再parse可能な形を確認した。contenteditableの`beforeinput`で既存Presentation wrapperを保全し、Palette Slotの選択値が同期処理でSlot 0へ戻らないよう修正した。
+- Writer Browser GateへViewer上の選択範囲へのStyle / Palette / Glyph / Combine適用、Ruby Reading部分のScoped Style適用、Presentation解除、既存Presentation内の本文直接置換・キャレット入力を追加し、GUI操作後もAuthor Sourceの意味文字列が再読込可能な形で保たれることを確認した。欠損Glyphは元文字へFallbackし、Z字Combineでも複数DOM nodeをまたぐ選択を扱える。Ruby scoped属性は`ruby-range` / `ruby-style`として再parse可能な形を確認した。contenteditableの`beforeinput`で既存Presentation wrapperを保全し、Palette Slotの選択値が同期処理でSlot 0へ戻らないよう修正した。
 - Writer BetaのPresentation AuthoringへOutline適用を追加し、既存のStyle / Palette / Glyph / Combine / Ruby操作と同じくAuthor Sourceへ再parse可能な`outline=name`として保存し、Resolverの相対em縁取りまでChromium Gateで確認した。
 - ADR 0002の未知Reader Document version方針を、現行のBest-effort変換・読込不能時のみCurrent保持する実装と要件書へ同期。
 - 詳細は[`docs/READER-KERNEL-ROADMAP.md`](docs/READER-KERNEL-ROADMAP.md)を参照。

@@ -249,6 +249,34 @@ async function runGate(targetUrl) {
       assert.equal(selected, true, `Writer must be able to select ${text}`);
     };
     const selectLyricsText = text => selectTextIn(page.locator("#lyrics"), text);
+    const placeCaretIn = async (locator, text, offset) => {
+      const placed = await locator.evaluate((root, value) => {
+        const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+        const nodes = [];
+        while (walker.nextNode()) nodes.push(walker.currentNode);
+        const source = nodes.map(node => node.nodeValue || "").join("");
+        const start = source.indexOf(value.text);
+        if (start < 0 || value.offset < 0 || value.offset > value.text.length) return false;
+        root.focus?.();
+        let cursor = 0;
+        for (const node of nodes) {
+          const length = node.nodeValue?.length || 0;
+          if (start + value.offset <= cursor + length) {
+            const range = document.createRange();
+            range.setStart(node, start + value.offset - cursor);
+            range.collapse(true);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            document.dispatchEvent(new Event("selectionchange"));
+            return true;
+          }
+          cursor += length;
+        }
+        return false;
+      }, { text, offset });
+      assert.equal(placed, true, `Writer must be able to place a caret in ${text}`);
+    };
 
     await clickHeaderButton(page, "#mode-switch");
     await page.locator("#lyrics").waitFor({ state: "visible" });
@@ -340,6 +368,16 @@ async function runGate(targetUrl) {
     const wysiwygSource = await page.locator("#source-editor").inputValue();
     assert.match(wysiwygSource, /\[Writer Beta:style=demo-chorus\]/, `WYSIWYG text editing lost the existing Presentation: ${wysiwygSource.slice(-400)}`);
     assert.doesNotMatch(wysiwygSource, /\[Writer Gate:style=demo-chorus\]/, "WYSIWYG text editing must update the Author Source text");
+    await page.locator("#source-editor").fill(clearedAuthorSource);
+    await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source, clearedAuthorSource, { timeout: 30_000 });
+
+    await clickHeaderButton(page, "#source-mode-switch");
+    await clickHeaderButton(page, "#mode-switch");
+    await placeCaretIn(page.locator("#lyrics"), "Writer Gate", 7);
+    await page.keyboard.insertText("X");
+    await clickHeaderButton(page, "#source-mode-switch");
+    const caretSource = await page.locator("#source-editor").inputValue();
+    assert.match(caretSource, /\[Writer XGate:style=demo-chorus\]/, `Caret input lost the existing Presentation: ${caretSource.slice(-500)}`);
     await page.locator("#source-editor").fill(clearedAuthorSource);
     await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source, clearedAuthorSource, { timeout: 30_000 });
 
