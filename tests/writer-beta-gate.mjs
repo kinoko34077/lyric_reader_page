@@ -223,6 +223,7 @@ async function runGate(targetUrl) {
         const source = nodes.map(node => node.nodeValue || "").join("");
         const start = source.indexOf(value);
         if (start < 0) return false;
+        root.focus?.();
         const point = (offset, end = false) => {
           let cursor = 0;
           for (const node of nodes) {
@@ -329,6 +330,18 @@ async function runGate(targetUrl) {
     await clickHeaderButton(page, "#source-mode-switch");
     await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source, clearedAuthorSource, { timeout: 30_000 });
     assert.equal(await page.locator("#source-editor").inputValue(), clearedAuthorSource, "Ruby-only presentation clear must restore the original Author Source");
+
+    await clickHeaderButton(page, "#source-mode-switch");
+    await clickHeaderButton(page, "#mode-switch");
+    await selectLyricsText("Writer Gate");
+    await page.keyboard.insertText("Writer Beta");
+    await clickHeaderButton(page, "#source-mode-switch");
+    await page.waitForFunction(() => /Writer Beta/.test(document.querySelector("#source-editor")?.value || ""), null, { timeout: 30_000 });
+    const wysiwygSource = await page.locator("#source-editor").inputValue();
+    assert.match(wysiwygSource, /\[Writer Beta:style=demo-chorus\]/, `WYSIWYG text editing lost the existing Presentation: ${wysiwygSource.slice(-400)}`);
+    assert.doesNotMatch(wysiwygSource, /\[Writer Gate:style=demo-chorus\]/, "WYSIWYG text editing must update the Author Source text");
+    await page.locator("#source-editor").fill(clearedAuthorSource);
+    await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source, clearedAuthorSource, { timeout: 30_000 });
 
     await page.screenshot({ path: screenshot, fullPage: false });
     assert.deepEqual({ consoleErrors, pageErrors, failedRequests, badResponses }, { consoleErrors: [], pageErrors: [], failedRequests: [], badResponses: [] });
