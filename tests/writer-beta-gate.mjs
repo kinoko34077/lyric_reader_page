@@ -418,6 +418,17 @@ async function runGate(targetUrl) {
 
     await clickHeaderButton(page, "#source-mode-switch");
     await clickHeaderButton(page, "#mode-switch");
+    await selectLyricsText("Writer Gate");
+    await page.keyboard.press("Backspace");
+    await clickHeaderButton(page, "#source-mode-switch");
+    const deleteSource = await page.locator("#source-editor").inputValue();
+    assert.doesNotMatch(deleteSource, /Writer Gate/, `WYSIWYG deletion must remove the selected Author Source text: ${deleteSource.slice(-500)}`);
+    assert.equal(await page.locator("#source-editor").getAttribute("aria-invalid"), null, "WYSIWYG deletion must keep the resulting Source parseable");
+    await page.locator("#source-editor").fill(clearedAuthorSource);
+    await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source, clearedAuthorSource, { timeout: 30_000 });
+
+    await clickHeaderButton(page, "#source-mode-switch");
+    await clickHeaderButton(page, "#mode-switch");
     const originalTitle = (await page.locator("#song-title").innerText()).trim();
     await selectTextIn(page.locator("#song-title"), originalTitle);
     await page.keyboard.insertText("Writer Title");
