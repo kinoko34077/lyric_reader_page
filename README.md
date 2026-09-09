@@ -69,7 +69,7 @@ git diff --check
 
 `npm run test:mobile`はローカルの公開Demoを検証し、PlaywrightのChromium mobile / WebKit iPhone emulationを実行します。公開Pagesなど別の配信先を検証する場合は、PowerShellで`$env:MOBILE_GATE_URL="https://example.com/lyric_reader_page/?mode=viewer"; npm run test:mobile`のように指定します。実機ブラウザ、IME、soft keyboardはこの自動Gateに含めません。
 
-CIでは`.nvmrc`のNode 22.14.0を使い、JavaScript構文検査と全Testが成功した場合だけPages Deployへ進みます。Unit / IntegrationのPASSとPages公開、Chromium以外の実機・IME・forced-colors・Clipboard権限検証は別状態として記録します。
+CIでは`.nvmrc`のNode 22.14.0を使い、JavaScript構文検査、全Test、自動Mobile Gateが成功した場合だけPages Deployへ進みます。Unit / IntegrationのPASSとPages公開、Chromium以外の実機・IME・forced-colors・Clipboard権限検証は別状態として記録します。
 
 ## 未確定事項
 

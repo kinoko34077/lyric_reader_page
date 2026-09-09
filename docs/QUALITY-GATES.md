@@ -62,6 +62,8 @@ git diff --check
 - ローカル実行時は一時ディレクトリへ横書き・縦書き・失敗時のScreenshotを保存する。`MOBILE_GATE_OUTPUT`で保存先を変更できる。
 - `MOBILE_GATE_URL`を指定すれば公開Pages等の配信先へ同じGateを実行できる。
 - Playwright WebKitはSafari本体ではないため、実機iPhone Safari / Android ChromeはReader v0.xの自動Gateとは分離したRelease Smokeとして扱う。Writer、IME、Caret、soft keyboardはこのGateの対象外。
+- 2026-09-09にPowerShellで`$env:MOBILE_GATE_URL='https://kinoko34077.github.io/lyric_reader_page/?mode=viewer'; npm run test:mobile`を実行し、公開Pagesでも`chromium-pixel-5` / `webkit-iphone-13`がPASSした。公開HTMLとローカルのbuild markerは`20260908-019`で一致している。
+- GitHub Actionsの`quality` jobでもPlaywright依存・Chromium / WebKitを導入して同じGateを実行し、成功時だけPages deployへ進む。
 
 ## Stage A — Baseline / semantic model
 
