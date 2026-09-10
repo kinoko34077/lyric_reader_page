@@ -690,6 +690,108 @@ async function runWriterSourceGate(targetUrl) {
   }
 }
 
+async function runWriterDocumentGate(targetUrl) {
+  const browser = await chromium.launch({ headless: true });
+  const context = await browser.newContext({ locale: "ja-JP", colorScheme: "light" });
+  const page = await context.newPage();
+  const consoleErrors = [];
+  const pageErrors = [];
+  const failedRequests = [];
+  const badResponses = [];
+  const successfulResponses = new Set();
+  page.on("console", message => { if (message.type() === "error" && !expectedAssetFailure(message.location().url) && !/Failed to load resource:/i.test(message.text())) consoleErrors.push(`${message.text()} (${message.location().url})`); });
+  page.on("pageerror", error => pageErrors.push(String(error)));
+  page.on("response", response => { if (response.ok()) successfulResponses.add(response.url()); else if (!expectedAssetFailure(response.url())) badResponses.push(`${response.status()} ${response.url()}`); });
+  page.on("requestfailed", request => {
+    const failure = request.failure()?.errorText || "unknown";
+    const harmlessCancellation = failure === "net::ERR_ABORTED" && successfulResponses.has(request.url());
+    if (!expectedAssetFailure(request.url()) && !harmlessCancellation) failedRequests.push(`${request.method()} ${request.url()} [${failure}]`);
+  });
+  let stage = "initial";
+  try {
+    await page.goto(targetUrl, { waitUntil: "domcontentloaded", timeout: 30_000 });
+    await page.locator("#source-editor").waitFor({ state: "visible", timeout: 30_000 });
+    await page.waitForFunction(() => /晴々撥条|如何《どう》/.test(document.querySelector("#source-editor")?.value || ""), null, { timeout: 30_000 });
+    const originalSource = await page.locator("#source-editor").inputValue();
+    const originalSourceUrl = await page.evaluate(() => document.querySelector("#source-url")?.value || "");
+    assert.match(originalSource, /晴々撥条|如何《どう》/);
+
+    stage = "initial load settles before invalid document";
+    await page.locator("#source-editor").fill(`${originalSource}\n[Writer Document Gate]`);
+    await page.waitForFunction(() => document.body.dataset.dirty === "true");
+    await page.reload({ waitUntil: "domcontentloaded", timeout: 30_000 });
+    await page.locator("#source-editor").waitFor({ state: "visible", timeout: 30_000 });
+    await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source, originalSource, { timeout: 30_000 });
+    await page.locator("#source-file").setInputFiles({ name: "broken.reader.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify({ version: 3, content: { variants: [] } })) });
+    await page.locator("#reader-error").waitFor({ state: "visible", timeout: 30_000 });
+    assert.match(await page.locator("#reader-error").textContent() || "", /本文がありません/);
+    assert.equal(await page.locator("#source-editor").inputValue(), originalSource, "invalid document must not replace the current source after initial load");
+    await page.locator("#draft-notice").waitFor({ state: "visible", timeout: 30_000 });
+    await page.locator("#draft-restore").click({ force: true });
+    await page.waitForFunction(() => /Writer Document Gate/.test(document.querySelector("#source-editor")?.value || ""), null, { timeout: 30_000 });
+
+    stage = "failed URL rollback";
+    const sourceBeforeRemoteFailure = await page.locator("#source-editor").inputValue();
+    const invalidRemoteUrl = `${new URL(targetUrl).origin}/tests/fixtures/missing-reader.txt`;
+    await clickHeaderButton(page, "#settings-toggle");
+    await page.locator("#source-url").fill(invalidRemoteUrl);
+    page.once("dialog", dialog => dialog.accept());
+    await page.locator("#url-open-button").click({ force: true });
+    await page.locator("#reader-error").waitFor({ state: "visible", timeout: 30_000 });
+    assert.match(await page.locator("#reader-error").textContent() || "", /本文を取得できませんでした/);
+    assert.equal(await page.locator("#source-editor").inputValue(), sourceBeforeRemoteFailure, "invalid URL document must not replace the current source");
+    await clickHeaderButton(page, "#settings-toggle");
+
+    stage = "document-open undo snapshot";
+    await clickHeaderButton(page, "#source-mode-switch");
+    await page.locator("#lyrics").waitFor({ state: "visible", timeout: 30_000 });
+    const documentABeforeOpen = await page.evaluate(() => ({
+      source: document.querySelector("#source-editor")?.value || "",
+      activeVariant: document.querySelector("#variant-mode")?.value || "",
+      sourceUrl: document.querySelector("#source-url")?.value || "",
+      paper: getComputedStyle(document.documentElement).getPropertyValue("--paper").trim(),
+      ink: getComputedStyle(document.documentElement).getPropertyValue("--ink").trim()
+    }));
+    assert.equal(documentABeforeOpen.activeVariant, "original");
+    assert.equal(documentABeforeOpen.sourceUrl, originalSourceUrl, "failed URL attempts must not replace Document A routing");
+
+    await clickHeaderButton(page, "#mode-switch");
+    await clickHeaderButton(page, "#settings-toggle");
+    const remoteSourceUrl = `${new URL(targetUrl).origin}/data/demo/lyrics-historical.txt`;
+    await page.locator("#source-url").fill(remoteSourceUrl);
+    page.once("dialog", dialog => dialog.accept());
+    await page.locator("#url-open-button").click({ force: true });
+    await page.waitForFunction(() => /曲前フリ/.test(document.querySelector("#song-title")?.textContent || ""), null, { timeout: 30_000 });
+    await page.waitForFunction(() => /URL本文を読み込みました/.test(document.querySelector("#source-status")?.textContent || ""), null, { timeout: 30_000 });
+    assert.equal(await page.locator("#reader-error").isHidden(), true, "successful document load must clear an earlier load error");
+    const documentBState = await page.evaluate(() => ({
+      activeVariant: document.querySelector("#variant-mode")?.value || "",
+      sourceUrl: document.querySelector("#source-url")?.value || ""
+    }));
+    assert.equal(documentBState.sourceUrl, remoteSourceUrl, "Document B must expose its URL routing");
+    await page.locator("#undo-button").click({ force: true });
+    const restoredDocumentA = await page.evaluate(() => ({
+      source: document.querySelector("#source-editor")?.value || "",
+      activeVariant: document.querySelector("#variant-mode")?.value || "",
+      sourceUrl: document.querySelector("#source-url")?.value || "",
+      paper: getComputedStyle(document.documentElement).getPropertyValue("--paper").trim(),
+      ink: getComputedStyle(document.documentElement).getPropertyValue("--ink").trim()
+    }));
+    assert.deepEqual(restoredDocumentA, documentABeforeOpen, "Document-open Undo must restore the complete Document A state");
+
+    assert.deepEqual({ consoleErrors, pageErrors, failedRequests, badResponses }, { consoleErrors: [], pageErrors: [], failedRequests: [], badResponses: [] });
+    return { status: "PASS", targetUrl };
+  } catch (error) {
+    const state = await page.evaluate(() => ({ mode: document.body.dataset.mode || "", source: document.querySelector("#source-editor")?.value || "", status: document.querySelector("#source-status")?.textContent || "", error: document.querySelector("#reader-error")?.textContent || "" })).catch(() => ({}));
+    const message = `${error instanceof Error ? error.message : String(error)} stage=${stage} state=${JSON.stringify(state)} console=${JSON.stringify(consoleErrors)} page=${JSON.stringify(pageErrors)}`.replace(/[\r\n]+/g, " ");
+    if (process.env.GITHUB_ACTIONS) console.log(`::error title=Writer Document Gate failure::${message}`);
+    throw new Error(message);
+  } finally {
+    await context.close();
+    await browser.close();
+  }
+}
+
 async function runWriterTabGate(targetUrl) {
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({ locale: "ja-JP", colorScheme: "light" });
@@ -819,7 +921,7 @@ async function runMalformedDraftGate(targetUrl) {
 const local = requestedUrl ? null : await startLocalServer();
 const targetUrl = requestedUrl || local.url;
 try {
-  console.log(JSON.stringify({ writer: await runGate(targetUrl), writerSource: await runWriterSourceGate(targetUrl), writerTab: await runWriterTabGate(targetUrl), storageFailure: await runStorageFailureGate(targetUrl), malformedDraft: await runMalformedDraftGate(targetUrl) }, null, 2));
+  console.log(JSON.stringify({ writer: await runGate(targetUrl), writerSource: await runWriterSourceGate(targetUrl), writerDocument: await runWriterDocumentGate(targetUrl), writerTab: await runWriterTabGate(targetUrl), storageFailure: await runStorageFailureGate(targetUrl), malformedDraft: await runMalformedDraftGate(targetUrl) }, null, 2));
 } finally {
   if (local) await new Promise(resolve => local.server.close(resolve));
 }

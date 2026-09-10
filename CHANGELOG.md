@@ -24,6 +24,7 @@
 - TXT / Reader JSON / `.lyric.txt`のダウンロード開始時にDirty状態やDraft Recoveryを消去しないよう修正した。保存完了ではなく開始checkpointという表示契約を維持する。
 - Writer BetaのK6 Tab Draft分離を独立`writerTab`下位Gateとして記録し、Requirements MatrixとReader/Writer別の検証コマンドを現行CI構成へ同期した。
 - Writer Browser GateにSource Editor専用の`writerSource`下位Gateを追加し、Variant隔離、valid Source→Viewer往復、parse error位置、Current保護、textarea native Undoを通常Writerシナリオから独立検証するようにした。
+- Writer Browser Gateに`writerDocument`下位Gateを追加し、初期Source確定後の不正文書投入、URL/File失敗時のCurrent保護、成功後のエラー解除、K1文書Open Undoを通常Writerシナリオから独立検証するようにした。
 - Reader JSONの未知トップレベルFieldを不活性な拡張として保持し、Document state・Draft・Historyを経由したCanonical保存でも消さないようにした。
 - URL Manifest読込でも同じ未知トップレベルField保持を適用し、入力経路による情報欠落をなくした。
 - 欠損Style / Palette / Glyph / Font / Assetを本文表示継続のまま右肩`⃠` Warning markerへ統一し、markerをPortable Copy・Author Source投影から除外。
