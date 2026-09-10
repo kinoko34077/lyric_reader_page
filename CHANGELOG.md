@@ -12,6 +12,7 @@
 - Writer Mobile Gateへ平坦化Ruby直後の改行回帰を追加し、Chromium／WebKit双方で改行後も`｜親文字《ルビ》`のAuthor Sourceを保持することを確認する。
 - Writer Mobile Gateへ、compositionend後に末尾inputが届かないIMEイベント順序の回帰を追加した。Chromium／WebKit iPhone相当の双方でTitle／本文の確定文字をCanonical Sourceへ反映し、実機IME固有の検証は引き続きRelease Smokeとして分離する。
 - 通常本文のWriter PasteをIRの範囲置換へ寄せ、Portable RubyをDOM全体の再シリアライズなしでAuthor Sourceへ挿入できるようにした。Presentation内・Ruby内部のPasteは既存の編集保護経路へFallbackし、通常CaretのPortable Ruby貼り付けをWriter Browser Gateで再parse・再表示まで確認する。
+- Writer Mobile GateでもPortable Ruby pasteをRoot boundaryと通常テキストcaretの両方から実行し、Chromium mobile / WebKit iPhone相当でIR経路のAuthor Source保持を確認する。
 - Registry FontをDocument Themeの`font`（`registry:name` / `{type:"registry",name}`）から解決し、読み込めた場合はReader全体へ`ReaderFont-name`として適用するようにした。未読込・CORS・Asset失敗時は標準FontへFallbackし、元本文を継続表示する。Nishiki-tekiの選択肢を端末インストール有無で無効化せず、文書Fontの失敗も表示専用Warning/Statusで扱う。Writer Presentation GateでTheme→作品既定適用→Fallbackを確認する。
 - 組版設定へ行間・字間・段落間隔を追加し、ViewerではUser View Overrideとして保存する一方、作品既定Themeへの反映はWriterの明示ボタンへ分離した。CSS固定値をTheme由来の変数へ置き換え、Mobile既定の行間も維持する。
 - Viewerの文字サイズ設定へ14〜32pxのプリセットSelectを追加し、A±・Slider・Select・CSS変数を同じ更新経路へ接続した。Header/Footerを自動収納中でも本文のpointer/touch操作、設定開閉、スクロール、画面端操作でChromeを復帰できるようにし、Chromium/WebKit Mobile Viewer Gateで同期と復帰を確認する。

@@ -68,6 +68,25 @@ async function placeCaretBeforeRuby(page, index) {
   return page.locator("#lyrics .source-ruby").nth(index).evaluate(node => { const range = document.createRange(); range.setStartBefore(node); range.collapse(true); const selection = window.getSelection(); selection?.removeAllRanges(); selection?.addRange(range); node.parentElement?.focus(); document.dispatchEvent(new Event("selectionchange")); return true; });
 }
 
+async function placeCaretInRoot(locator, text, offset) {
+  return locator.evaluate((root, value) => {
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT); const nodes = [];
+    while (walker.nextNode()) nodes.push(walker.currentNode);
+    const source = nodes.map(node => node.nodeValue || "").join(""); const start = source.indexOf(value.text);
+    if (start < 0 || value.offset < 0 || value.offset > value.text.length) return false;
+    root.focus(); let cursor = 0; const target = start + value.offset;
+    for (const node of nodes) {
+      const length = node.nodeValue?.length || 0;
+      if (target >= cursor && target <= cursor + length) {
+        const range = document.createRange(); range.setStart(node, target - cursor); range.collapse(true);
+        const selection = window.getSelection(); selection?.removeAllRanges(); selection?.addRange(range); document.dispatchEvent(new Event("selectionchange")); return true;
+      }
+      cursor += length;
+    }
+    return false;
+  }, { text, offset });
+}
+
 async function placeCaretAtRootBoundary(locator, end = false) {
   return locator.evaluate((root, atEnd) => { root.focus(); const range = document.createRange(); range.selectNodeContents(root); range.collapse(Boolean(atEnd)); const selection = window.getSelection(); selection?.removeAllRanges(); selection?.addRange(range); document.dispatchEvent(new Event("selectionchange")); return true; }, end);
 }
@@ -270,6 +289,18 @@ async function checkScenario(scenario, targetUrl) {
     await clickHeaderButton(page, "#source-mode-switch");
     source = await page.locator("#source-editor").inputValue();
     assert.match(source, /前｜読確認《よみかくにん》｜ペウコ《ピョコ》後/, `${scenario.id}: mobile Portable Ruby paste must restore Ruby Source`);
+
+    stage = "Portable Ruby paste at a normal text caret";
+    await page.locator("#source-editor").fill(rubyFixture);
+    await page.waitForFunction(value => document.querySelector("#source-editor")?.value === value && document.querySelector("#source-editor")?.getAttribute("aria-invalid") !== "true", rubyFixture, { timeout: 30_000 });
+    await clickHeaderButton(page, "#source-mode-switch");
+    await clickHeaderButton(page, "#mode-switch");
+    assert.equal(await placeCaretInRoot(page.locator("#lyrics"), "前", 1), true, `${scenario.id}: mobile normal-text caret must be placeable before Ruby`);
+    await page.locator("#lyrics").evaluate((element, text) => { const event = new Event("paste", { bubbles: true, cancelable: true }); Object.defineProperty(event, "clipboardData", { value: { getData: type => type === "text/plain" ? text : "" } }); element.dispatchEvent(event); }, copied);
+    await page.waitForFunction(() => (document.querySelectorAll("#lyrics .source-ruby").length || 0) >= 3, null, { timeout: 30_000 });
+    await clickHeaderButton(page, "#source-mode-switch");
+    source = await page.locator("#source-editor").inputValue();
+    assert.match(source, /前｜読確認《よみかくにん》｜読確認《よみかくにん》後/, `${scenario.id}: mobile Portable Ruby paste at a normal text caret must use the semantic Source transaction`);
 
     assert.deepEqual({ consoleErrors, pageErrors, failedRequests, badResponses }, { consoleErrors: [], pageErrors: [], failedRequests: [], badResponses: [] });
     return { id: scenario.id, status: "PASS", screenshot: screenshotBase, initial, vertical };
