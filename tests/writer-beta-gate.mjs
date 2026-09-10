@@ -719,6 +719,18 @@ async function runWriterRubyGate(targetUrl) {
     assert.match(source, /前｜読確認《よみかくにん》｜ペウコ《ピョコ》後/, `Portable Ruby paste must restore Ruby syntax: ${source}`);
     assert.doesNotMatch(source, /\\｜読確認|\\《よみかくにん/, "Portable Ruby paste must not become escaped literal text");
 
+    stage = "Portable Ruby paste uses the semantic Source transaction";
+    await resetWriterSource(fixtureContainer);
+    await placeCaretInRoot(page.locator("#lyrics"), "後", 0);
+    await page.locator("#lyrics").evaluate((element, text) => {
+      const event = new Event("paste", { bubbles: true, cancelable: true });
+      Object.defineProperty(event, "clipboardData", { value: { getData: type => type === "text/plain" ? text : "" } });
+      element.dispatchEvent(event);
+    }, copied);
+    await page.waitForFunction(() => /読確認よみかくにん読確認よみかくにん後/.test(document.querySelector("#lyrics")?.innerText || ""), null, { timeout: 30_000 });
+    source = await readSource();
+    assert.match(source, /前｜読確認《よみかくにん》｜読確認《よみかくにん》後/, `Portable Ruby paste at a normal text caret must use an IR transaction: ${source}`);
+
     assert.deepEqual({ consoleErrors, pageErrors }, { consoleErrors: [], pageErrors: [] });
     return { status: "PASS", targetUrl };
   } catch (error) {

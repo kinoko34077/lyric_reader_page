@@ -475,12 +475,17 @@ function insertTextAt(nodes, position, value) {
 }
 
 /** Replace a semantic display range while retaining surrounding Presentation IR. */
+export function replaceDocumentRange(document, range, replacementNodes = []) {
+  const start = Math.max(0, Number(range?.start) || 0); const end = Math.max(start, Number(range?.end) || start);
+  const parts = partitionDocument(document, { start, end });
+  const replacement = Array.isArray(replacementNodes) ? replacementNodes : [];
+  return { ...document, nodes: normalizeNodes([...parts.before, ...replacement, ...parts.after]) };
+}
+
 export function replaceText(document, range, value) {
   const start = Math.max(0, Number(range?.start) || 0); const end = Math.max(start, Number(range?.end) || start); const text = String(value ?? "");
   if (start === end) return { ...document, nodes: insertTextAt(document?.nodes || [], start, text) };
-  const parts = partitionDocument(document, { start, end });
-  const replacement = text ? [{ type: "text", value: text }] : [];
-  return { ...document, nodes: normalizeNodes([...parts.before, ...replacement, ...parts.after]) };
+  return replaceDocumentRange(document, { start, end }, text ? [{ type: "text", value: text }] : []);
 }
 
 function stripPresentation(nodes) { return nodes.flatMap(node => { if (node.type === "span") return stripPresentation(node.children || []); if (node.type !== "ruby") return [node]; const plain = { ...node }; delete plain.baseDecorations; delete plain.rubyDecorations; return [plain]; }); }

@@ -2,7 +2,7 @@ import { loadInput, parseJsonText, parseLocalInput, validateSourceText } from ".
 import { MAX_READER_DOCUMENT_JSON_BYTES, MAX_SOURCE_BYTES } from "./config.js";
 import { firstLineInfo, withFirstLineBody } from "./content-boundary.js";
 import { boundedHistory, clone, documentFingerprint, documentIdentity, documentPayload, draftDiffers, draftPayload, draftStorageKey, localSourceIdentity, migrateReaderDocument, normalizeDraft, readerDocumentExtensions } from "./document-state.js";
-import { applyPresentation, applyRubyPresentation, assertCapabilities, clearPresentation, clearRubyPresentation, getSyntaxAdapter, graphemes, isSafePresentationName, nodeLength, parseSource, replaceText, serializeSource, toPortableText, toPortableTextSafe } from "./syntax-adapter.js";
+import { applyPresentation, applyRubyPresentation, assertCapabilities, clearPresentation, clearRubyPresentation, getSyntaxAdapter, graphemes, isSafePresentationName, nodeLength, parseSource, replaceDocumentRange, replaceText, serializeSource, toPortableText, toPortableTextSafe } from "./syntax-adapter.js";
 import { renderLyrics, rawText } from "./reader-view.js";
 import { containerToReaderDocument, isLyricContainerText, parseLyricContainer, serializeLyricContainer } from "./lyric-container.js";
 import { normalizeRegistry, paletteValue, validateRegistry } from "./registry.js";
@@ -528,6 +528,37 @@ function insertPastedText(range, text) {
   const selection = window.getSelection(); selection?.removeAllRanges(); selection?.addRange(range);
   return inserted;
 }
+function stripPastedPresentation(nodes = []) {
+  return nodes.flatMap(node => {
+    if (node.type === "span") return stripPastedPresentation(node.children || []);
+    if (node.type === "ruby") { const copy = { ...node }; delete copy.baseDecorations; delete copy.rubyDecorations; return [copy]; }
+    return [{ ...node }];
+  });
+}
+function portablePasteNodes(value) {
+  const text = String(value || "");
+  if (!text) return [];
+  try { return stripPastedPresentation(currentAdapter().parse(text).nodes); }
+  catch { return [{ type: "text", value: text }]; }
+}
+function selectionTouchesPresentation() {
+  const selection = window.getSelection(); const lyrics = $("lyrics");
+  if (!selection || !selection.rangeCount || !lyrics?.contains(selection.getRangeAt(0).commonAncestorContainer)) return false;
+  const range = selection.getRangeAt(0);
+  const owner = container => (container?.nodeType === Node.ELEMENT_NODE ? container : container?.parentElement)?.closest(".source-presentation");
+  if (owner(range.startContainer) || owner(range.endContainer)) return true;
+  if (range.collapsed) return false;
+  for (const presentation of lyrics.querySelectorAll(".source-presentation")) {
+    try { if (range.intersectsNode(presentation)) return true; } catch { /* A detached Safari selection is not an editable Presentation range. */ }
+  }
+  return false;
+}
+function commitPortablePaste(range, text) {
+  const replacement = portablePasteNodes(text);
+  const document = replaceDocumentRange({ type: "document", nodes: state.nodes }, range, replacement);
+  writeBodyDocument(document);
+  restoreCaret(Number(range.start) + replacement.reduce((sum, node) => sum + nodeLength(node), 0));
+}
 function rememberSelection() {
   const selection = window.getSelection(); const lyrics = $("lyrics");
   if (!selection || selection.isCollapsed || !selection.rangeCount || !lyrics?.contains(selection.getRangeAt(0).commonAncestorContainer)) return;
@@ -617,7 +648,7 @@ function bind() {
   $("combine-button").addEventListener("click", () => applySelectedPresentation({ combine: { type: "combine", mode: $("combine-mode")?.value || "straight" } }));
   $("outline-button").addEventListener("click", () => { const name = $("outline-name").value.trim(); if (!isSafePresentationName(name)) return setStatus("Outline名は予約語以外の英数字・ハイフン・アンダースコアで指定してください"); applySelectedPresentation({ outline: { type: "outline", name } }); });
   $("presentation-font-button").addEventListener("click", () => { const name = $("presentation-font-name").value.trim(); if (!isSafePresentationName(name)) return setStatus("範囲Font名は予約語以外の英数字・ハイフン・アンダースコアで指定してください"); applySelectedPresentation({ font: { type: "font", name } }); });
-  $("song-title").addEventListener("input", titleInput); $("lyrics").addEventListener("paste", event => { if (state.mode !== "writer") return; event.preventDefault(); const editRuby = selectionTouchesRuby(); const text = event.clipboardData?.getData("text/plain") || ""; const selection = window.getSelection(); if (!selection?.rangeCount) return; insertPastedText(selection.getRangeAt(0), text); bodyInput({ editRuby }); }); $("lyrics").addEventListener("input", bodyInput); $("lyrics").setAttribute("spellcheck", "false"); $("lyrics").setAttribute("autocorrect", "off"); $("lyrics").setAttribute("autocapitalize", "off"); $("song-title").setAttribute("spellcheck", "false"); $("song-title").setAttribute("autocorrect", "off"); $("song-title").setAttribute("autocapitalize", "off"); $("lyrics").addEventListener("copy", event => { if (!window.getSelection()?.isCollapsed) { event.preventDefault(); const range = selectionOffsets(); event.clipboardData.setData("text/plain", range ? rawText(state.nodes, range) : selectedEditedSource()); } });
+  $("song-title").addEventListener("input", titleInput); $("lyrics").addEventListener("paste", event => { if (state.mode !== "writer") return; event.preventDefault(); const editRuby = selectionTouchesRuby(); const text = event.clipboardData?.getData("text/plain") || ""; const offsets = selectionOffsets(); const caret = caretOffset(); const semanticRange = offsets && !offsets.ruby ? offsets : caret == null || editRuby ? null : { start: caret, end: caret }; if (semanticRange && !selectionTouchesPresentation() && (text || semanticRange.start !== semanticRange.end)) { commitPortablePaste(semanticRange, text); return; } const selection = window.getSelection(); if (!selection?.rangeCount) return; insertPastedText(selection.getRangeAt(0), text); bodyInput({ editRuby }); }); $("lyrics").addEventListener("input", bodyInput); $("lyrics").setAttribute("spellcheck", "false"); $("lyrics").setAttribute("autocorrect", "off"); $("lyrics").setAttribute("autocapitalize", "off"); $("song-title").setAttribute("spellcheck", "false"); $("song-title").setAttribute("autocorrect", "off"); $("song-title").setAttribute("autocapitalize", "off"); $("lyrics").addEventListener("copy", event => { if (!window.getSelection()?.isCollapsed) { event.preventDefault(); const range = selectionOffsets(); event.clipboardData.setData("text/plain", range ? rawText(state.nodes, range) : selectedEditedSource()); } });
   $("song-title").addEventListener("beforeinput", handleTitleBodyBoundary); $("lyrics").addEventListener("beforeinput", handleTitleBodyBoundary);
   $("draft-restore").addEventListener("click", applyDraft); $("draft-discard").addEventListener("click", clearDraft);
   $("reader-shell").addEventListener("wheel", event => { if (event.target.closest(".settings") || state.writingMode !== "vertical") return; event.preventDefault(); $("reader-shell").scrollLeft -= event.deltaY || event.deltaX; }, { passive: false });

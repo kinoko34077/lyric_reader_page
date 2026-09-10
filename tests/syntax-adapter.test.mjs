@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { applyPresentation, applyRubyPresentation, assertCapabilities, clearPresentation, detectSyntaxAdapter, graphemes, getSyntaxAdapter, isSafePresentationName, legacyNarouTextAdapter, narouTextAdapter, nodeLength, parseSource, replaceText, serializeSource, toPlainText, toPortableText, toPortableTextSafe, validateSource } from "../assets/js/syntax-adapter.js";
+import { applyPresentation, applyRubyPresentation, assertCapabilities, clearPresentation, detectSyntaxAdapter, graphemes, getSyntaxAdapter, isSafePresentationName, legacyNarouTextAdapter, narouTextAdapter, nodeLength, parseSource, replaceDocumentRange, replaceText, serializeSource, toPlainText, toPortableText, toPortableTextSafe, validateSource } from "../assets/js/syntax-adapter.js";
 import { rawText } from "../assets/js/reader-view.js";
 
 test("vNext provisional markup becomes typed presentation IR", () => {
@@ -117,6 +117,15 @@ test("semantic text replacement preserves surrounding Ruby and Presentation node
   const edited = replaceText(document, { start: 0, end: 1 }, "先");
   assert.equal(serializeSource(edited), "先[如何《どう》:c=2]後");
   assert.equal(toPortableText(edited), "先如何《どう》後");
+});
+
+test("semantic node replacement can paste Portable Ruby without a DOM round trip", () => {
+  const document = parseSource("前後");
+  const replacement = parseSource("｜読確認《よみかくにん》").nodes;
+  const edited = replaceDocumentRange(document, { start: 1, end: 1 }, replacement);
+  assert.equal(serializeSource(edited), "前｜読確認《よみかくにん》後");
+  assert.equal(toPortableText(edited), "前｜読確認《よみかくにん》後");
+  assert.deepEqual(parseSource(serializeSource(edited)), edited);
 });
 
 test("presentation registry names share the parser safety contract", () => {
