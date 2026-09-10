@@ -68,6 +68,10 @@ async function placeCaretBeforeRuby(page, index) {
   return page.locator("#lyrics .source-ruby").nth(index).evaluate(node => { const range = document.createRange(); range.setStartBefore(node); range.collapse(true); const selection = window.getSelection(); selection?.removeAllRanges(); selection?.addRange(range); node.parentElement?.focus(); document.dispatchEvent(new Event("selectionchange")); return true; });
 }
 
+async function placeCaretAtRootBoundary(locator, end = false) {
+  return locator.evaluate((root, atEnd) => { root.focus(); const range = document.createRange(); range.selectNodeContents(root); range.collapse(Boolean(atEnd)); const selection = window.getSelection(); selection?.removeAllRanges(); selection?.addRange(range); document.dispatchEvent(new Event("selectionchange")); return true; }, end);
+}
+
 async function checkScenario(scenario, targetUrl) {
   const browser = await scenario.browser.launch({ headless: true });
   const context = await browser.newContext({ ...scenario.device, locale: "ja-JP", colorScheme: "light" });
@@ -125,6 +129,7 @@ async function checkScenario(scenario, targetUrl) {
     await page.waitForFunction(() => document.querySelectorAll("#lyrics ruby").length === 0, null, { timeout: 30_000 });
     await page.locator("#ruby-toggle").check();
     await page.waitForFunction(() => document.querySelectorAll("#lyrics ruby").length > 0, null, { timeout: 30_000 });
+    assert.equal(await page.locator("body").getAttribute("data-dirty"), "false", `${scenario.id}: mobile view controls must not dirty the Document`);
 
     stage = "vertical Writer layout";
     await page.locator("#vertical-toggle").check();
@@ -151,10 +156,40 @@ async function checkScenario(scenario, targetUrl) {
     await clickHeaderButton(page, "#mode-switch");
     await page.waitForFunction(() => document.body.dataset.mode === "writer" && document.querySelector("#lyrics")?.contentEditable === "true", null, { timeout: 30_000 });
 
-    stage = "Ruby preservation on mobile Writer";
+    stage = "Title/body boundary on mobile Writer";
     await clickHeaderButton(page, "#source-mode-switch");
     await page.locator("#source-editor").waitFor({ state: "visible", timeout: 30_000 });
     const originalSource = await page.locator("#source-editor").inputValue();
+    const boundaryFixture = containerWithActiveSource(originalSource, "Mobile Boundary\n本文");
+    await page.locator("#source-editor").fill(boundaryFixture);
+    await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source && document.querySelector("#source-editor")?.getAttribute("aria-invalid") !== "true", boundaryFixture, { timeout: 30_000 });
+    await clickHeaderButton(page, "#source-mode-switch");
+    await clickHeaderButton(page, "#mode-switch");
+    await placeCaretAtRootBoundary(page.locator("#song-title"), true);
+    await page.keyboard.press("Enter");
+    await page.waitForFunction(() => document.activeElement?.id === "lyrics", null, { timeout: 30_000 });
+    await clickHeaderButton(page, "#source-mode-switch");
+    await page.locator("#source-editor").waitFor({ state: "visible", timeout: 30_000 });
+    assert.equal(parseLyricContainer(await page.locator("#source-editor").inputValue()).source, "Mobile Boundary\n本文", `${scenario.id}: Title Enter must keep the canonical Source on mobile`);
+    await clickHeaderButton(page, "#source-mode-switch");
+    await clickHeaderButton(page, "#mode-switch");
+    await clickHeaderButton(page, "#source-mode-switch");
+    await page.locator("#source-editor").fill(boundaryFixture);
+    await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source && document.querySelector("#source-editor")?.getAttribute("aria-invalid") !== "true", boundaryFixture, { timeout: 30_000 });
+    await clickHeaderButton(page, "#source-mode-switch");
+    await clickHeaderButton(page, "#mode-switch");
+    await placeCaretAtRootBoundary(page.locator("#lyrics"), false);
+    await page.keyboard.press("Backspace");
+    await page.waitForFunction(() => document.activeElement?.id === "song-title", null, { timeout: 30_000 });
+    await clickHeaderButton(page, "#source-mode-switch");
+    await page.locator("#source-editor").waitFor({ state: "visible", timeout: 30_000 });
+    assert.equal(parseLyricContainer(await page.locator("#source-editor").inputValue()).source, "Mobile Boundary\n本文", `${scenario.id}: Body Backspace must keep the canonical Source on mobile`);
+    await clickHeaderButton(page, "#source-mode-switch");
+    await clickHeaderButton(page, "#mode-switch");
+
+    stage = "Ruby preservation on mobile Writer";
+    await clickHeaderButton(page, "#source-mode-switch");
+    await page.locator("#source-editor").waitFor({ state: "visible", timeout: 30_000 });
     const rubyFixture = containerWithActiveSource(originalSource, "Ruby Mobile Gate\n前｜読確認《よみかくにん》後\n前｜ペウコ《ピョコ》後");
     await page.locator("#source-editor").fill(rubyFixture);
     await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source && document.querySelector("#source-editor")?.getAttribute("aria-invalid") !== "true", rubyFixture, { timeout: 30_000 });
