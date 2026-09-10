@@ -769,6 +769,13 @@ async function runWriterRubyGate(targetUrl) {
     const flattenRuby = async index => page.locator("#lyrics .source-ruby").nth(index).evaluate(node => {
       const ruby = node.querySelector("ruby"); if (!ruby) return false; ruby.replaceWith(document.createTextNode(node.textContent || "")); return true;
     });
+    const copySelection = async () => page.locator("#lyrics").evaluate(element => {
+      let value = "";
+      const event = new Event("copy", { bubbles: true, cancelable: true });
+      Object.defineProperty(event, "clipboardData", { value: { setData: (type, next) => { if (type === "text/plain") value = next; } } });
+      element.dispatchEvent(event);
+      return value;
+    });
 
     const fixtureContainer = containerWithActiveSource(originalSource, fixture);
 
@@ -846,6 +853,15 @@ async function runWriterRubyGate(targetUrl) {
       element.dispatchEvent(event); return value;
     });
     assert.equal(copied, "｜読確認《よみかくにん》", `Ruby copy must use Portable Ruby text: ${copied}`);
+
+    stage = "Portable Ruby copy from base or reading selection";
+    await resetWriterSource(fixtureContainer);
+    assert.equal(await selectTextInRoot(page.locator("#lyrics .source-ruby").first(), "読確認"), true, "Ruby base selection must be selectable for copy");
+    assert.equal(await copySelection(), "｜読確認《よみかくにん》", "Selecting a Ruby base must copy the complete portable Ruby");
+    await resetWriterSource(fixtureContainer);
+    assert.equal(await selectTextInRoot(page.locator("#lyrics .source-ruby").first(), "よみかくにん"), true, "Ruby reading selection must be selectable for copy");
+    assert.equal(await copySelection(), "｜読確認《よみかくにん》", "Selecting a Ruby reading must copy the complete portable Ruby");
+
     await placeCaretBeforeRuby(1);
     await page.locator("#lyrics").evaluate((element, text) => {
       const event = new Event("paste", { bubbles: true, cancelable: true });
@@ -955,10 +971,11 @@ async function runWriterCompositionGate(targetUrl) {
     await page.waitForFunction(() => /^LYRIC-READER\/1\n/.test(document.querySelector("#source-editor")?.value || ""), null, { timeout: 30_000 });
     const originalSource = await page.locator("#source-editor").inputValue();
     const fixtureSource = containerWithActiveSource(originalSource, fixture);
-    const resetWriterSource = async () => {
+    const resetWriterSource = async (source = fixture) => {
       if (await page.evaluate(() => document.body.dataset.mode) !== "source") await clickHeaderButton(page, "#source-mode-switch");
-      await page.locator("#source-editor").fill(fixtureSource);
-      await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source && document.querySelector("#source-editor")?.getAttribute("aria-invalid") !== "true", fixtureSource, { timeout: 30_000 });
+      const sourceText = source === fixture ? fixtureSource : containerWithActiveSource(originalSource, source);
+      await page.locator("#source-editor").fill(sourceText);
+      await page.waitForFunction(expected => document.querySelector("#source-editor")?.value === expected && document.querySelector("#source-editor")?.getAttribute("aria-invalid") !== "true", sourceText, { timeout: 30_000 });
       await clickHeaderButton(page, "#source-mode-switch");
       await clickHeaderButton(page, "#mode-switch");
       await page.locator("#lyrics").waitFor({ state: "visible", timeout: 30_000 });
@@ -1025,6 +1042,14 @@ async function runWriterCompositionGate(targetUrl) {
     await dispatchCompositionData(page.locator("#lyrics"), "入力", true);
     await page.waitForFunction(() => /本文入力/.test(document.querySelector("#source-editor")?.value || ""), null, { timeout: 30_000 });
     assert.equal(await readSource(), fixture.replace("本文", "本文入力"), "Body final input must not be required for a second DOM serialization");
+
+    stage = "body composition at the end after Ruby and Presentation";
+    const complexBody = "前｜読確認《よみかくにん》後[末尾:c=2]";
+    await resetWriterSource(`Complex IME\n${complexBody}`);
+    await placeCaretAtRootBoundary(page.locator("#lyrics"), true);
+    await dispatchCompositionWithoutFinalInput(page.locator("#lyrics"), "かな");
+    await page.waitForFunction(() => /\[末尾:c=2\]かな/.test(document.querySelector("#source-editor")?.value || ""), null, { timeout: 30_000 });
+    assert.equal(await readSource(), `Complex IME\n${complexBody}かな`, "Body composition at the Source end must append after Ruby and Presentation");
 
     assert.deepEqual({ consoleErrors, pageErrors }, { consoleErrors: [], pageErrors: [] });
     return { status: "PASS", targetUrl };

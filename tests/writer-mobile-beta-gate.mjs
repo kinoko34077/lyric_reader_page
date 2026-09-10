@@ -223,6 +223,17 @@ async function checkScenario(scenario, targetUrl) {
     await page.waitForFunction(() => /本文かな/.test(document.querySelector("#source-editor")?.value || ""), null, { timeout: 30_000 });
     assert.equal(await readMobileSource(), "Mobile IME\n本文かな", `${scenario.id}: WebKit compositionend must commit body text without a trailing input event`);
 
+    stage = "IME at the end after Ruby and Presentation";
+    const complexCompositionFixture = containerWithActiveSource(originalSource, "Mobile Complex\n前｜読確認《よみかくにん》後[末尾:c=2]");
+    await page.locator("#source-editor").fill(complexCompositionFixture);
+    await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source && document.querySelector("#source-editor")?.getAttribute("aria-invalid") !== "true", complexCompositionFixture, { timeout: 30_000 });
+    await clickHeaderButton(page, "#source-mode-switch");
+    await clickHeaderButton(page, "#mode-switch");
+    await placeCaretAtRootBoundary(page.locator("#lyrics"), true);
+    await dispatchCompositionWithoutFinalInput(page.locator("#lyrics"), "かな");
+    await page.waitForFunction(() => /\[末尾:c=2\]かな/.test(document.querySelector("#source-editor")?.value || ""), null, { timeout: 30_000 });
+    assert.equal(await readMobileSource(), "Mobile Complex\n前｜読確認《よみかくにん》後[末尾:c=2]かな", `${scenario.id}: WebKit body composition at the Source end must append after Ruby and Presentation`);
+
     stage = "IME Source transaction on mobile Writer";
     await page.locator("#source-editor").fill(compositionFixture);
     await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source && document.querySelector("#source-editor")?.getAttribute("aria-invalid") !== "true", compositionFixture, { timeout: 30_000 });
