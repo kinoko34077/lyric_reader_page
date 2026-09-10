@@ -97,6 +97,23 @@ async function checkScenario(scenario, targetUrl) {
     assert.equal(settings.withinViewport, true, `${scenario.id}: settings must stay in viewport`);
     assert.equal(settings.scrollable, true, `${scenario.id}: settings must be independently scrollable`);
 
+    await page.locator("#size-select").selectOption("24");
+    await page.waitForFunction(() => document.querySelector("#size-range")?.value === "24" && document.querySelector("#size-value")?.textContent === "24px");
+    const sizeState = await page.evaluate(() => ({
+      css: getComputedStyle(document.documentElement).getPropertyValue("--reader-size").trim(),
+      select: document.querySelector("#size-select")?.value || "",
+      range: document.querySelector("#size-range")?.value || ""
+    }));
+    assert.deepEqual(sizeState, { css: "24px", select: "24", range: "24" }, `${scenario.id}: size controls must stay synchronized`);
+
+    await page.locator("#settings-toggle").click();
+    await page.evaluate(() => {
+      document.body.classList.add("chrome-hidden");
+      document.querySelector("#lyrics")?.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, pointerType: "touch" }));
+    });
+    await page.waitForFunction(() => !document.body.classList.contains("chrome-hidden"));
+    await page.locator("#settings-toggle").click();
+
     await page.locator("#variant-mode").selectOption("modernized");
     await page.waitForFunction(() => document.querySelector("#variant-mode")?.value === "modernized");
     assert.match(await page.locator("#lyrics").innerText(), /どうしてこちらへ来たのだろう/);
