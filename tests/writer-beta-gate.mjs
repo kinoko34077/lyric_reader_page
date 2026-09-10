@@ -500,6 +500,14 @@ async function runGate(targetUrl) {
     await clickHeaderButton(page, "#source-mode-switch");
     await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source, clearedAuthorSource, { timeout: 30_000 });
 
+    await page.locator("#source-editor").focus();
+    await page.keyboard.press("Control+End");
+    await page.keyboard.insertText("\n[Native Undo Gate]");
+    await page.waitForFunction(() => /Native Undo Gate/.test(document.querySelector("#source-editor")?.value || ""), null, { timeout: 30_000 });
+    await page.keyboard.press("Control+z");
+    await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source, clearedAuthorSource, { timeout: 30_000 });
+    assert.equal(await page.locator("#source-editor").inputValue(), clearedAuthorSource, "Source Editor must retain the textarea native Undo path");
+
     await page.screenshot({ path: screenshot, fullPage: false });
     assert.deepEqual({ consoleErrors, pageErrors, failedRequests, badResponses }, { consoleErrors: [], pageErrors: [], failedRequests: [], badResponses: [] });
     return { status: "PASS", targetUrl, screenshot };
