@@ -6,6 +6,7 @@ import os from "node:os";
 import path from "node:path";
 import { chromium } from "playwright";
 import { getSyntaxAdapter, parseSource, serializeSource, toPortableText } from "../assets/js/syntax-adapter.js";
+import { runWriterGateSuite } from "./writer-gate-runner.mjs";
 
 const root = path.resolve(process.cwd());
 const outputRoot = process.env.WRITER_GATE_OUTPUT || path.join(os.tmpdir(), "lyric-reader-writer-gate");
@@ -1007,7 +1008,18 @@ async function runMalformedDraftGate(targetUrl) {
 const local = requestedUrl ? null : await startLocalServer();
 const targetUrl = requestedUrl || local.url;
 try {
-  console.log(JSON.stringify({ writer: await runGate(targetUrl), writerSource: await runWriterSourceGate(targetUrl), writerDocument: await runWriterDocumentGate(targetUrl), writerWysiwyg: await runWriterWysiwygGate(targetUrl), writerTab: await runWriterTabGate(targetUrl), storageFailure: await runStorageFailureGate(targetUrl), malformedDraft: await runMalformedDraftGate(targetUrl) }, null, 2));
+  const gates = [
+    ["writer", runGate],
+    ["writerSource", runWriterSourceGate],
+    ["writerDocument", runWriterDocumentGate],
+    ["writerWysiwyg", runWriterWysiwygGate],
+    ["writerTab", runWriterTabGate],
+    ["storageFailure", runStorageFailureGate],
+    ["malformedDraft", runMalformedDraftGate]
+  ];
+  const { results, failed } = await runWriterGateSuite(gates, targetUrl);
+  console.log(JSON.stringify(results, null, 2));
+  if (failed) process.exitCode = 1;
 } finally {
   if (local) await new Promise(resolve => local.server.close(resolve));
 }

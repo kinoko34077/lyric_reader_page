@@ -26,6 +26,8 @@
 - Writer Browser GateにSource Editor専用の`writerSource`下位Gateを追加し、Variant隔離、valid Source→Viewer往復、parse error位置、Current保護、textarea native Undoを通常Writerシナリオから独立検証するようにした。
 - Writer Browser Gateに`writerDocument`下位Gateを追加し、初期Source確定後の不正文書投入、URL/File失敗時のCurrent保護、成功後のエラー解除、K1文書Open Undoを通常Writerシナリオから独立検証するようにした。
 - Writer Browser Gateに`writerWysiwyg`下位Gateを追加し、Presentation範囲内の本文置換をApplication Undo→Redoボタン→Author Source投影まで独立検証するようにした。
+- Writer Browser Gateのランナーを失敗継続型へ変更し、一つの下位Gateが失敗してもSource／Document／WYSIWYG／Tab／故障系の残りを実行して結果を集約するようにした。
+- 下位Gate集約ランナーをWriter専用Unitで検証し、先頭Gateの失敗後も後続Gateを実行しつつ最終終了コードへ失敗を反映する契約を固定した。
 - Reader JSONの未知トップレベルFieldを不活性な拡張として保持し、Document state・Draft・Historyを経由したCanonical保存でも消さないようにした。
 - URL Manifest読込でも同じ未知トップレベルField保持を適用し、入力経路による情報欠落をなくした。
 - 欠損Style / Palette / Glyph / Font / Assetを本文表示継続のまま右肩`⃠` Warning markerへ統一し、markerをPortable Copy・Author Source投影から除外。
