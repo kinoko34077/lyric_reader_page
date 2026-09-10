@@ -646,6 +646,19 @@ async function runWriterWysiwygGate(targetUrl) {
     });
     assert.equal(copiedTitle, "Semantic Title", "Title copy must expose the portable Source text");
 
+    stage = "semantic title Ruby copy";
+    const rubyTitleSource = containerWithActiveSource(semanticTitleSource, "｜題《だい》\n本文");
+    await resetWriterSource(rubyTitleSource);
+    assert.equal(await selectTextInRoot(page.locator("#song-title"), "題だい"), true, "Title Ruby copy gate must select the rendered base and reading");
+    const copiedRubyTitle = await page.locator("#song-title").evaluate(element => {
+      let value = "";
+      const event = new Event("copy", { bubbles: true, cancelable: true });
+      Object.defineProperty(event, "clipboardData", { value: { setData: (type, next) => { if (type === "text/plain") value = next; } } });
+      element.dispatchEvent(event);
+      return value;
+    });
+    assert.equal(copiedRubyTitle, "｜題《だい》", "Title Ruby copy must preserve Portable Ruby notation");
+
     await resetWriterSource(originalSource);
     await clickHeaderButton(page, "#source-mode-switch");
     await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source, originalSource, { timeout: 30_000 });

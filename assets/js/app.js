@@ -362,7 +362,10 @@ function selectionTouchesRuby(root = $("lyrics")) {
   }
   return false;
 }
-function renderedBodySource(container = $("lyrics"), options = {}) { return serializeRenderedBodySource(container, currentAdapter(), { ...options, preserveRuby: options.preserveRuby ?? !state.rubyEditActive }); }
+function renderedBodySource(container = $("lyrics"), options = {}) {
+  const editRuby = options.editRuby ?? state.rubyEditActive;
+  return serializeRenderedBodySource(container, currentAdapter(), { ...options, editRuby, preserveRuby: options.preserveRuby ?? !editRuby });
+}
 function bodyInput(options = {}) { const caret = caretOffset(); const editRuby = options.editRuby ?? (state.rubyEditActive || selectionTouchesRuby()); const rawBody = renderedBodySource($("lyrics"), { editRuby }); const record = currentRecord(); const nextText = state.data.titleSource === "first-line" ? withFirstLineBody(record.source.text, rawBody) : rawBody; let parsed; try { parsed = currentAdapter().parse(nextText); } catch (error) { setStatus(error instanceof Error ? error.message : "本文を更新できませんでした"); render(captureScroll()); return; } finally { state.rubyEditActive = false; } state.selectionBookmark = null; state.data = replaceVariantSource(state.data, record.id, nextText); state.nodes = parsed.nodes; markDirty({ source: true }); saveDraft(); scheduleHistory(); render(captureScroll()); restoreCaret(caret); updateStatus(); }
 function commitSemanticTextEdit(range, value) { const document = replaceText({ type: "document", nodes: state.nodes }, range, value); writeBodyDocument(document); restoreCaret(Number(range.start) + graphemes(value).length); }
 function domPathFromRoot(root, node) {
@@ -410,7 +413,7 @@ function sourceOffsetAtPoint(root, container, offset) {
 function semanticSelectionRange(root = $("lyrics")) {
   const selection = window.getSelection();
   if (!selection || !selection.rangeCount) return null;
-  const range = selectionOffsets();
+  const range = selectionOffsets(root);
   if (!selection.isCollapsed) return range && !range.ruby ? range : null;
   if (selectionTouchesRuby(root)) return null;
   const offset = caretOffset(root);
@@ -605,9 +608,10 @@ function restoreCaret(offset, root = $("lyrics")) {
     }
   });
 }
-function selectionOffsets() {
-  const selection = window.getSelection(); if (!selection || selection.isCollapsed || !selection.rangeCount) return null;
+function selectionOffsets(root = $("lyrics")) {
+  const selection = window.getSelection(); if (!selection || selection.isCollapsed || !selection.rangeCount || !root) return null;
   const range = selection.getRangeAt(0);
+  if (!root.contains(range.startContainer) || !root.contains(range.endContainer)) return null;
   const rubyMarker = container => (container.nodeType === Node.ELEMENT_NODE ? container : container.parentElement)?.closest("[data-ruby-part]");
   const rubyOwner = container => (container.nodeType === Node.ELEMENT_NODE ? container : container.parentElement)?.closest(".source-ruby");
   const rubyPosition = (container, point) => {
@@ -692,7 +696,7 @@ function rememberSelection() {
   if (!selection || selection.isCollapsed || !selection.rangeCount || !lyrics?.contains(selection.getRangeAt(0).commonAncestorContainer)) return;
   const range = selectionOffsets(); if (range) state.selectionBookmark = structuredClone(range);
 }
-function selectedEditedSource() { const selection = window.getSelection(); if (!selection || selection.isCollapsed || !selection.rangeCount) return ""; const source = renderedBodySource(selection.getRangeAt(0).cloneContents()); try { const adapter = currentAdapter(); return toPortableText(parseSource(source, adapter), adapter); } catch { return source; } }
+function selectedEditedSource() { const selection = window.getSelection(); if (!selection || selection.isCollapsed || !selection.rangeCount) return ""; const source = renderedBodySource(selection.getRangeAt(0).cloneContents(), { preserveRuby: true }); try { const adapter = currentAdapter(); return toPortableText(parseSource(source, adapter), adapter); } catch { return source; } }
 function bindCompositionGuards() {
   const editables = [$("lyrics"), $("song-title")];
   const editableFor = node => editables.find(editable => editable === node || editable?.contains(node)) || null;
@@ -803,10 +807,10 @@ function bind() {
   $("combine-button").addEventListener("click", () => applySelectedPresentation({ combine: { type: "combine", mode: $("combine-mode")?.value || "straight" } }));
   $("outline-button").addEventListener("click", () => { const name = $("outline-name").value.trim(); if (!isSafePresentationName(name)) return setStatus("Outline名は予約語以外の英数字・ハイフン・アンダースコアで指定してください"); applySelectedPresentation({ outline: { type: "outline", name } }); });
   $("presentation-font-button").addEventListener("click", () => { const name = $("presentation-font-name").value.trim(); if (!isSafePresentationName(name)) return setStatus("範囲Font名は予約語以外の英数字・ハイフン・アンダースコアで指定してください"); applySelectedPresentation({ font: { type: "font", name } }); });
-  $("song-title").addEventListener("input", titleInput); $("lyrics").addEventListener("paste", event => { if (state.mode !== "writer") return; event.preventDefault(); const editRuby = selectionTouchesRuby(); const text = event.clipboardData?.getData("text/plain") || ""; const offsets = selectionOffsets(); const caret = caretOffset(); const semanticRange = offsets && !offsets.ruby ? offsets : caret == null || editRuby ? null : { start: caret, end: caret }; if (semanticRange && !selectionTouchesPresentation() && (text || semanticRange.start !== semanticRange.end)) { commitPortablePaste(semanticRange, text); return; } const selection = window.getSelection(); if (!selection?.rangeCount) return; insertPastedText(selection.getRangeAt(0), text); bodyInput({ editRuby }); }); $("lyrics").addEventListener("input", bodyInput); $("lyrics").setAttribute("spellcheck", "false"); $("lyrics").setAttribute("autocorrect", "off"); $("lyrics").setAttribute("autocapitalize", "off"); $("song-title").setAttribute("spellcheck", "false"); $("song-title").setAttribute("autocorrect", "off"); $("song-title").setAttribute("autocapitalize", "off"); $("lyrics").addEventListener("copy", event => { if (!window.getSelection()?.isCollapsed) { event.preventDefault(); const range = selectionOffsets(); event.clipboardData.setData("text/plain", range ? rawText(state.nodes, range) : selectedEditedSource()); } });
+  $("song-title").addEventListener("input", titleInput); $("lyrics").addEventListener("paste", event => { if (state.mode !== "writer") return; event.preventDefault(); const editRuby = selectionTouchesRuby(); const text = event.clipboardData?.getData("text/plain") || ""; const offsets = selectionOffsets($("lyrics")); const caret = caretOffset(); const semanticRange = offsets && !offsets.ruby ? offsets : caret == null || editRuby ? null : { start: caret, end: caret }; if (semanticRange && !selectionTouchesPresentation() && (text || semanticRange.start !== semanticRange.end)) { commitPortablePaste(semanticRange, text); return; } const selection = window.getSelection(); if (!selection?.rangeCount) return; insertPastedText(selection.getRangeAt(0), text); bodyInput({ editRuby }); }); $("lyrics").addEventListener("input", bodyInput); $("lyrics").setAttribute("spellcheck", "false"); $("lyrics").setAttribute("autocorrect", "off"); $("lyrics").setAttribute("autocapitalize", "off"); $("song-title").setAttribute("spellcheck", "false"); $("song-title").setAttribute("autocorrect", "off"); $("song-title").setAttribute("autocapitalize", "off"); $("lyrics").addEventListener("copy", event => { if (!window.getSelection()?.isCollapsed) { event.preventDefault(); const range = selectionOffsets($("lyrics")); event.clipboardData.setData("text/plain", range ? rawText(state.nodes, range) : selectedEditedSource()); } });
   $("song-title").addEventListener("beforeinput", event => { if (event.defaultPrevented || handleTitleBodyBoundary(event)) return; if (preserveWysiwygTitleDeletion(event)) return; preserveWysiwygTitleTextInput(event); }); $("lyrics").addEventListener("beforeinput", handleTitleBodyBoundary);
   $("song-title").addEventListener("paste", preserveWysiwygTitlePaste);
-  $("song-title").addEventListener("copy", event => { if (!window.getSelection()?.isCollapsed) { event.preventDefault(); const range = selectionOffsets(); event.clipboardData?.setData("text/plain", range ? rawText(state.titleNodes, range) : titleSourceText()); } });
+  $("song-title").addEventListener("copy", event => { if (!window.getSelection()?.isCollapsed) { event.preventDefault(); const range = selectionOffsets($("song-title")); event.clipboardData?.setData("text/plain", range ? rawText(state.titleNodes, range) : titleSourceText()); } });
   $("draft-restore").addEventListener("click", applyDraft); $("draft-discard").addEventListener("click", clearDraft);
   $("reader-shell").addEventListener("wheel", event => { if (event.target.closest(".settings") || state.writingMode !== "vertical") return; event.preventDefault(); $("reader-shell").scrollLeft -= event.deltaY || event.deltaX; }, { passive: false });
   let scrollTimer; $("reader-shell").addEventListener("scroll", () => { document.body.classList.add("is-scrolling"); revealChrome(); clearTimeout(scrollTimer); scrollTimer = setTimeout(() => { document.body.classList.remove("is-scrolling"); document.body.classList.add("chrome-hidden"); saveScroll(); }, 900); });

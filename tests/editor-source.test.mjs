@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { serializeEditedNode } from "../assets/js/editor-source.js";
+import { renderedBodySource, serializeEditedNode } from "../assets/js/editor-source.js";
 import { legacyNarouTextAdapter, parseSource, toPlainText } from "../assets/js/syntax-adapter.js";
 
 const text = value => ({ nodeType: 3, nodeValue: value });
@@ -21,6 +21,18 @@ test("unchanged Ruby markup is preserved when the rendered editor tree is serial
   const sourceRuby = element("SPAN", ["source-ruby"], { sourceBase: "如何", sourceRuby: "どう", sourceRaw: "[如何《どう》:base-range=0-1,base-c=2]" }, [ruby], "如何どう");
   sourceRuby.querySelector = selector => selector === "ruby" ? ruby : null;
   assert.equal(serializeEditedNode(sourceRuby), sourceRuby.dataset.sourceRaw);
+});
+
+test("explicit Ruby edit mode cannot be overridden by an unrelated preservation flag", () => {
+  const base = element("SPAN", [], {}, [text("如何")], "如何");
+  const rt = element("RT", [], {}, [text("どう")], "どう");
+  const ruby = { nodeType: 1, tagName: "RUBY", childNodes: [base, rt], querySelector: selector => selector === "rt" ? rt : null };
+  const sourceRuby = element("SPAN", ["source-ruby"], { sourceBase: "如何", sourceRuby: "どう", sourceRaw: "如何《どう》" }, [ruby], "如何どう");
+  sourceRuby.querySelector = selector => selector === "ruby" ? ruby : null;
+  base.textContent = "何";
+  assert.equal(renderedBodySource({ childNodes: [sourceRuby] }, "narou-text", { editRuby: true }), "何《どう》");
+  base.textContent = "如何";
+  assert.equal(renderedBodySource({ childNodes: [sourceRuby] }, "narou-text", { editRuby: false }), "如何《どう》");
 });
 
 test("Ruby source stays parseable when nested inside a presentation target", () => {
