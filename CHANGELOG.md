@@ -66,6 +66,7 @@
 - WriterのPalette Authoringで選択Bank / Slot（例:`night:2`）を明示指定でき、Source・Viewerへ反映後に既定Bankと本文Sourceを復元できることをBrowser Gateへ追加した。
 - Writer BetaのK6 Browser Gateを強化し、同一文書を開いた別TabのDraftキー分離だけでなく、一方のTabでDraftを破棄しても他方のDraftが保持されることを確認するようにした。
 - Writer Browser Gateのreload直後に初期Author Sourceの確定を待つ同期点を追加し、初期読込競合による不正文書ロールバック検証の不安定さを除去した。不正文Draftの復元候補は本文が空ならCurrentへ反映せず、警告だけを表示して本文を保持するFail-soft境界も追加した。
+- Writer Beta GateのK6 Tab/Draftシナリオを独立Browser Contextの`writerTab`下位Gateへ切り出し、通常のSource・Presentationシナリオの状態ずれから分離した。stableのBranch Rulesetは外部設定のため、設定済みと断定せず未確認状態をQuality Gateへ反映した。
 - Writerの既存Presentation範囲をWYSIWYGで削除しても結果がparse可能なAuthor Sourceになり、選択文字が残留しないことをBrowser Gateへ追加した。
 - Writerで同一範囲へ2つのNamed Styleを適用した場合、Sourceの複数指定を保持し、ViewerでConflict Warningを表示したうえで解除できることをBrowser Gateへ追加した。3つ以上のVisual分割規則はHOLDのまま維持する。
 - ADR 0002の未知Reader Document version方針を、現行のBest-effort変換・読込不能時のみCurrent保持する実装と要件書へ同期。

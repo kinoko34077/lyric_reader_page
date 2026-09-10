@@ -131,31 +131,6 @@ async function runGate(targetUrl) {
     await page.locator("#lyrics").waitFor({ state: "visible" });
     assert.match(await page.locator("#lyrics").innerText(), /Writer Gate/);
 
-    const secondTab = await context.newPage();
-    try {
-      await secondTab.goto(targetUrl, { waitUntil: "domcontentloaded", timeout: 30_000 });
-      await secondTab.locator("#source-editor").waitFor({ state: "visible", timeout: 30_000 });
-      await secondTab.waitForFunction(() => /晴々撥条|如何《どう》/.test(document.querySelector("#source-editor")?.value || ""), null, { timeout: 30_000 });
-      const secondSource = await secondTab.locator("#source-editor").inputValue();
-      await secondTab.locator("#source-editor").fill(`${secondSource}\n[Writer Gate:second-tab]`);
-      await secondTab.waitForFunction(() => document.body.dataset.dirty === "true");
-      const draftKeys = await page.evaluate(() => Object.keys(localStorage).filter(key => key.startsWith("lyric-reader:draft:")));
-      const tabKeys = draftKeys.map(key => key.split(":tab:")[1]).filter(Boolean);
-      assert.ok(tabKeys.length >= 2, "each Tab must create an independent Draft key");
-      assert.equal(new Set(tabKeys).size, tabKeys.length, "Draft keys must not share a Tab identity");
-      const draftEntries = await page.evaluate(() => Object.keys(localStorage).filter(key => key.startsWith("lyric-reader:draft:")).map(key => [key, localStorage.getItem(key) || ""]));
-      const firstTabDraftKey = draftEntries.find(([, value]) => value.includes("[Writer Gate:style=demo-chorus]"))?.[0];
-      const secondTabDraftKey = draftEntries.find(([, value]) => value.includes("[Writer Gate:second-tab]"))?.[0];
-      assert.ok(firstTabDraftKey, "the first Tab must have its own recoverable Draft");
-      assert.ok(secondTabDraftKey, "the second Tab must have its own recoverable Draft");
-      const secondTabDraftBeforeCleanup = await page.evaluate(key => localStorage.getItem(key), secondTabDraftKey);
-      await page.locator("#draft-discard").click({ force: true });
-      await page.waitForFunction(key => localStorage.getItem(key) === null, firstTabDraftKey, { timeout: 30_000 });
-      assert.equal(await page.evaluate(key => localStorage.getItem(key), secondTabDraftKey), secondTabDraftBeforeCleanup, "discarding one Tab's Draft must not remove another Tab's Draft");
-    } finally {
-      await secondTab.close();
-    }
-
     const documentABeforeOpen = await page.evaluate(() => {
       const styled = document.querySelector('#lyrics .source-presentation[data-style="demo-title"]');
       return {
@@ -609,6 +584,61 @@ async function runGate(targetUrl) {
   }
 }
 
+async function runWriterTabGate(targetUrl) {
+  const browser = await chromium.launch({ headless: true });
+  const context = await browser.newContext({ locale: "ja-JP", colorScheme: "light" });
+  const page = await context.newPage();
+  const consoleErrors = [];
+  const pageErrors = [];
+  const observe = tab => {
+    tab.on("console", message => { if (message.type() === "error" && !/Failed to load resource:/i.test(message.text())) consoleErrors.push(message.text()); });
+    tab.on("pageerror", error => pageErrors.push(String(error)));
+  };
+  observe(page);
+  try {
+    await page.goto(targetUrl, { waitUntil: "domcontentloaded", timeout: 30_000 });
+    await page.locator("#source-editor").waitFor({ state: "visible", timeout: 30_000 });
+    await page.waitForFunction(() => /晴々撥条|如何《どう》/.test(document.querySelector("#source-editor")?.value || ""), null, { timeout: 30_000 });
+    const firstSource = await page.locator("#source-editor").inputValue();
+    await page.locator("#source-editor").fill(`${firstSource}\n[Writer Tab:first]`);
+    await page.waitForFunction(() => document.body.dataset.dirty === "true");
+    await page.reload({ waitUntil: "domcontentloaded", timeout: 30_000 });
+    await page.locator("#source-editor").waitFor({ state: "visible", timeout: 30_000 });
+    await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source, firstSource, { timeout: 30_000 });
+    await page.locator("#draft-notice").waitFor({ state: "visible", timeout: 30_000 });
+
+    const secondTab = await context.newPage();
+    observe(secondTab);
+    try {
+      await secondTab.goto(targetUrl, { waitUntil: "domcontentloaded", timeout: 30_000 });
+      await secondTab.locator("#source-editor").waitFor({ state: "visible", timeout: 30_000 });
+      await secondTab.waitForFunction(() => /晴々撥条|如何《どう》/.test(document.querySelector("#source-editor")?.value || ""), null, { timeout: 30_000 });
+      const secondSource = await secondTab.locator("#source-editor").inputValue();
+      await secondTab.locator("#source-editor").fill(`${secondSource}\n[Writer Tab:second]`);
+      await secondTab.waitForFunction(() => document.body.dataset.dirty === "true");
+      const draftEntries = await page.evaluate(() => Object.keys(localStorage).filter(key => key.startsWith("lyric-reader:draft:")).map(key => [key, localStorage.getItem(key) || ""]));
+      const tabKeys = draftEntries.map(([key]) => key.split(":tab:")[1]).filter(Boolean);
+      assert.ok(tabKeys.length >= 2, "each Tab must create an independent Draft key");
+      assert.equal(new Set(tabKeys).size, tabKeys.length, "Draft keys must not share a Tab identity");
+      const firstTabDraftKey = draftEntries.find(([, value]) => value.includes("[Writer Tab:first]"))?.[0];
+      const secondTabDraftKey = draftEntries.find(([, value]) => value.includes("[Writer Tab:second]"))?.[0];
+      assert.ok(firstTabDraftKey, "the first Tab must have its own recoverable Draft");
+      assert.ok(secondTabDraftKey, "the second Tab must have its own recoverable Draft");
+      const secondTabDraftBeforeCleanup = await page.evaluate(key => localStorage.getItem(key), secondTabDraftKey);
+      await page.locator("#draft-discard").click({ force: true });
+      await page.waitForFunction(key => localStorage.getItem(key) === null, firstTabDraftKey, { timeout: 30_000 });
+      assert.equal(await page.evaluate(key => localStorage.getItem(key), secondTabDraftKey), secondTabDraftBeforeCleanup, "discarding one Tab's Draft must not remove another Tab's Draft");
+      assert.deepEqual({ consoleErrors, pageErrors }, { consoleErrors: [], pageErrors: [] });
+      return { status: "PASS", targetUrl };
+    } finally {
+      await secondTab.close();
+    }
+  } finally {
+    await context.close();
+    await browser.close();
+  }
+}
+
 async function runStorageFailureGate(targetUrl) {
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({ locale: "ja-JP", colorScheme: "light" });
@@ -683,7 +713,7 @@ async function runMalformedDraftGate(targetUrl) {
 const local = requestedUrl ? null : await startLocalServer();
 const targetUrl = requestedUrl || local.url;
 try {
-  console.log(JSON.stringify({ writer: await runGate(targetUrl), storageFailure: await runStorageFailureGate(targetUrl), malformedDraft: await runMalformedDraftGate(targetUrl) }, null, 2));
+  console.log(JSON.stringify({ writer: await runGate(targetUrl), writerTab: await runWriterTabGate(targetUrl), storageFailure: await runStorageFailureGate(targetUrl), malformedDraft: await runMalformedDraftGate(targetUrl) }, null, 2));
 } finally {
   if (local) await new Promise(resolve => local.server.close(resolve));
 }
