@@ -5,6 +5,7 @@ import { createServer } from "node:http";
 import os from "node:os";
 import path from "node:path";
 import { chromium, devices, webkit } from "playwright";
+import { containerToReaderDocument, parseLyricContainer, serializeLyricContainer } from "../assets/js/lyric-container.js";
 
 const root = path.resolve(process.cwd());
 const outputRoot = process.env.WRITER_MOBILE_GATE_OUTPUT || path.join(os.tmpdir(), "lyric-reader-writer-mobile-gate");
@@ -42,6 +43,29 @@ function expectedAssetFailure(url) {
 
 async function clickHeaderButton(page, selector) {
   await page.evaluate(target => { document.body.classList.remove("chrome-hidden"); document.querySelector(target)?.click(); }, selector);
+}
+
+function containerWithActiveSource(containerText, source) {
+  const parsed = parseLyricContainer(containerText);
+  const document = containerToReaderDocument(parsed);
+  document.content.variants = document.content.variants.map(variant => variant.id === parsed.activeVariantId ? { ...variant, source: { text: source, url: "container:" } } : variant);
+  return serializeLyricContainer(document, parsed.activeVariantId);
+}
+
+async function selectTextInRoot(locator, text) {
+  return locator.evaluate((root, value) => {
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT); const nodes = [];
+    while (walker.nextNode()) nodes.push(walker.currentNode);
+    const source = nodes.map(node => node.nodeValue || "").join(""); const start = source.indexOf(value);
+    if (start < 0) return false;
+    let cursor = 0; const point = offset => { for (const node of nodes) { const length = node.nodeValue?.length || 0; if (offset <= cursor + length) return [node, offset - cursor]; cursor += length; } const last = nodes.at(-1); return [last, last?.nodeValue?.length || 0]; };
+    const range = document.createRange(); const [startNode, startOffset] = point(start); cursor = 0; const [endNode, endOffset] = point(start + value.length); range.setStart(startNode, startOffset); range.setEnd(endNode, endOffset);
+    const selection = window.getSelection(); selection?.removeAllRanges(); selection?.addRange(range); document.dispatchEvent(new Event("selectionchange")); return true;
+  }, text);
+}
+
+async function placeCaretBeforeRuby(page, index) {
+  return page.locator("#lyrics .source-ruby").nth(index).evaluate(node => { const range = document.createRange(); range.setStartBefore(node); range.collapse(true); const selection = window.getSelection(); selection?.removeAllRanges(); selection?.addRange(range); node.parentElement?.focus(); document.dispatchEvent(new Event("selectionchange")); return true; });
 }
 
 async function checkScenario(scenario, targetUrl) {
@@ -126,6 +150,39 @@ async function checkScenario(scenario, targetUrl) {
     await page.waitForFunction(() => document.body.dataset.mode === "viewer" && document.querySelector("#lyrics")?.contentEditable === "false", null, { timeout: 30_000 });
     await clickHeaderButton(page, "#mode-switch");
     await page.waitForFunction(() => document.body.dataset.mode === "writer" && document.querySelector("#lyrics")?.contentEditable === "true", null, { timeout: 30_000 });
+
+    stage = "Ruby preservation on mobile Writer";
+    await clickHeaderButton(page, "#source-mode-switch");
+    await page.locator("#source-editor").waitFor({ state: "visible", timeout: 30_000 });
+    const originalSource = await page.locator("#source-editor").inputValue();
+    const rubyFixture = containerWithActiveSource(originalSource, "Ruby Mobile Gate\n前｜読確認《よみかくにん》後\n前｜ペウコ《ピョコ》後");
+    await page.locator("#source-editor").fill(rubyFixture);
+    await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source && document.querySelector("#source-editor")?.getAttribute("aria-invalid") !== "true", rubyFixture, { timeout: 30_000 });
+    await clickHeaderButton(page, "#source-mode-switch");
+    await clickHeaderButton(page, "#mode-switch");
+    await page.locator("#lyrics .source-ruby").first().waitFor({ state: "visible", timeout: 30_000 });
+    await page.locator("#lyrics .source-ruby").first().evaluate(node => { const ruby = node.querySelector("ruby"); if (ruby) ruby.replaceWith(document.createTextNode(node.textContent || "")); });
+    await page.locator("#lyrics").evaluate(root => { const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT); while (walker.nextNode()) { const node = walker.currentNode; const index = (node.nodeValue || "").indexOf("後"); if (index < 0) continue; const range = document.createRange(); range.setStart(node, index); range.collapse(true); const selection = window.getSelection(); selection?.removeAllRanges(); selection?.addRange(range); root.focus(); document.dispatchEvent(new Event("selectionchange")); return; } });
+    await page.keyboard.insertText("A");
+    await page.waitForFunction(() => /A後/.test(document.querySelector("#lyrics")?.innerText || ""), null, { timeout: 30_000 });
+    await clickHeaderButton(page, "#source-mode-switch");
+    await page.locator("#source-editor").waitFor({ state: "visible", timeout: 30_000 });
+    let source = await page.locator("#source-editor").inputValue();
+    assert.match(source, /前｜読確認《よみかくにん》A後/, `${scenario.id}: flattened Ruby neighbor edit must preserve Ruby Source`);
+
+    await page.locator("#source-editor").fill(rubyFixture);
+    await page.waitForFunction(value => document.querySelector("#source-editor")?.value === value && document.querySelector("#source-editor")?.getAttribute("aria-invalid") !== "true", rubyFixture, { timeout: 30_000 });
+    await clickHeaderButton(page, "#source-mode-switch");
+    await clickHeaderButton(page, "#mode-switch");
+    assert.equal(await selectTextInRoot(page.locator("#lyrics .source-ruby").first(), "読確認よみかくにん"), true, `${scenario.id}: mobile Ruby selection must find the complete Ruby`);
+    const copied = await page.locator("#lyrics").evaluate(element => { let value = ""; const event = new Event("copy", { bubbles: true, cancelable: true }); Object.defineProperty(event, "clipboardData", { value: { setData: (type, next) => { if (type === "text/plain") value = next; } } }); element.dispatchEvent(event); return value; });
+    assert.equal(copied, "｜読確認《よみかくにん》", `${scenario.id}: mobile Ruby copy must use Portable Ruby text`);
+    await placeCaretBeforeRuby(page, 1);
+    await page.locator("#lyrics").evaluate((element, text) => { const event = new Event("paste", { bubbles: true, cancelable: true }); Object.defineProperty(event, "clipboardData", { value: { getData: type => type === "text/plain" ? text : "" } }); element.dispatchEvent(event); }, copied);
+    await page.waitForFunction(() => (document.querySelectorAll("#lyrics .source-ruby").length || 0) >= 3, null, { timeout: 30_000 });
+    await clickHeaderButton(page, "#source-mode-switch");
+    source = await page.locator("#source-editor").inputValue();
+    assert.match(source, /前｜読確認《よみかくにん》｜ペウコ《ピョコ》後/, `${scenario.id}: mobile Portable Ruby paste must restore Ruby Source`);
 
     assert.deepEqual({ consoleErrors, pageErrors, failedRequests, badResponses }, { consoleErrors: [], pageErrors: [], failedRequests: [], badResponses: [] });
     return { id: scenario.id, status: "PASS", screenshot: screenshotBase, initial, vertical };
