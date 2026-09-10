@@ -47,6 +47,38 @@ async function clickHeaderButton(page, selector) {
   await page.evaluate(target => { document.body.classList.remove("chrome-hidden"); document.querySelector(target)?.click(); }, selector);
 }
 
+async function selectTextInRoot(locator, text) {
+  return locator.evaluate((root, value) => {
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    const nodes = [];
+    while (walker.nextNode()) nodes.push(walker.currentNode);
+    const source = nodes.map(node => node.nodeValue || "").join("");
+    const start = source.indexOf(value);
+    if (start < 0) return false;
+    root.focus?.();
+    const point = (offset, end = false) => {
+      let cursor = 0;
+      for (const node of nodes) {
+        const length = node.nodeValue?.length || 0;
+        const next = cursor + length;
+        if (offset < next || (end && offset === next)) return [node, offset - cursor];
+        cursor = next;
+      }
+      const last = nodes[nodes.length - 1];
+      return [last, last?.nodeValue?.length || 0];
+    };
+    const range = document.createRange();
+    const [startNode, startOffset] = point(start);
+    const [endNode, endOffset] = point(start + value.length, true);
+    range.setStart(startNode, startOffset);
+    range.setEnd(endNode, endOffset);
+    const selection = window.getSelection();
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+    return true;
+  }, text);
+}
+
 async function runGate(targetUrl) {
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({ locale: "ja-JP", colorScheme: "light" });
@@ -792,6 +824,60 @@ async function runWriterDocumentGate(targetUrl) {
   }
 }
 
+async function runWriterWysiwygGate(targetUrl) {
+  const browser = await chromium.launch({ headless: true });
+  const context = await browser.newContext({ locale: "ja-JP", colorScheme: "light" });
+  const page = await context.newPage();
+  const consoleErrors = [];
+  const pageErrors = [];
+  page.on("console", message => { if (message.type() === "error" && !expectedAssetFailure(message.location().url) && !/Failed to load resource:/i.test(message.text())) consoleErrors.push(`${message.text()} (${message.location().url})`); });
+  page.on("pageerror", error => pageErrors.push(String(error)));
+  let stage = "initial";
+  try {
+    await page.goto(targetUrl, { waitUntil: "domcontentloaded", timeout: 30_000 });
+    await page.locator("#source-editor").waitFor({ state: "visible", timeout: 30_000 });
+    await page.waitForFunction(() => /晴々撥条|如何《どう》/.test(document.querySelector("#source-editor")?.value || ""), null, { timeout: 30_000 });
+    const originalSource = await page.locator("#source-editor").inputValue();
+    const wysiwygSeedSource = `${originalSource}\n[Writer Gate:style=demo-chorus]`;
+    await page.locator("#source-editor").fill(wysiwygSeedSource);
+    await page.waitForFunction(() => /Writer Gate/.test(document.querySelector("#source-editor")?.value || ""), null, { timeout: 30_000 });
+    await clickHeaderButton(page, "#source-mode-switch");
+    await clickHeaderButton(page, "#mode-switch");
+    await page.locator("#lyrics").waitFor({ state: "visible", timeout: 30_000 });
+
+    stage = "contenteditable undo redo";
+    assert.equal(await selectTextInRoot(page.locator("#lyrics"), "Writer Gate"), true, "WYSIWYG gate must find its editable presentation text");
+    await page.keyboard.insertText("Writer Undo");
+    await page.waitForFunction(() => /Writer Undo/.test(document.querySelector("#lyrics")?.innerText || ""), null, { timeout: 30_000 });
+    await page.waitForTimeout(750);
+    await page.waitForFunction(() => document.querySelector("#undo-button")?.disabled === false, null, { timeout: 30_000 });
+    await page.locator("#lyrics").focus();
+    await page.keyboard.press("Control+z");
+    await page.waitForFunction(() => /Writer Gate/.test(document.querySelector("#lyrics")?.innerText || "") && !/Writer Undo/.test(document.querySelector("#lyrics")?.innerText || ""), null, { timeout: 30_000 });
+    await page.waitForFunction(() => document.querySelector("#redo-button")?.disabled === false, null, { timeout: 30_000 });
+    await clickHeaderButton(page, "#redo-button");
+    await page.waitForFunction(() => /Writer Undo/.test(document.querySelector("#lyrics")?.innerText || ""), null, { timeout: 30_000 });
+
+    stage = "contenteditable source projection";
+    await clickHeaderButton(page, "#source-mode-switch");
+    const redoSource = await page.locator("#source-editor").inputValue();
+    assert.match(redoSource, /\[Writer Undo:style=demo-chorus\]/, `WYSIWYG redo must restore the presentation-aware Author Source: ${redoSource.slice(-500)}`);
+    assert.doesNotMatch(redoSource, /Writer Gate:style=demo-chorus/, "WYSIWYG redo must keep the replaced text");
+    await page.locator("#source-editor").fill(originalSource);
+    await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source, originalSource, { timeout: 30_000 });
+    assert.deepEqual({ consoleErrors, pageErrors }, { consoleErrors: [], pageErrors: [] });
+    return { status: "PASS", targetUrl };
+  } catch (error) {
+    const state = await page.evaluate(() => ({ mode: document.body.dataset.mode || "", source: document.querySelector("#source-editor")?.value || "", viewer: document.querySelector("#lyrics")?.innerText || "" })).catch(() => ({}));
+    const message = `${error instanceof Error ? error.message : String(error)} stage=${stage} state=${JSON.stringify(state)} console=${JSON.stringify(consoleErrors)} page=${JSON.stringify(pageErrors)}`.replace(/[\r\n]+/g, " ");
+    if (process.env.GITHUB_ACTIONS) console.log(`::error title=Writer WYSIWYG Gate failure::${message}`);
+    throw new Error(message);
+  } finally {
+    await context.close();
+    await browser.close();
+  }
+}
+
 async function runWriterTabGate(targetUrl) {
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({ locale: "ja-JP", colorScheme: "light" });
@@ -921,7 +1007,7 @@ async function runMalformedDraftGate(targetUrl) {
 const local = requestedUrl ? null : await startLocalServer();
 const targetUrl = requestedUrl || local.url;
 try {
-  console.log(JSON.stringify({ writer: await runGate(targetUrl), writerSource: await runWriterSourceGate(targetUrl), writerDocument: await runWriterDocumentGate(targetUrl), writerTab: await runWriterTabGate(targetUrl), storageFailure: await runStorageFailureGate(targetUrl), malformedDraft: await runMalformedDraftGate(targetUrl) }, null, 2));
+  console.log(JSON.stringify({ writer: await runGate(targetUrl), writerSource: await runWriterSourceGate(targetUrl), writerDocument: await runWriterDocumentGate(targetUrl), writerWysiwyg: await runWriterWysiwygGate(targetUrl), writerTab: await runWriterTabGate(targetUrl), storageFailure: await runStorageFailureGate(targetUrl), malformedDraft: await runMalformedDraftGate(targetUrl) }, null, 2));
 } finally {
   if (local) await new Promise(resolve => local.server.close(resolve));
 }
