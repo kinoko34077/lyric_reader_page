@@ -234,6 +234,19 @@ async function runWriterViewStateGate(targetUrl) {
     assert.equal(afterViewOverride.draftHidden, true, "Viewer color override must not show a Draft notice");
     assert.deepEqual(afterViewOverride.draftKeys, [], "Viewer color override must not save a Draft");
 
+    stage = "Viewer typography and font overrides stay outside Document state";
+    await page.locator("#background-color").evaluate(element => { element.value = "#efe7d8"; element.dispatchEvent(new Event("input", { bubbles: true })); });
+    await page.locator("#size-select").selectOption("24");
+    await page.locator("#line-height-range").fill("1.5");
+    await page.locator("#letter-spacing-range").fill("0.08");
+    await page.locator("#paragraph-spacing-range").fill("0.5");
+    await page.locator("#font-family").selectOption("serif");
+    await page.waitForFunction(() => getComputedStyle(document.documentElement).getPropertyValue("--reader-size").trim() === "24px" && getComputedStyle(document.documentElement).getPropertyValue("--reader-line-height").trim() === "1.5" && getComputedStyle(document.documentElement).getPropertyValue("--reader-letter-spacing").trim() === "0.08em" && getComputedStyle(document.documentElement).getPropertyValue("--reader-paragraph-spacing").trim() === "0.5em", null, { timeout: 30_000 });
+    const afterTypographyOverride = await page.evaluate(() => ({ dirty: document.body.dataset.dirty, draftHidden: document.querySelector("#draft-notice")?.hidden, draftKeys: Object.keys(localStorage).filter(key => key.startsWith("lyric-reader:draft:")), font: document.documentElement.style.getPropertyValue("--reader-font") }));
+    assert.equal(afterTypographyOverride.dirty, "false", "Viewer typography/font overrides must not mark the Document dirty");
+    assert.equal(afterTypographyOverride.draftHidden, true, "Viewer typography/font overrides must not show a Draft notice");
+    assert.deepEqual(afterTypographyOverride.draftKeys, [], "Viewer typography/font overrides must not save a Draft");
+
     stage = "stale Draft is not a normal recovery candidate";
     await clickHeaderButton(page, "#settings-toggle");
     await clickHeaderButton(page, "#source-mode-switch");
