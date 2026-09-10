@@ -48,6 +48,7 @@
 - Reader専用、Shared Contract、Writer専用Unitのテストスクリプトを分離し、Reader Pages deployはReader / Shared / Mobile Gateだけに依存する構成へ整理した。Writer Unit / Browser Gateは独立した助言ジョブとして常時実行する。
 - Writer BetaのViewer範囲操作へFont指定（`font=name`）を追加し、欠損FontでもAuthor Sourceと元本文を保ったまま表示用WarningへFallbackするBrowser Gateを追加した。
 - Source Editorのtextarea native UndoをApplication Historyと分離したWriter Browser回帰へ追加し、入力→Ctrl+ZでAuthor Sourceを復元できることを確認するようにした。
+- Writer Browser GateへVariantごとのViewer編集往復を追加し、現代表記だけへのStyle適用・解除、原文Variantの非変更、Variant再切替後のPresentation保持を確認するようにした。既存属性順の差異はHOLD-B7のSemantic canonical方針に合わせて比較する。
 - Reader安定点`925cfc7`へ`stable`ブランチと`reader-v0.1.0`タグを作成し、Reader v0.xのFreeze checkpointを固定した。`main`はWriter Betaの継続開発に使用する。
 - Writer Betaの`K6`を実装し、`sessionStorage`由来のタブ固有IDをDraftキーへ含めた。同一文書を複数Tabで編集してもDraftが上書き・復元候補へ混入せず、同一Tabのreloadではキーを維持する。`K1`は次のWriter Beta sliceで実装した。
 - Writer Betaの`K1`を実装し、文書Open前のSnapshotへSource URL / name / identityを保持するようにした。URL本文を開いた後のUndoで元文書のAuthor Source・文書Identity・表示状態へ戻れることを`tests/writer-beta-gate.mjs`で確認する。

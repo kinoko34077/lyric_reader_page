@@ -5,10 +5,13 @@ import { createServer } from "node:http";
 import os from "node:os";
 import path from "node:path";
 import { chromium } from "playwright";
+import { getSyntaxAdapter, parseSource, serializeSource } from "../assets/js/syntax-adapter.js";
 
 const root = path.resolve(process.cwd());
 const outputRoot = process.env.WRITER_GATE_OUTPUT || path.join(os.tmpdir(), "lyric-reader-writer-gate");
 const requestedUrl = process.env.WRITER_GATE_URL?.trim();
+const canonicalAdapter = getSyntaxAdapter("narou-text");
+const canonicalAuthorSource = source => serializeSource(parseSource(source, canonicalAdapter), canonicalAdapter);
 
 const mimeTypes = {
   ".css": "text/css; charset=utf-8",
@@ -63,6 +66,8 @@ async function runGate(targetUrl) {
   });
   await mkdir(outputRoot, { recursive: true });
   const screenshot = path.join(outputRoot, "chromium-source-editor.png");
+  let stage = "initial";
+  let diagnosticExpected = "";
 
   try {
     await page.goto(targetUrl, { waitUntil: "domcontentloaded", timeout: 30_000 });
@@ -249,6 +254,12 @@ async function runGate(targetUrl) {
       assert.equal(selected, true, `Writer must be able to select ${text}`);
     };
     const selectLyricsText = text => selectTextIn(page.locator("#lyrics"), text);
+    const setSettingsOpen = async open => {
+      const panel = page.locator("#settings-panel");
+      const hidden = await panel.evaluate(element => element.hidden);
+      if (hidden === open) await clickHeaderButton(page, "#settings-toggle");
+      await page.waitForFunction(expected => document.querySelector("#settings-panel")?.hidden === !expected, open, { timeout: 30_000 });
+    };
     const placeCaretIn = async (locator, text, offset) => {
       const placed = await locator.evaluate((root, value) => {
         const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
@@ -508,13 +519,58 @@ async function runGate(targetUrl) {
     await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source, clearedAuthorSource, { timeout: 30_000 });
     assert.equal(await page.locator("#source-editor").inputValue(), clearedAuthorSource, "Source Editor must retain the textarea native Undo path");
 
+    await clickHeaderButton(page, "#source-mode-switch");
+    await clickHeaderButton(page, "#mode-switch");
+    await setSettingsOpen(true);
+    stage = "variant modernized baseline";
+    await page.locator("#variant-mode").selectOption("modernized");
+    const modernBaseline = await page.locator("#source-editor").inputValue();
+    const modernBaselineCanonical = canonicalAuthorSource(modernBaseline);
+    assert.match(modernBaseline, /組文字も/);
+    await setSettingsOpen(true);
+    stage = "variant modernized style";
+    await selectLyricsText("組文字も");
+    await page.locator("#style-name").fill("demo-chorus");
+    await page.locator("#style-button").click({ force: true });
+    await page.waitForFunction(() => document.body.dataset.dirty === "true");
+    stage = "variant inspect edited modernized";
+    await clickHeaderButton(page, "#source-mode-switch");
+    const modernEdited = await page.locator("#source-editor").inputValue();
+    assert.match(modernEdited, /\[組文字も:style=demo-chorus\]/, "WYSIWYG edits must target the active Variant Source");
+    await setSettingsOpen(true);
+    stage = "variant inspect original";
+    await page.locator("#variant-mode").selectOption("original");
+    await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source, clearedAuthorSource, { timeout: 30_000 });
+    assert.equal(await page.locator("#source-editor").inputValue(), clearedAuthorSource, "editing another Variant must not leak into the original Source");
+    stage = "variant restore modernized";
+    await page.locator("#variant-mode").selectOption("modernized");
+    await page.waitForFunction(source => document.querySelector("#source-editor")?.value !== source, clearedAuthorSource, { timeout: 30_000 });
+    assert.match(await page.locator("#source-editor").inputValue(), /\[組文字も:style=demo-chorus\]/, "Variant-specific WYSIWYG presentation must survive a Variant round-trip");
+    await setSettingsOpen(true);
+    stage = "variant clear modernized";
+    await clickHeaderButton(page, "#source-mode-switch");
+    await clickHeaderButton(page, "#mode-switch");
+    await selectLyricsText("組文字も");
+    await page.locator("#clear-presentation-button").click({ force: true });
+    await clickHeaderButton(page, "#source-mode-switch");
+    diagnosticExpected = modernBaselineCanonical;
+    await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source, modernBaselineCanonical, { timeout: 30_000 });
+    assert.equal(await page.locator("#source-editor").inputValue(), modernBaselineCanonical, "clearing Variant presentation must restore only that Variant Source");
+    await setSettingsOpen(true);
+    stage = "variant restore original";
+    await page.locator("#variant-mode").selectOption("original");
+    await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source, clearedAuthorSource, { timeout: 30_000 });
+    await setSettingsOpen(false);
+
     await page.screenshot({ path: screenshot, fullPage: false });
     assert.deepEqual({ consoleErrors, pageErrors, failedRequests, badResponses }, { consoleErrors: [], pageErrors: [], failedRequests: [], badResponses: [] });
     return { status: "PASS", targetUrl, screenshot };
   } catch (error) {
     await page.screenshot({ path: path.join(outputRoot, "chromium-source-editor-failure.png"), fullPage: false }).catch(() => {});
     const state = await page.evaluate(() => ({ mode: document.body.dataset.mode || "", invalid: document.querySelector("#source-editor")?.getAttribute("aria-invalid"), status: document.querySelector("#source-status")?.textContent || "", dirty: document.body.dataset.dirty || "" })).catch(() => ({}));
-    const message = `${error instanceof Error ? error.message : String(error)} state=${JSON.stringify(state)} console=${JSON.stringify(consoleErrors)} page=${JSON.stringify(pageErrors)}`.replace(/[\r\n]+/g, " ");
+    const sourceTail = await page.locator("#source-editor").inputValue().catch(() => "");
+    const expectedTail = diagnosticExpected ? ` expectedTail=${JSON.stringify(diagnosticExpected.slice(-500))}` : "";
+    const message = `${error instanceof Error ? error.message : String(error)} stage=${stage} sourceTail=${JSON.stringify(sourceTail.slice(-500))}${expectedTail} state=${JSON.stringify(state)} console=${JSON.stringify(consoleErrors)} page=${JSON.stringify(pageErrors)}`.replace(/[\r\n]+/g, " ");
     if (process.env.GITHUB_ACTIONS) console.log(`::error title=Writer Beta Gate failure::${message}`);
     throw new Error(message);
   } finally {

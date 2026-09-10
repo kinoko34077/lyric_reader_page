@@ -72,7 +72,7 @@ git diff --check
 
 ### Writer Beta Gate
 
-- `npm run test:writer`で、ChromiumのWriter Beta Browser Gateを単独検証する。parse成功時の反映、Variant別Source、Draft復元、文書Open Undo、不正文書・URL取得失敗時のCurrent Document保護と成功後のエラー解除、Storage書込み不能時の編集継続、Viewer上のStyle / Palette / Glyph / Font / Combine / Outline適用、Palette Bank / Slot指定、Ruby Reading部分のScoped Style適用（`ruby-range` / `ruby-style`）、2つのNamed Style競合表示、Presentation解除、既存Presentation内の本文直接置換・キャレット入力・削除、Plain Text貼り付け、Title直接編集、Source→Viewer→SourceのAuthor Source保持を含む。`font=name`の範囲指定は欠損Fontでも元文字とWarningを維持する。Source Editorのtextarea native UndoはApplication Historyと分離して確認し、contenteditableの`beforeinput`では既存Presentation wrapperを保全する。
+- `npm run test:writer`で、ChromiumのWriter Beta Browser Gateを単独検証する。parse成功時の反映、Variant別Source、Draft復元、文書Open Undo、不正文書・URL取得失敗時のCurrent Document保護と成功後のエラー解除、Storage書込み不能時の編集継続、Viewer上のStyle / Palette / Glyph / Font / Combine / Outline適用、Palette Bank / Slot指定、Ruby Reading部分のScoped Style適用（`ruby-range` / `ruby-style`）、2つのNamed Style競合表示、Presentation解除、VariantごとのViewer編集分離、既存Presentation内の本文直接置換・キャレット入力・削除、Plain Text貼り付け、Title直接編集、Source→Viewer→SourceのAuthor Source保持を含む。`font=name`の範囲指定は欠損Fontでも元文字とWarningを維持する。Variant操作後に既存Sourceを再シリアライズする場合はB7のSemantic canonical方針で比較し、Source Editorのtextarea native UndoはApplication Historyと分離して確認する。contenteditableの`beforeinput`では既存Presentation wrapperを保全する。
 - `?mode=source`からAuthor Sourceを読み込み、parse成功した編集だけがViewerへ反映されること、無効入力は`aria-invalid`とエラー表示になりCurrent Documentへ反映されないことを確認する。
 - Writer Beta Gateは`writer-beta`ジョブとしてReader Release Gateから分離し、現段階では`continue-on-error: true`の助言的チェックとする。失敗はActionsへ記録するが、ReaderのPages deployを止めない。
 - Source Editorの単体・統合契約は`tests/source-editor.test.mjs`と`tests/writer-beta-gate.mjs`を正本とする。
