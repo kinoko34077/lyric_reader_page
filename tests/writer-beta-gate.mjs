@@ -5,7 +5,7 @@ import { createServer } from "node:http";
 import os from "node:os";
 import path from "node:path";
 import { chromium } from "playwright";
-import { getSyntaxAdapter, parseSource, serializeSource } from "../assets/js/syntax-adapter.js";
+import { getSyntaxAdapter, parseSource, serializeSource, toPortableText } from "../assets/js/syntax-adapter.js";
 
 const root = path.resolve(process.cwd());
 const outputRoot = process.env.WRITER_GATE_OUTPUT || path.join(os.tmpdir(), "lyric-reader-writer-gate");
@@ -457,6 +457,18 @@ async function runGate(targetUrl) {
     await clickHeaderButton(page, "#source-mode-switch");
     const caretSource = await page.locator("#source-editor").inputValue();
     assert.match(caretSource, /\[Writer XGate:style=demo-chorus\]/, `Caret input lost the existing Presentation: ${caretSource.slice(-500)}`);
+    await page.locator("#source-editor").fill(clearedAuthorSource);
+    await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source, clearedAuthorSource, { timeout: 30_000 });
+
+    await clickHeaderButton(page, "#source-mode-switch");
+    await clickHeaderButton(page, "#mode-switch");
+    await placeCaretIn(page.locator("#lyrics"), "Writer Gate", 7);
+    await page.keyboard.press("Enter");
+    await clickHeaderButton(page, "#source-mode-switch");
+    const newlineSource = await page.locator("#source-editor").inputValue();
+    const newlinePortable = toPortableText(parseSource(newlineSource, canonicalAdapter), canonicalAdapter);
+    assert.match(newlinePortable, /Writer \r?\nGate/, `WYSIWYG newline must become Portable Source text: ${newlineSource.slice(-500)}`);
+    assert.match(newlineSource, /\[Writer .*style=demo-chorus\]\r?\n\[Gate:style=demo-chorus\]/, `WYSIWYG newline must retain the existing Presentation: ${newlineSource.slice(-500)}`);
     await page.locator("#source-editor").fill(clearedAuthorSource);
     await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source, clearedAuthorSource, { timeout: 30_000 });
 
