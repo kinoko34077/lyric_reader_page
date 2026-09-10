@@ -92,9 +92,10 @@ async function placeCaretInRoot(locator, text, offset) {
     let cursor = 0;
     for (const node of nodes) {
       const length = node.nodeValue?.length || 0;
-      if (start + value.offset <= cursor + length) {
+      const target = start + value.offset;
+      if (target < cursor + length || (target === cursor + length && node === nodes.at(-1))) {
         const range = document.createRange();
-        range.setStart(node, start + value.offset - cursor);
+        range.setStart(node, target - cursor);
         range.collapse(true);
         const selection = window.getSelection();
         selection?.removeAllRanges();
@@ -499,6 +500,107 @@ async function runWriterWysiwygGate(targetUrl) {
   }
 }
 
+async function runWriterRubyGate(targetUrl) {
+  const browser = await chromium.launch({ headless: true });
+  const context = await browser.newContext({ locale: "ja-JP", colorScheme: "light" });
+  const page = await context.newPage();
+  const consoleErrors = [];
+  const pageErrors = [];
+  page.on("console", message => { if (message.type() === "error" && !expectedAssetFailure(message.location().url) && !/Failed to load resource:/i.test(message.text())) consoleErrors.push(`${message.text()} (${message.location().url})`); });
+  page.on("pageerror", error => pageErrors.push(String(error)));
+  let stage = "initial";
+  const fixture = "Ruby Gate\n前｜読確認《よみかくにん》後\n前｜ペウコ《ピョコ》後\n如何《どう》";
+  try {
+    await page.goto(targetUrl, { waitUntil: "domcontentloaded", timeout: 30_000 });
+    await page.locator("#source-editor").waitFor({ state: "visible", timeout: 30_000 });
+    await page.waitForFunction(() => /晴々撥条|如何《どう》/.test(document.querySelector("#source-editor")?.value || ""), null, { timeout: 30_000 });
+
+    const resetWriterSource = async source => {
+      if (await page.evaluate(() => document.body.dataset.mode) !== "source") await clickHeaderButton(page, "#source-mode-switch");
+      await page.locator("#source-editor").waitFor({ state: "visible", timeout: 30_000 });
+      await page.locator("#source-editor").fill(source);
+      await page.waitForFunction(expected => document.querySelector("#source-editor")?.value === expected && document.querySelector("#source-editor")?.getAttribute("aria-invalid") !== "true", source, { timeout: 30_000 });
+      await clickHeaderButton(page, "#source-mode-switch");
+      await page.locator("#lyrics").waitFor({ state: "visible", timeout: 30_000 });
+      await clickHeaderButton(page, "#mode-switch");
+      await page.locator("#lyrics").waitFor({ state: "visible", timeout: 30_000 });
+    };
+    const readSource = async () => {
+      if (await page.evaluate(() => document.body.dataset.mode) !== "source") await clickHeaderButton(page, "#source-mode-switch");
+      await page.locator("#source-editor").waitFor({ state: "visible", timeout: 30_000 });
+      return page.locator("#source-editor").inputValue();
+    };
+    const placeCaretBeforeRuby = async index => page.locator("#lyrics .source-ruby").nth(index).evaluate(node => {
+      const range = document.createRange(); range.setStartBefore(node); range.collapse(true);
+      const selection = window.getSelection(); selection?.removeAllRanges(); selection?.addRange(range); node.parentElement?.focus();
+      document.dispatchEvent(new Event("selectionchange")); return true;
+    });
+    const flattenRuby = async index => page.locator("#lyrics .source-ruby").nth(index).evaluate(node => {
+      const ruby = node.querySelector("ruby"); if (!ruby) return false; ruby.replaceWith(document.createTextNode(node.textContent || "")); return true;
+    });
+
+    stage = "Ruby before-neighbor input";
+    await resetWriterSource(fixture);
+    assert.equal(await flattenRuby(0), true, "Ruby gate must be able to simulate a flattened Ruby DOM");
+    assert.equal(await placeCaretInRoot(page.locator("#lyrics"), "後", 0), true, "Ruby gate must place a caret after the first Ruby");
+    const caretBeforeRubyInput = await page.evaluate(() => { const selection = window.getSelection(); return { active: document.activeElement?.id || document.activeElement?.className || "", anchor: selection?.anchorNode?.parentElement?.outerHTML?.slice(0, 240) || "", text: selection?.toString() || "" }; });
+    assert.match(caretBeforeRubyInput.anchor, /source-text/, `Ruby gate caret must be outside Ruby before input: ${JSON.stringify(caretBeforeRubyInput)}`);
+    await page.keyboard.insertText("A");
+    await page.waitForFunction(() => /A後/.test(document.querySelector("#lyrics")?.innerText || ""), null, { timeout: 30_000 });
+    let source = await readSource();
+    assert.match(source, /前｜読確認《よみかくにん》A後/, `editing after a flattened Ruby must preserve Ruby Source: ${source}`);
+
+    stage = "Ruby after-neighbor input";
+    await resetWriterSource(fixture);
+    assert.equal(await flattenRuby(1), true, "Ruby gate must flatten the second Ruby");
+    await placeCaretBeforeRuby(1);
+    await page.keyboard.insertText("B");
+    await page.waitForFunction(() => /前B/.test(document.querySelector("#lyrics")?.innerText || ""), null, { timeout: 30_000 });
+    source = await readSource();
+    assert.match(source, /前B｜ペウコ《ピョコ》後/, `editing before a flattened Ruby must preserve Ruby Source: ${source}`);
+
+    stage = "Ruby reading edit";
+    await resetWriterSource(fixture);
+    assert.equal(await selectTextInRoot(page.locator("#lyrics .source-ruby").first(), "よみかくにん"), true, "Ruby gate must select the reading portion");
+    await page.keyboard.insertText("読み");
+    await page.waitForFunction(() => /読み/.test(document.querySelector("#lyrics")?.innerText || ""), null, { timeout: 30_000 });
+    source = await readSource();
+    assert.match(source, /前｜読確認《読み》後/, `editing Ruby reading must keep Ruby syntax: ${source}`);
+
+    stage = "Portable Ruby copy and paste";
+    await resetWriterSource(fixture);
+    assert.equal(await selectTextInRoot(page.locator("#lyrics .source-ruby").first(), "読確認よみかくにん"), true, "Ruby gate must select the complete Ruby for copy");
+    const copied = await page.locator("#lyrics").evaluate(element => {
+      let value = "";
+      const event = new Event("copy", { bubbles: true, cancelable: true });
+      Object.defineProperty(event, "clipboardData", { value: { setData: (type, next) => { if (type === "text/plain") value = next; } } });
+      element.dispatchEvent(event); return value;
+    });
+    assert.equal(copied, "｜読確認《よみかくにん》", `Ruby copy must use Portable Ruby text: ${copied}`);
+    await placeCaretBeforeRuby(1);
+    await page.locator("#lyrics").evaluate((element, text) => {
+      const event = new Event("paste", { bubbles: true, cancelable: true });
+      Object.defineProperty(event, "clipboardData", { value: { getData: type => type === "text/plain" ? text : "" } });
+      element.dispatchEvent(event);
+    }, copied);
+    await page.waitForFunction(() => (document.querySelectorAll("#lyrics .source-ruby").length || 0) >= 3, null, { timeout: 30_000 });
+    source = await readSource();
+    assert.match(source, /前｜読確認《よみかくにん》｜ペウコ《ピョコ》後/, `Portable Ruby paste must restore Ruby syntax: ${source}`);
+    assert.doesNotMatch(source, /\\｜読確認|\\《よみかくにん/, "Portable Ruby paste must not become escaped literal text");
+
+    assert.deepEqual({ consoleErrors, pageErrors }, { consoleErrors: [], pageErrors: [] });
+    return { status: "PASS", targetUrl };
+  } catch (error) {
+    const state = await page.evaluate(() => ({ mode: document.body.dataset.mode || "", source: document.querySelector("#source-editor")?.value || "", viewer: document.querySelector("#lyrics")?.innerText || "", active: document.activeElement?.id || document.activeElement?.className || "", selection: (() => { const value = window.getSelection(); return value?.rangeCount ? { text: value.toString(), collapsed: value.isCollapsed, anchor: value.anchorNode?.parentElement?.outerHTML?.slice(0, 240) || "" } : null; })(), rubyHtml: document.querySelector("#lyrics .source-ruby")?.outerHTML?.slice(0, 500) || "" })).catch(() => ({}));
+    const message = `${error instanceof Error ? error.message : String(error)} stage=${stage} state=${JSON.stringify(state)} console=${JSON.stringify(consoleErrors)} page=${JSON.stringify(pageErrors)}`.replace(/[\r\n]+/g, " ");
+    if (process.env.GITHUB_ACTIONS) console.log(`::error title=Writer Ruby Gate failure::${message}`);
+    throw new Error(message);
+  } finally {
+    await context.close();
+    await browser.close();
+  }
+}
+
 async function runWriterTabGate(targetUrl) {
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({ locale: "ja-JP", colorScheme: "light" });
@@ -633,11 +735,15 @@ try {
     ["writerSource", runWriterSourceGate],
     ["writerDocument", runWriterDocumentGate],
     ["writerWysiwyg", runWriterWysiwygGate],
+    ["writerRuby", runWriterRubyGate],
     ["writerTab", runWriterTabGate],
     ["storageFailure", runStorageFailureGate],
     ["malformedDraft", runMalformedDraftGate]
   ];
-  const { results, failed } = await runWriterGateSuite(gates, targetUrl);
+  const selectedGate = process.env.WRITER_GATE_ONLY?.trim();
+  const runnableGates = selectedGate ? gates.filter(([name]) => name === selectedGate) : gates;
+  if (selectedGate && runnableGates.length === 0) throw new Error(`Unknown Writer gate: ${selectedGate}`);
+  const { results, failed } = await runWriterGateSuite(runnableGates, targetUrl);
   console.log(JSON.stringify(results, null, 2));
   if (failed) process.exitCode = 1;
 } finally {

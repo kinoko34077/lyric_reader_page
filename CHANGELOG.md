@@ -4,6 +4,8 @@
 
 ### Reader Kernel優先への方針転換
 
+- WriterのRuby編集経路をSource-SSOTへ寄せ、表示DOMがSafari相当の平坦化を受けても編集対象外のRubyを`data-source-raw`から復元するようにした。縮約Caret入力はsemantic IR rangeへ直接挿入し、Ruby境界での隣接入力による平文化を防止する。
+- Portable RubyのCopy→PasteをWriter Browser Gateへ追加し、`｜親文字《ルビ》`をParser / Renderer経由で貼り付けてAuthor SourceへRubyとして再構成する。Ruby直前・直後入力、Reading編集、flattened DOM保護をUnit / DOM / Browserで回帰検証する。
 - 完成条件を汎用Writer全体から、Input → Syntax Adapter / Parser → IR → Registry Resolver → Renderer → ProjectionのReader Kernelへ切り替え。
 - Parser停止・Source破壊・本文欠落・安全性・Glyph失敗時Fallback・Portable欠落をP0として優先する。
 - Writer、Draft、History、複雑なVariant編集、IME / Caret / Native Undo、Style rename UI、3つ以上のStyle競合表示はReader完成後のBeta改善へ移動。

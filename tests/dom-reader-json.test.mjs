@@ -40,6 +40,15 @@ function installDocument() {
   return () => { globalThis.document = previous; };
 }
 
+function findByClass(root, className) {
+  if (root.classList?.contains(className)) return root;
+  for (const child of root.childNodes || []) {
+    const found = findByClass(child, className);
+    if (found) return found;
+  }
+  return null;
+}
+
 test("rendered DOM round-trips through Author Source and Reader JSON", () => {
   const restore = installDocument();
   try {
@@ -52,6 +61,19 @@ test("rendered DOM round-trips through Author Source and Reader JSON", () => {
     const loaded = parseJsonText(json, "reader-document");
     assert.equal(loaded.content.variants[0].source.text, source);
     assert.equal(loaded.registry.styles.shout.weight, "700");
+  } finally { restore(); }
+});
+
+test("Ruby Author Source survives a flattened rendered DOM when Ruby is not the edit target", () => {
+  const restore = installDocument();
+  try {
+    const container = new FakeNode("DIV");
+    const source = "Ruby Gate\n前｜読確認《よみかくにん》後\n前｜ペウコ《ピョコ》後\n如何《どう》";
+    renderLyrics(container, source, { mode: "writer", preserveSource: true });
+    const ruby = findByClass(container, "source-ruby");
+    assert.ok(ruby);
+    ruby.replaceChildren(new FakeNode("#text", 3, "読確認よみかくにん"));
+    assert.equal(renderedBodySource(container), source);
   } finally { restore(); }
 });
 

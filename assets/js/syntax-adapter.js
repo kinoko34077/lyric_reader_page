@@ -453,6 +453,36 @@ function partitionDocument(document, range) {
   return { before, selected, after, start, end };
 }
 
+function insertTextAt(nodes, position, value) {
+  const result = []; let offset = 0; let inserted = false;
+  const insert = () => { if (!inserted && value) { result.push({ type: "text", value }); inserted = true; } };
+  for (const node of nodes || []) {
+    const length = nodeLength(node);
+    if (!inserted && position <= offset) insert();
+    if (!inserted && node.type === "span" && position < offset + length) {
+      result.push({ ...node, children: insertTextAt(node.children || [], position - offset, value) });
+      inserted = true;
+    } else if (!inserted && node.type === "text" && position > offset && position < offset + length) {
+      const chars = graphemes(node.value); const local = position - offset;
+      result.push({ type: "text", value: chars.slice(0, local).join("") }); insert(); result.push({ type: "text", value: chars.slice(local).join("") });
+    } else if (!inserted && node.type === "ruby" && position > offset && position < offset + length) {
+      const chars = graphemes(node.base); const local = position - offset;
+      result.push({ ...node, base: `${chars.slice(0, local).join("")}${value}${chars.slice(local).join("")}` }); inserted = true;
+    } else result.push(node);
+    offset += length;
+  }
+  insert(); return normalizeNodes(result);
+}
+
+/** Replace a semantic display range while retaining surrounding Presentation IR. */
+export function replaceText(document, range, value) {
+  const start = Math.max(0, Number(range?.start) || 0); const end = Math.max(start, Number(range?.end) || start); const text = String(value ?? "");
+  if (start === end) return { ...document, nodes: insertTextAt(document?.nodes || [], start, text) };
+  const parts = partitionDocument(document, { start, end });
+  const replacement = text ? [{ type: "text", value: text }] : [];
+  return { ...document, nodes: normalizeNodes([...parts.before, ...replacement, ...parts.after]) };
+}
+
 function stripPresentation(nodes) { return nodes.flatMap(node => { if (node.type === "span") return stripPresentation(node.children || []); if (node.type !== "ruby") return [node]; const plain = { ...node }; delete plain.baseDecorations; delete plain.rubyDecorations; return [plain]; }); }
 
 function clonePresentation(presentation) { return structuredClone(presentation || {}); }

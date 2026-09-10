@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { applyPresentation, applyRubyPresentation, assertCapabilities, clearPresentation, detectSyntaxAdapter, graphemes, getSyntaxAdapter, isSafePresentationName, legacyNarouTextAdapter, narouTextAdapter, nodeLength, parseSource, serializeSource, toPlainText, toPortableText, toPortableTextSafe, validateSource } from "../assets/js/syntax-adapter.js";
+import { applyPresentation, applyRubyPresentation, assertCapabilities, clearPresentation, detectSyntaxAdapter, graphemes, getSyntaxAdapter, isSafePresentationName, legacyNarouTextAdapter, narouTextAdapter, nodeLength, parseSource, replaceText, serializeSource, toPlainText, toPortableText, toPortableTextSafe, validateSource } from "../assets/js/syntax-adapter.js";
 import { rawText } from "../assets/js/reader-view.js";
 
 test("vNext provisional markup becomes typed presentation IR", () => {
@@ -99,6 +99,24 @@ test("multiple Ruby-part ranges remain closed through nested serialization", () 
 test("Ruby-part copy projection keeps the original portable Ruby", () => {
   const document = parseSource("前｜如何《どう》後");
   assert.equal(rawText(document.nodes, { ruby: { nodeIndex: 0, part: "ruby", start: 0, end: 1 } }), "｜如何《どう》");
+});
+
+test("semantic text insertion stays outside an adjacent Ruby and inside Presentation", () => {
+  const ruby = parseSource("前｜如何《どう》後");
+  const afterRuby = replaceText(ruby, { start: 3, end: 3 }, "A");
+  assert.equal(serializeSource(afterRuby), "前｜如何《どう》A後");
+  assert.deepEqual(parseSource(serializeSource(afterRuby)), afterRuby);
+
+  const styled = replaceText(parseSource("[AB:c=2]"), { start: 1, end: 1 }, "X");
+  assert.equal(serializeSource(styled), "[AXB:c=2]");
+  assert.deepEqual(parseSource(serializeSource(styled)), styled);
+});
+
+test("semantic text replacement preserves surrounding Ruby and Presentation nodes", () => {
+  const document = parseSource("前[如何《どう》:c=2]後");
+  const edited = replaceText(document, { start: 0, end: 1 }, "先");
+  assert.equal(serializeSource(edited), "先[如何《どう》:c=2]後");
+  assert.equal(toPortableText(edited), "先如何《どう》後");
 });
 
 test("presentation registry names share the parser safety contract", () => {

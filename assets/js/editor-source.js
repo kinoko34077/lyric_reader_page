@@ -5,7 +5,7 @@ import { graphemes } from "./syntax-adapter.js";
  * glyph/transform output as source text. The adapter format is supplied by the
  * caller so editing a legacy document cannot silently emit vNext markup.
  */
-export function serializeEditedNode(node, inPresentationTarget = false, format = "narou-text") {
+export function serializeEditedNode(node, inPresentationTarget = false, format = "narou-text", options = {}) {
   if (node.nodeType === 3) return node.nodeValue || "";
   if (node.nodeType !== 1) return "";
   if (node.tagName === "BR") return "\n";
@@ -14,13 +14,15 @@ export function serializeEditedNode(node, inPresentationTarget = false, format =
     if (node.dataset?.sourceRaw && (node.dataset.glyphType === "text" || node.dataset.glyphType === "font" || node.dataset.glyphFailed === "true" || node.querySelector?.(".source-glyph"))) return node.dataset.sourceRaw;
     if (node.dataset?.glyphFallback && node.textContent === node.dataset.glyphFallback && node.dataset.sourceRaw) return node.dataset.sourceRaw;
     const attrs = presentationAttributes(node);
-    const inner = [...(node.childNodes || [])].map(child => serializeEditedNode(child, true, format)).join("");
+    const inner = [...(node.childNodes || [])].map(child => serializeEditedNode(child, true, format, options)).join("");
     return presentationWrap(inner, attrs, format);
   }
   if (node.classList?.contains("source-text")) return escapeAuthorText(node.textContent || "", inPresentationTarget);
   if (node.classList?.contains("source-char")) return escapeAuthorText(node.textContent || "", inPresentationTarget);
   if (node.classList?.contains("source-ruby")) {
     const ruby = node.querySelector?.("ruby");
+    if (node.dataset?.sourceRaw && !ruby) return node.dataset.sourceRaw;
+    if (options.preserveRuby !== false && !options.editRuby && node.dataset?.sourceRaw) return inPresentationTarget ? node.dataset.sourceRaw.replace(rubyCore(node.dataset, false), rubyCore(node.dataset, true)) : node.dataset.sourceRaw;
     if (ruby) {
       const rt = ruby.querySelector("rt");
       const base = [...ruby.childNodes].filter(child => child !== rt).map(child => child.textContent || "").join("");
@@ -30,7 +32,7 @@ export function serializeEditedNode(node, inPresentationTarget = false, format =
     }
     return node.textContent === node.dataset.sourceBase ? (node.dataset.sourceRaw || escapeRubyPart(node.textContent || "", inPresentationTarget)) : escapeRubyPart(node.textContent || "", inPresentationTarget);
   }
-  return [...(node.childNodes || [])].map(child => serializeEditedNode(child, inPresentationTarget, format)).join("");
+  return [...(node.childNodes || [])].map(child => serializeEditedNode(child, inPresentationTarget, format, options)).join("");
 }
 
 function isLegacyFormat(format) { return format === "narou" || format === "narou-legacy"; }
@@ -96,12 +98,12 @@ function escapeAuthorText(value, inPresentationTarget = false) {
   return String(value).replace(pattern, match => `\\${match}`);
 }
 
-export function renderedBodySource(container, adapterOrFormat = "narou-text") {
+export function renderedBodySource(container, adapterOrFormat = "narou-text", options = {}) {
   const format = typeof adapterOrFormat === "string" ? adapterOrFormat : adapterOrFormat?.id || "narou-text";
   const blockTags = new Set(["DIV", "P", "LI", "SECTION", "ARTICLE"]);
   const parts = [];
   for (const node of container?.childNodes || []) {
-    const value = serializeEditedNode(node, false, format);
+    const value = serializeEditedNode(node, false, format, options);
     if (blockTags.has(node.nodeType === 1 ? node.tagName : "")) parts.push(value);
     else if (parts.length) parts[parts.length - 1] += value;
     else parts.push(value);

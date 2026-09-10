@@ -2,7 +2,7 @@ import { loadInput, parseJsonText, parseLocalInput, validateSourceText } from ".
 import { MAX_READER_DOCUMENT_JSON_BYTES, MAX_SOURCE_BYTES } from "./config.js";
 import { firstLineInfo, withFirstLineBody } from "./content-boundary.js";
 import { boundedHistory, clone, documentIdentity, documentPayload, draftDiffers, draftPayload, draftStorageKey, localSourceIdentity, migrateReaderDocument, normalizeDraft, readerDocumentExtensions } from "./document-state.js";
-import { applyPresentation, applyRubyPresentation, assertCapabilities, clearPresentation, clearRubyPresentation, getSyntaxAdapter, graphemes, isSafePresentationName, parseSource, serializeSource, toPortableText, toPortableTextSafe } from "./syntax-adapter.js";
+import { applyPresentation, applyRubyPresentation, assertCapabilities, clearPresentation, clearRubyPresentation, getSyntaxAdapter, graphemes, isSafePresentationName, parseSource, replaceText, serializeSource, toPortableText, toPortableTextSafe } from "./syntax-adapter.js";
 import { renderLyrics, rawText } from "./reader-view.js";
 import { parseLyricContainer, serializeLyricContainer } from "./lyric-container.js";
 import { normalizeRegistry, paletteValue, validateRegistry } from "./registry.js";
@@ -18,7 +18,7 @@ const initialMode = requestedMode === "writer" || requestedMode === "source" ? r
 const state = {
   activeVariantId: "variant-A", kanji: "original", ruby: true, writingMode: "horizontal", size: 20,
   font: "serif", fontUrl: "", background: "#f5f0e6", color: "#272522", paletteBank: "default",
-  remoteFontsAllowed: true, loadedRegistryFonts: new Set(), data: null, nodes: [], selectionBookmark: null, compositionActive: false, compositionCommitPending: false, mode: initialMode,
+  remoteFontsAllowed: true, loadedRegistryFonts: new Set(), data: null, nodes: [], selectionBookmark: null, compositionActive: false, compositionCommitPending: false, rubyEditActive: false, mode: initialMode,
   preferencesLoaded: false, sourceDirty: false, documentDirty: false, dirty: false, draft: null, history: [], historyIndex: -1, historyDocumentId: null, savedCheckpoint: null, storageAvailable: true
 };
 const PREFS_KEY = "lyric-reader:preferences:v1";
@@ -159,9 +159,26 @@ function applyDraft() {
   }
 }
 function titleInput() { const title = renderedBodySource($("song-title")).replace(/[\r\n]/g, "").trim() || "無題"; const record = currentRecord(); if (state.data.titleSource === "first-line") { const raw = record.source.text; const info = sourceInfo(record); const bom = raw.startsWith("\uFEFF") ? "\uFEFF" : ""; const nextText = `${bom}${title}${info.newline}${raw.slice(info.bodyStart)}`; try { currentAdapter().parse(nextText); } catch (error) { setStatus(error instanceof Error ? error.message : "タイトルを更新できませんでした"); render(captureScroll()); return; } state.data = replaceVariantSource(state.data, record.id, nextText); } else { state.data.sourceMetadata = { ...(state.data.sourceMetadata || {}), title }; } markDirty({ source: state.data.titleSource === "first-line", document: state.data.titleSource !== "first-line" }); saveDraft(); scheduleHistory(); render(captureScroll()); updateStatus(); }
-function renderedBodySource(container = $("lyrics")) { return serializeRenderedBodySource(container, currentAdapter()); }
-function bodyInput() { const caret = caretOffset(); const rawBody = renderedBodySource(); const record = currentRecord(); const nextText = state.data.titleSource === "first-line" ? withFirstLineBody(record.source.text, rawBody) : rawBody; let parsed; try { parsed = currentAdapter().parse(nextText); } catch (error) { setStatus(error instanceof Error ? error.message : "本文を更新できませんでした"); render(captureScroll()); return; } state.selectionBookmark = null; state.data = replaceVariantSource(state.data, record.id, nextText); state.nodes = parsed.nodes; markDirty({ source: true }); saveDraft(); scheduleHistory(); render(captureScroll()); restoreCaret(caret); updateStatus(); }
-function preserveWysiwygTextInput(event) { if (state.mode !== "writer" || state.compositionActive || event.isComposing || !["insertText", "insertReplacementText"].includes(event.inputType) || typeof event.data !== "string" || !event.data) return false; const selection = window.getSelection(); const lyrics = $("lyrics"); if (!selection || selection.isCollapsed || !selection.rangeCount || !lyrics?.contains(selection.getRangeAt(0).commonAncestorContainer)) return false; const range = selection.getRangeAt(0); event.preventDefault(); range.deleteContents(); const node = document.createTextNode(event.data); range.insertNode(node); range.setStartAfter(node); range.collapse(true); selection.removeAllRanges(); selection.addRange(range); bodyInput(); return true; }
+function selectionTouchesRuby() {
+  const selection = window.getSelection(); const lyrics = $("lyrics");
+  if (!selection || !selection.rangeCount || !lyrics?.contains(selection.getRangeAt(0).commonAncestorContainer)) return false;
+  const range = selection.getRangeAt(0);
+  const owner = container => (container?.nodeType === Node.ELEMENT_NODE ? container : container?.parentElement)?.closest(".source-ruby");
+  if (range.collapsed) {
+    const ruby = owner(range.startContainer)?.querySelector("ruby");
+    return Boolean(ruby?.contains(range.startContainer));
+  }
+  if (owner(range.startContainer) || owner(range.endContainer)) return true;
+  for (const ruby of lyrics.querySelectorAll(".source-ruby")) {
+    try { if (range.intersectsNode(ruby)) return true; } catch { /* Safari may reject a detached selection endpoint. */ }
+  }
+  return false;
+}
+function renderedBodySource(container = $("lyrics"), options = {}) { return serializeRenderedBodySource(container, currentAdapter(), { ...options, preserveRuby: options.preserveRuby ?? !state.rubyEditActive }); }
+function bodyInput(options = {}) { const caret = caretOffset(); const editRuby = options.editRuby ?? (state.rubyEditActive || selectionTouchesRuby()); const rawBody = renderedBodySource($("lyrics"), { editRuby }); const record = currentRecord(); const nextText = state.data.titleSource === "first-line" ? withFirstLineBody(record.source.text, rawBody) : rawBody; let parsed; try { parsed = currentAdapter().parse(nextText); } catch (error) { setStatus(error instanceof Error ? error.message : "本文を更新できませんでした"); render(captureScroll()); return; } finally { state.rubyEditActive = false; } state.selectionBookmark = null; state.data = replaceVariantSource(state.data, record.id, nextText); state.nodes = parsed.nodes; markDirty({ source: true }); saveDraft(); scheduleHistory(); render(captureScroll()); restoreCaret(caret); updateStatus(); }
+function commitSemanticTextEdit(range, value) { const document = replaceText({ type: "document", nodes: state.nodes }, range, value); writeBodyDocument(document); restoreCaret(Number(range.start) + graphemes(value).length); }
+function preserveWysiwygTextInput(event) { if (state.mode !== "writer" || state.compositionActive || event.isComposing || !["insertText", "insertReplacementText"].includes(event.inputType) || typeof event.data !== "string" || !event.data) return false; state.rubyEditActive = selectionTouchesRuby(); const selection = window.getSelection(); const lyrics = $("lyrics"); if (!selection || !selection.rangeCount || !lyrics?.contains(selection.getRangeAt(0).commonAncestorContainer)) return false; if (selection.isCollapsed && !state.rubyEditActive) { const start = caretOffset(); if (start == null) return false; event.preventDefault(); commitSemanticTextEdit({ start, end: start }, event.data); state.rubyEditActive = false; return true; } if (selection.isCollapsed) return false; const range = selection.getRangeAt(0); event.preventDefault(); range.deleteContents(); const node = document.createTextNode(event.data); range.insertNode(node); range.setStartAfter(node); range.collapse(true); selection.removeAllRanges(); selection.addRange(range); bodyInput({ editRuby: state.rubyEditActive }); return true; }
+function handleWysiwygBeforeInput(event) { state.rubyEditActive = state.mode === "writer" && selectionTouchesRuby(); preserveWysiwygTextInput(event); }
 function writeBodyDocument(document, documentChanged = false) { const record = currentRecord(); const adapter = currentAdapter(); const serialized = serializeSource(document, adapter); const nextText = state.data.titleSource === "first-line" ? withFirstLineBody(record.source.text, serialized) : serialized; try { adapter.parse(nextText); } catch (error) { setStatus(error instanceof Error ? error.message : "本文を更新できませんでした"); return; } state.selectionBookmark = null; state.data = replaceVariantSource(state.data, record.id, nextText); state.nodes = document.nodes; render(); markDirty({ source: true, document: documentChanged }); saveDraft(); pushHistory(); updateStatus(); }
 async function hashText(text) { const bytes = new TextEncoder().encode(text); if (globalThis.crypto?.subtle) { try { const digest = await crypto.subtle.digest("SHA-256", bytes); return [...new Uint8Array(digest)].map(value => value.toString(16).padStart(2, "0")).join(""); } catch { /* fall through to a deterministic local fingerprint */ } } let hash = 2166136261; for (const byte of bytes) { hash ^= byte; hash = Math.imul(hash, 16777619); } return (hash >>> 0).toString(16); }
 function setLocalSource(text, name = "ローカル本文", sourceIdentity = "", format = "narou-text") { const raw = String(text); const title = resolveTitle({ source: raw, fallback: name.replace(/\.(txt|json)$/i, "") || "ローカル本文" }); const variants = [{ id: "variant-A", label: "Variant A", role: "", source: { text: raw, url: "local:" } }]; const manifest = validatedManifest({ title, description: "この本文はブラウザ内だけで読み込んでいます。", content: { format } }); validateLoadedVariants(manifest, variants); checkpointBeforeDocumentOpen(); state.loadedRegistryFonts = new Set(); state.data = { manifest, variants, activeVariantId: variants[0].id, links: [], variantOverrides: {}, titleSource: "first-line", sourceMetadata: {}, metadata: { title }, sourceUrl: "local:", sourceName: name, sourceIdentity: sourceIdentity || localSourceIdentity(name, new TextEncoder().encode(raw).byteLength, 0) }; clearReaderError(); state.activeVariantId = variants[0].id; clearDirty({ source: true, document: true }); applyManifest(state.data.manifest, true, true); applyAppearance(); render({ offset: 0, top: 0, left: 0 }); setCleanCheckpoint(); showDraftIfNeeded(); updateStatus(`「${title}」を表示中`); pushHistory(); }
@@ -302,6 +319,36 @@ function selectionOffsets() {
   const position = (container, point) => { const owner = marker(container); if (!owner) return null; const start = Number(owner.dataset.sourceStart); if (container.nodeType !== Node.TEXT_NODE) return start; const prefix = document.createRange(); prefix.selectNodeContents(owner); try { prefix.setEnd(container, point); return Math.min(Number(owner.dataset.sourceEnd), start + graphemes(prefix.toString()).length); } catch { return start; } };
   const start = position(range.startContainer, range.startOffset); const end = position(range.endContainer, range.endOffset); if (start == null || end == null) return null; return { start: Math.min(start, end), end: Math.max(start, end) };
 }
+function containsRubyNode(nodes = []) { return nodes.some(node => node.type === "ruby" || (node.type === "span" && containsRubyNode(node.children || []))); }
+function insertPastedText(range, text) {
+  const value = String(text || "");
+  if (!value) return null;
+  let inserted = [];
+  try {
+    const parsed = currentAdapter().parse(value);
+    if (containsRubyNode(parsed.nodes || [])) {
+      const staging = document.createElement("span");
+      renderLyrics(staging, value, { ...state, mode: "writer", preserveSource: true, adapter: currentAdapter(), registry: state.data?.manifest?.registry, loadedRegistryFonts: state.loadedRegistryFonts });
+      inserted = [...staging.childNodes];
+      if (inserted.length) {
+        const fragment = document.createDocumentFragment();
+        inserted.forEach(node => fragment.append(node));
+        range.deleteContents();
+        range.insertNode(fragment);
+      }
+    }
+  } catch { inserted = []; }
+  if (!inserted.length) {
+    const node = document.createTextNode(value);
+    range.deleteContents();
+    range.insertNode(node);
+    inserted = [node];
+  }
+  const last = inserted.at(-1);
+  if (last) { range.setStartAfter(last); range.collapse(true); }
+  const selection = window.getSelection(); selection?.removeAllRanges(); selection?.addRange(range);
+  return inserted;
+}
 function rememberSelection() {
   const selection = window.getSelection(); const lyrics = $("lyrics");
   if (!selection || selection.isCollapsed || !selection.rangeCount || !lyrics?.contains(selection.getRangeAt(0).commonAncestorContainer)) return;
@@ -359,7 +406,7 @@ function bind() {
   $("copy-all-button").addEventListener("click", () => copy(toPortableTextSafe(currentRaw(), currentAdapter()))); $("download-button").addEventListener("click", () => { download(new Blob([currentRaw()], { type: "text/plain;charset=utf-8" }), filename("txt")); updateStatus("TXTダウンロードを開始しました"); }); $("download-reader-button").addEventListener("click", () => { try { const readerText = JSON.stringify(buildReaderDocument(), null, 2); parseJsonText(readerText, "reader-document"); download(new Blob([readerText], { type: "application/json;charset=utf-8" }), filename("reader.json")); updateStatus("Reader文書ダウンロードを開始しました"); } catch (error) { setStatus(error instanceof Error ? error.message : "Reader文書が大きすぎるためダウンロードできません"); } }); $("download-container-button").addEventListener("click", () => { try { const containerText = serializeLyricContainer(buildReaderDocument(), state.activeVariantId); parseLyricContainer(containerText); download(new Blob([containerText], { type: "text/plain;charset=utf-8" }), filename("lyric.txt")); updateStatus(".lyric.txtダウンロードを開始しました"); } catch (error) { setStatus(error instanceof Error ? error.message : "Containerを保存できません"); } }); $("source-copy-button").addEventListener("click", () => { const source = state.data?.sourceUrl; if (/^https?:\/\//i.test(source || "")) copy(source); else setStatus("現在の本文にコピーできるSource URLはありません"); });
   $("share-button").addEventListener("click", () => copy(location.href)); $("undo-button").addEventListener("click", () => { if (state.historyIndex > 0) { state.historyIndex--; restoreSnapshot(state.history[state.historyIndex]); updateHistoryButtons(); } }); $("redo-button").addEventListener("click", () => { if (state.historyIndex < state.history.length - 1) { state.historyIndex++; restoreSnapshot(state.history[state.historyIndex]); updateHistoryButtons(); } });
    document.addEventListener("selectionchange", rememberSelection);
-   $("lyrics").addEventListener("beforeinput", preserveWysiwygTextInput);
+   $("lyrics").addEventListener("beforeinput", handleWysiwygBeforeInput);
   $("palette-bank").addEventListener("change", handlePaletteBankChange); $("palette-slot").addEventListener("change", syncPaletteControls); $("palette-save-button").addEventListener("click", savePaletteSlot); $("apply-palette-button").addEventListener("click", () => { const range = selectionOffsets() || state.selectionBookmark; if (!range) return setStatus("本文の範囲を選択してください"); const index = Number($("palette-slot").value); const presentation = { bank: { type: "palette-bank", name: state.paletteBank }, color: { type: "palette", index } }; const document = range.ruby ? applyRubyPresentation({ type: "document", nodes: state.nodes }, range.ruby, presentation) : applyPresentation({ type: "document", nodes: state.nodes }, range, presentation); writeBodyDocument(document, true); }); $("clear-presentation-button").addEventListener("click", () => { const range = selectionOffsets() || state.selectionBookmark; if (!range) return setStatus("本文の範囲を選択してください"); const document = range.ruby ? clearRubyPresentation({ type: "document", nodes: state.nodes }, range.ruby) : clearPresentation({ type: "document", nodes: state.nodes }, range); writeBodyDocument(document); });
   const applySelectedPresentation = presentation => { const range = selectionOffsets() || state.selectionBookmark; if (!range) return setStatus("本文の範囲を選択してください"); writeBodyDocument(range.ruby ? applyRubyPresentation({ type: "document", nodes: state.nodes }, range.ruby, presentation) : applyPresentation({ type: "document", nodes: state.nodes }, range, presentation)); };
   $("style-button").addEventListener("click", () => { const name = $("style-name").value.trim(); if (!isSafePresentationName(name)) return setStatus("Style名は予約語以外の英数字・ハイフン・アンダースコアで指定してください"); applySelectedPresentation({ style: { type: "style", name } }); });
@@ -367,7 +414,7 @@ function bind() {
   $("combine-button").addEventListener("click", () => applySelectedPresentation({ combine: { type: "combine", mode: $("combine-mode")?.value || "straight" } }));
   $("outline-button").addEventListener("click", () => { const name = $("outline-name").value.trim(); if (!isSafePresentationName(name)) return setStatus("Outline名は予約語以外の英数字・ハイフン・アンダースコアで指定してください"); applySelectedPresentation({ outline: { type: "outline", name } }); });
   $("presentation-font-button").addEventListener("click", () => { const name = $("presentation-font-name").value.trim(); if (!isSafePresentationName(name)) return setStatus("範囲Font名は予約語以外の英数字・ハイフン・アンダースコアで指定してください"); applySelectedPresentation({ font: { type: "font", name } }); });
-  $("song-title").addEventListener("input", titleInput); $("lyrics").addEventListener("paste", event => { if (state.mode !== "writer") return; event.preventDefault(); const text = event.clipboardData?.getData("text/plain") || ""; const selection = window.getSelection(); if (!selection?.rangeCount) return; const range = selection.getRangeAt(0); range.deleteContents(); const node = document.createTextNode(text); range.insertNode(node); range.setStartAfter(node); range.collapse(true); selection.removeAllRanges(); selection.addRange(range); bodyInput(); }); $("lyrics").addEventListener("input", bodyInput); $("lyrics").setAttribute("spellcheck", "false"); $("lyrics").setAttribute("autocorrect", "off"); $("lyrics").setAttribute("autocapitalize", "off"); $("song-title").setAttribute("spellcheck", "false"); $("song-title").setAttribute("autocorrect", "off"); $("song-title").setAttribute("autocapitalize", "off"); $("lyrics").addEventListener("copy", event => { if (!window.getSelection()?.isCollapsed) { event.preventDefault(); const range = selectionOffsets(); event.clipboardData.setData("text/plain", range ? rawText(state.nodes, range) : selectedEditedSource()); } });
+  $("song-title").addEventListener("input", titleInput); $("lyrics").addEventListener("paste", event => { if (state.mode !== "writer") return; event.preventDefault(); const editRuby = selectionTouchesRuby(); const text = event.clipboardData?.getData("text/plain") || ""; const selection = window.getSelection(); if (!selection?.rangeCount) return; insertPastedText(selection.getRangeAt(0), text); bodyInput({ editRuby }); }); $("lyrics").addEventListener("input", bodyInput); $("lyrics").setAttribute("spellcheck", "false"); $("lyrics").setAttribute("autocorrect", "off"); $("lyrics").setAttribute("autocapitalize", "off"); $("song-title").setAttribute("spellcheck", "false"); $("song-title").setAttribute("autocorrect", "off"); $("song-title").setAttribute("autocapitalize", "off"); $("lyrics").addEventListener("copy", event => { if (!window.getSelection()?.isCollapsed) { event.preventDefault(); const range = selectionOffsets(); event.clipboardData.setData("text/plain", range ? rawText(state.nodes, range) : selectedEditedSource()); } });
   $("draft-restore").addEventListener("click", applyDraft); $("draft-discard").addEventListener("click", clearDraft);
   $("reader-shell").addEventListener("wheel", event => { if (event.target.closest(".settings") || state.writingMode !== "vertical") return; event.preventDefault(); $("reader-shell").scrollLeft -= event.deltaY || event.deltaX; }, { passive: false });
   let scrollTimer; $("reader-shell").addEventListener("scroll", () => { document.body.classList.add("is-scrolling"); document.body.classList.remove("chrome-hidden"); clearTimeout(scrollTimer); scrollTimer = setTimeout(() => { document.body.classList.remove("is-scrolling"); document.body.classList.add("chrome-hidden"); saveScroll(); }, 900); });
