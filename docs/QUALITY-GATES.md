@@ -87,7 +87,7 @@ git diff --check
 ### Writer Mobile Beta Gate
 
 - `npm run test:writer-mobile`で、Writerの表示面をChromium `Pixel 5`相当とPlaywright WebKit `iPhone 13`相当から独立検証する。
-- Writer modeへの起動、Title / 本文の表示とcontenteditable状態、Ruby、Variant / Ruby切替、設定Panelのviewport内表示と内部scroll、縦書き時のTitle / 本文writing-mode同期、意図しない横overflow、Source→Viewer→Writer往復を確認する。表示DOMがRubyを平坦化した場合の隣接入力と、Portable RubyのCopy→PasteがAuthor Sourceとして復元されること、Title末尾Enter／本文先頭Backspaceの境界操作、表示設定のDocument Dirty非発生もChromium / WebKit双方で確認する。
+- Writer modeへの起動、Title / 本文の表示とcontenteditable状態、Ruby、Variant / Ruby切替、設定Panelのviewport内表示と内部scroll、縦書き時のTitle / 本文writing-mode同期、意図しない横overflow、Source→Viewer→Writer往復を確認する。表示DOMがRubyを平坦化した場合の隣接入力・改行と、Portable RubyのCopy→PasteがAuthor Sourceとして復元されること、Title末尾Enter／本文先頭Backspaceの境界操作、表示設定のDocument Dirty非発生もChromium / WebKit双方で確認する。
 - このGateはWriter Browser GateとReader Mobile Gateの状態・Contextを共有せず、IME、Caret、soft keyboard、touch selection、Clipboard権限、実機Safari / Android Chromeは対象外とする。Playwright WebKitはSafari本体ではないため、実機確認は別Release Smokeとして記録する。
 - GitHub Actionsでは`writer-mobile-beta`の`continue-on-error: true`ジョブとして常時実行するが、Pages deployは`reader-quality`だけに依存し、Writer Mobileの失敗でReader公開を止めない。
 

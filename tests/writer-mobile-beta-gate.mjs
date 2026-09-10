@@ -209,6 +209,20 @@ async function checkScenario(scenario, targetUrl) {
     await page.waitForFunction(value => document.querySelector("#source-editor")?.value === value && document.querySelector("#source-editor")?.getAttribute("aria-invalid") !== "true", rubyFixture, { timeout: 30_000 });
     await clickHeaderButton(page, "#source-mode-switch");
     await clickHeaderButton(page, "#mode-switch");
+    await page.locator("#lyrics .source-ruby").first().waitFor({ state: "visible", timeout: 30_000 });
+    await page.locator("#lyrics .source-ruby").first().evaluate(node => { const ruby = node.querySelector("ruby"); if (ruby) ruby.replaceWith(document.createTextNode(node.textContent || "")); });
+    await page.locator("#lyrics").evaluate(root => { const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT); while (walker.nextNode()) { const node = walker.currentNode; const index = (node.nodeValue || "").indexOf("後"); if (index < 0) continue; const range = document.createRange(); range.setStart(node, index); range.collapse(true); const selection = window.getSelection(); selection?.removeAllRanges(); selection?.addRange(range); root.focus(); document.dispatchEvent(new Event("selectionchange")); return; } });
+    await page.keyboard.press("Enter");
+    await page.waitForFunction(() => /読確認よみかくにん[\r\n]+後/.test(document.querySelector("#lyrics")?.innerText || ""), null, { timeout: 30_000 });
+    await clickHeaderButton(page, "#source-mode-switch");
+    await page.locator("#source-editor").waitFor({ state: "visible", timeout: 30_000 });
+    source = await page.locator("#source-editor").inputValue();
+    assert.match(source, /前｜読確認《よみかくにん》\r?\n後/, `${scenario.id}: line break next to a flattened Ruby must preserve Ruby Source`);
+
+    await page.locator("#source-editor").fill(rubyFixture);
+    await page.waitForFunction(value => document.querySelector("#source-editor")?.value === value && document.querySelector("#source-editor")?.getAttribute("aria-invalid") !== "true", rubyFixture, { timeout: 30_000 });
+    await clickHeaderButton(page, "#source-mode-switch");
+    await clickHeaderButton(page, "#mode-switch");
     assert.equal(await selectTextInRoot(page.locator("#lyrics .source-ruby").first(), "読確認よみかくにん"), true, `${scenario.id}: mobile Ruby selection must find the complete Ruby`);
     const copied = await page.locator("#lyrics").evaluate(element => { let value = ""; const event = new Event("copy", { bubbles: true, cancelable: true }); Object.defineProperty(event, "clipboardData", { value: { setData: (type, next) => { if (type === "text/plain") value = next; } } }); element.dispatchEvent(event); return value; });
     assert.equal(copied, "｜読確認《よみかくにん》", `${scenario.id}: mobile Ruby copy must use Portable Ruby text`);

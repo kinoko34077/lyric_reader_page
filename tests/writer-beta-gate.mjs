@@ -672,6 +672,15 @@ async function runWriterRubyGate(targetUrl) {
     source = await readSource();
     assert.match(source, /\r?\n｜読確認《よみかくにん》後/, `deleting before a flattened Ruby must preserve Ruby Source: ${source}`);
 
+    stage = "Ruby-adjacent line break";
+    await resetWriterSource(fixtureContainer);
+    assert.equal(await flattenRuby(0), true, "Ruby line-break gate must be able to simulate a flattened Ruby DOM");
+    assert.equal(await placeCaretInRoot(page.locator("#lyrics"), "後", 0), true, "Ruby line-break gate must place a caret after the first Ruby");
+    await page.keyboard.press("Enter");
+    await page.waitForFunction(() => /読確認よみかくにん[\r\n]+後/.test(document.querySelector("#lyrics")?.innerText || ""), null, { timeout: 30_000 });
+    source = await readSource();
+    assert.match(source, /前｜読確認《よみかくにん》\r?\n後/, `line break next to a flattened Ruby must preserve Ruby Source: ${source}`);
+
     stage = "Ruby-crossing selection deletion";
     await resetWriterSource(fixtureContainer);
     assert.equal(await selectTextInRoot(page.locator("#lyrics"), "前読確認よみかくにん後"), true, "Ruby crossing selection must include the complete Ruby and neighboring text");

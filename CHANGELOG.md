@@ -9,6 +9,7 @@
 - Writer Mobile GateへRuby Source保全の実操作を追加した。Chromium / WebKitの両環境で、表示DOMがRubyを平坦化した状態の隣接入力でもAuthor Sourceを保持し、Portable RubyのCopy→Pasteを再parseしてRuby semanticへ戻すことを確認する。Safari本体のNative Clipboard権限やIMEは引き続き実機Release Smokeとして分離する。
 - Writer本文のBackspace / Deleteを、通常の削除範囲でもIR上のsemantic transactionへ寄せた。Rubyを跨ぐ削除はRuby Node単位で処理し、表示DOMが平坦化されても隣接する通常文字の削除でRuby Author Sourceを失わない。Ruby直後の削除、Ruby直前の削除、Rubyを跨ぐ選択削除をWriter Browser Gateへ追加した。
 - Writer Mobile GateへTitle末尾Enter／本文先頭Backspaceの境界往復と、Variant／Ruby／縦書き切替がDocument Dirtyを発生させない回帰を追加した。Chromium Pixel 5相当とWebKit iPhone 13相当の両環境でCanonical Source保持まで確認する。
+- Writer Mobile Gateへ平坦化Ruby直後の改行回帰を追加し、Chromium／WebKit双方で改行後も`｜親文字《ルビ》`のAuthor Sourceを保持することを確認する。
 - Registry FontをDocument Themeの`font`（`registry:name` / `{type:"registry",name}`）から解決し、読み込めた場合はReader全体へ`ReaderFont-name`として適用するようにした。未読込・CORS・Asset失敗時は標準FontへFallbackし、元本文を継続表示する。Nishiki-tekiの選択肢を端末インストール有無で無効化せず、文書Fontの失敗も表示専用Warning/Statusで扱う。Writer Presentation GateでTheme→作品既定適用→Fallbackを確認する。
 - 組版設定へ行間・字間・段落間隔を追加し、ViewerではUser View Overrideとして保存する一方、作品既定Themeへの反映はWriterの明示ボタンへ分離した。CSS固定値をTheme由来の変数へ置き換え、Mobile既定の行間も維持する。
 - Viewerの文字サイズ設定へ14〜32pxのプリセットSelectを追加し、A±・Slider・Select・CSS変数を同じ更新経路へ接続した。Header/Footerを自動収納中でも本文のpointer/touch操作、設定開閉、スクロール、画面端操作でChromeを復帰できるようにし、Chromium/WebKit Mobile Viewer Gateで同期と復帰を確認する。
