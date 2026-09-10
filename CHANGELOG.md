@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased] — 2026-09-09
+## [Unreleased] — 2026-09-10
 
 ### Reader Kernel優先への方針転換
 
@@ -28,6 +28,7 @@
 - Writer Browser Gateに`writerWysiwyg`下位Gateを追加し、Presentation範囲内の本文置換をApplication Undo→Redoボタン→Author Source投影まで独立検証するようにした。
 - Writer Browser Gateのランナーを失敗継続型へ変更し、一つの下位Gateが失敗してもSource／Document／WYSIWYG／Tab／故障系の残りを実行して結果を集約するようにした。
 - 下位Gate集約ランナーをWriter専用Unitで検証し、先頭Gateの失敗後も後続Gateを実行しつつ最終終了コードへ失敗を反映する契約を固定した。
+- Writerの表示面をReader Mobile Gateから分離した`writer-mobile-beta` Gateとして追加し、Chromium `Pixel 5`相当とWebKit `iPhone 13`相当でWriter起動、Title / 本文、Ruby、設定Panel、Variant / Ruby切替、縦書き同期、横overflow、Source→Viewer→Writer往復を検証する。Writer Browser Gateと同じくadvisory jobとして実行し、Reader Pages公開の依存にはしない。
 - Reader JSONの未知トップレベルFieldを不活性な拡張として保持し、Document state・Draft・Historyを経由したCanonical保存でも消さないようにした。
 - URL Manifest読込でも同じ未知トップレベルField保持を適用し、入力経路による情報欠落をなくした。
 - 欠損Style / Palette / Glyph / Font / Assetを本文表示継続のまま右肩`⃠` Warning markerへ統一し、markerをPortable Copy・Author Source投影から除外。

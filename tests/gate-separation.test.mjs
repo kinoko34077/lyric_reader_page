@@ -27,12 +27,14 @@ test("Reader, Shared, and Writer unit tests have separate workflow responsibilit
   const readerStart = workflow.indexOf("  reader-quality:");
   const writerUnitStart = workflow.indexOf("  writer-unit:");
   const writerBetaStart = workflow.indexOf("  writer-beta:");
+  const writerMobileStart = workflow.indexOf("  writer-mobile-beta:");
   const deployStart = workflow.indexOf("  deploy:");
-  assert.ok(readerStart >= 0 && writerUnitStart > readerStart && writerBetaStart > writerUnitStart && deployStart > writerBetaStart, "workflow jobs must keep their declared order");
+  assert.ok(readerStart >= 0 && writerUnitStart > readerStart && writerBetaStart > writerUnitStart && writerMobileStart > writerBetaStart && deployStart > writerMobileStart, "workflow jobs must keep their declared order");
 
   const readerJob = workflow.slice(readerStart, writerUnitStart);
   const writerUnitJob = workflow.slice(writerUnitStart, writerBetaStart);
-  const writerBetaJob = workflow.slice(writerBetaStart, deployStart);
+  const writerBetaJob = workflow.slice(writerBetaStart, writerMobileStart);
+  const writerMobileJob = workflow.slice(writerMobileStart, deployStart);
   assert.match(readerJob, /npm run test:reader/);
   assert.match(readerJob, /npm run test:shared/);
   assert.doesNotMatch(readerJob, /node --test tests\/\*\.test\.mjs|npm run test:writer-unit|tests\/source-editor\.test\.mjs/);
@@ -40,6 +42,8 @@ test("Reader, Shared, and Writer unit tests have separate workflow responsibilit
   assert.match(writerUnitJob, /continue-on-error:\s*true/);
   assert.match(writerBetaJob, /npm run test:writer/);
   assert.match(writerBetaJob, /continue-on-error:\s*true/);
+  assert.match(writerMobileJob, /npm run test:writer-mobile/);
+  assert.match(writerMobileJob, /continue-on-error:\s*true/);
   assert.match(workflow.slice(deployStart), /needs:\s*reader-quality/);
 });
 

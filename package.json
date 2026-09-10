@@ -7,7 +7,8 @@
     "test:shared": "node --test tests/document-model.test.mjs tests/document-state.test.mjs tests/dom-reader-json.test.mjs tests/gate-separation.test.mjs tests/runtime-integrity.test.mjs tests/syntax-adapter.test.mjs",
     "test:writer-unit": "node --test tests/writer-state.test.mjs tests/editor-source.test.mjs tests/source-editor.test.mjs tests/writer-gate-runner.test.mjs",
     "test:mobile": "node tests/mobile-viewer-gate.mjs",
-    "test:writer": "node tests/writer-beta-gate.mjs"
+    "test:writer": "node tests/writer-beta-gate.mjs",
+    "test:writer-mobile": "node tests/writer-mobile-beta-gate.mjs"
   },
   "devDependencies": {
     "playwright": "^1.63.0"

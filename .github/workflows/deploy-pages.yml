@@ -69,6 +69,22 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Writer Beta Gate
         run: npm run test:writer
+  writer-mobile-beta:
+    continue-on-error: true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+      - name: Install test dependencies
+        run: npm ci
+      - name: Install Playwright mobile browsers
+        run: npx playwright install --with-deps chromium webkit
+      - name: Writer Mobile Browser Gate
+        run: npm run test:writer-mobile
   deploy:
     needs: reader-quality
     environment:

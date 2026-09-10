@@ -77,6 +77,13 @@ git diff --check
 - Writer Beta Gateは`writer-beta`ジョブとしてReader Release Gateから分離し、現段階では`continue-on-error: true`の助言的チェックとする。失敗はActionsへ記録するが、ReaderのPages deployを止めない。
 - Source Editorの単体・統合契約は`tests/source-editor.test.mjs`と`tests/writer-beta-gate.mjs`を正本とする。
 
+### Writer Mobile Beta Gate
+
+- `npm run test:writer-mobile`で、Writerの表示面をChromium `Pixel 5`相当とPlaywright WebKit `iPhone 13`相当から独立検証する。
+- Writer modeへの起動、Title / 本文の表示とcontenteditable状態、Ruby、Variant / Ruby切替、設定Panelのviewport内表示と内部scroll、縦書き時のTitle / 本文writing-mode同期、意図しない横overflow、Source→Viewer→Writer往復を確認する。
+- このGateはWriter Browser GateとReader Mobile Gateの状態・Contextを共有せず、IME、Caret、soft keyboard、touch selection、Clipboard権限、実機Safari / Android Chromeは対象外とする。Playwright WebKitはSafari本体ではないため、実機確認は別Release Smokeとして記録する。
+- GitHub Actionsでは`writer-mobile-beta`の`continue-on-error: true`ジョブとして常時実行するが、Pages deployは`reader-quality`だけに依存し、Writer Mobileの失敗でReader公開を止めない。
+
 ### Stable branch / release checkpoint policy
 
 - 現在の`stable`はReader安定点`925cfc7`、`reader-v0.1.0`は同じReader checkpointを指す。Writer変更は`main`だけへ積み、Reader tagへ逆流させない。

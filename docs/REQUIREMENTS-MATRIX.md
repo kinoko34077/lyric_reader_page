@@ -51,7 +51,7 @@
 | Storage / draft failure atomicity | `storageGet/Set/Remove`, staged load/restore | state tests、app failure paths | Storage失敗を編集失敗へ波及させず通知。不正文書はCurrentを保持 | Private mode/evictionの実機確認待ち |
 | Input size separation | `parseJsonText(kind)`, `validateSourceText`, local preflight | data-loader/large-source tests | Manifest、Reader JSON、Sourceを個別上限で検証。Local JSONも同一pipeline | Browser File APIの異常実装はGate 8対象 |
 | CI / build truth | `.nvmrc`, `.github/workflows/deploy-pages.yml`, build-id test | `node --check`, full test, build-id, `git diff --check` | Quality成功をDeploy jobへ依存。ID不整合を検出 | Push後のGitHub Actions/Pages live run確認が外部依存 |
-| UI / responsive / chrome | `reader.css`, `index.html`, auto-hide/settings scroll | Desktop smoke、`npm run test:mobile` | Settings独立scroll、Header/Footer収納、縦横切替、Title/本文同期、Chromium Pixel 5 / WebKit iPhone 13幅表示、横overflowなしを確認 | Safari/iOS/Android実機、soft keyboard、Clipboard権限はRelease Smoke |
+| UI / responsive / chrome | `reader.css`, `index.html`, auto-hide/settings scroll | Desktop smoke、`npm run test:mobile`、`npm run test:writer-mobile` | Settings独立scroll、Header/Footer収納、縦横切替、Title/本文同期、Chromium Pixel 5 / WebKit iPhone 13幅表示、Writer modeの表示・Source往復、横overflowなしを確認 | Safari/iOS/Android実機、Writer IME / caret / soft keyboard、Clipboard権限はRelease Smoke |
 
 ## Required commands
 
@@ -61,6 +61,7 @@ npm run test:shared
 npm run test:writer-unit
 npm run test:mobile
 npm run test:writer
+npm run test:writer-mobile
 node --check assets/js/*.js
 git diff --check
 ```
