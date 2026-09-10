@@ -349,6 +349,25 @@ async function runGate(targetUrl) {
     await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source, clearedAuthorSource, { timeout: 30_000 });
 
     await clickHeaderButton(page, "#source-mode-switch");
+    await clickHeaderButton(page, "#mode-switch");
+    await selectLyricsText("Reader Smoke");
+    await page.locator("#presentation-font-name").fill("missing-font");
+    await page.locator("#presentation-font-button").click({ force: true });
+    await clickHeaderButton(page, "#source-mode-switch");
+    const presentationFontSource = await page.locator("#source-editor").inputValue();
+    assert.match(presentationFontSource, /\[Reader Smoke:font=missing-font\]/, `Font authoring was not serialized: ${presentationFontSource.slice(-500)}`);
+    await clickHeaderButton(page, "#source-mode-switch");
+    const presentationFont = page.locator('#lyrics .source-presentation[data-font="missing-font"]').filter({ hasText: "Reader Smoke" });
+    await presentationFont.waitFor({ state: "visible", timeout: 30_000 });
+    await presentationFont.locator(".view-warning").waitFor({ state: "visible", timeout: 30_000 });
+    assert.match(await page.locator("#lyrics").textContent() || "", /Reader Smoke/);
+    await clickHeaderButton(page, "#mode-switch");
+    await selectLyricsText("Reader Smoke");
+    await page.locator("#clear-presentation-button").click({ force: true });
+    await clickHeaderButton(page, "#source-mode-switch");
+    await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source, clearedAuthorSource, { timeout: 30_000 });
+
+    await clickHeaderButton(page, "#source-mode-switch");
     await page.locator("#lyrics").waitFor({ state: "visible" });
     await clickHeaderButton(page, "#mode-switch");
     await selectLyricsText("Reader Smoke");
