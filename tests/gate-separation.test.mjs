@@ -51,6 +51,17 @@ test("Reader, Shared, and Writer unit tests have separate workflow responsibilit
   assert.match(workflow.slice(deployStart), /needs:\s*reader-quality/);
 });
 
+test("Writer Beta main gate is a minimal core smoke with independent detail gates", () => {
+  const gate = readRepoFile("tests/writer-beta-gate.mjs");
+
+  assert.match(gate, /async function runWriterCoreGate\(targetUrl\)/);
+  assert.match(gate, /\["writer", runWriterCoreGate\]/);
+  assert.match(gate, /\["writerSource", runWriterSourceGate\]/);
+  assert.match(gate, /\["writerDocument", runWriterDocumentGate\]/);
+  assert.match(gate, /\["writerWysiwyg", runWriterWysiwygGate\]/);
+  assert.match(gate, /\["writerTab", runWriterTabGate\]/);
+});
+
 test("Tab-local Draft policy does not depend on a cross-tab warning path", () => {
   const app = readRepoFile("assets/js/app.js");
   const requirements = readRepoFile("docs/LYRIC_READER_REQUIREMENTS.md");

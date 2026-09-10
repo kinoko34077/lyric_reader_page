@@ -80,6 +80,78 @@ async function selectTextInRoot(locator, text) {
   }, text);
 }
 
+async function runWriterCoreGate(targetUrl) {
+  const browser = await chromium.launch({ headless: true });
+  const context = await browser.newContext({ locale: "ja-JP", colorScheme: "light" });
+  const page = await context.newPage();
+  const consoleErrors = [];
+  const pageErrors = [];
+  const failedRequests = [];
+  const badResponses = [];
+  const successfulResponses = new Set();
+  page.on("console", message => { if (message.type() === "error" && !expectedAssetFailure(message.location().url) && !/Failed to load resource:/i.test(message.text())) consoleErrors.push(`${message.text()} (${message.location().url})`); });
+  page.on("pageerror", error => pageErrors.push(String(error)));
+  page.on("response", response => { if (response.ok()) successfulResponses.add(response.url()); else if (!expectedAssetFailure(response.url())) badResponses.push(`${response.status()} ${response.url()}`); });
+  page.on("requestfailed", request => {
+    const failure = request.failure()?.errorText || "unknown";
+    const harmlessCancellation = failure === "net::ERR_ABORTED" && successfulResponses.has(request.url());
+    if (!expectedAssetFailure(request.url()) && !harmlessCancellation) failedRequests.push(`${request.method()} ${request.url()} [${failure}]`);
+  });
+  await mkdir(outputRoot, { recursive: true });
+  const screenshot = path.join(outputRoot, "chromium-writer-core.png");
+  let stage = "initial";
+  try {
+    await page.goto(targetUrl, { waitUntil: "domcontentloaded", timeout: 30_000 });
+    await page.locator("#source-editor").waitFor({ state: "visible", timeout: 30_000 });
+    await page.waitForFunction(() => {
+      const editor = document.querySelector("#source-editor");
+      return Boolean(editor && /晴々撥条|如何《どう》/.test(editor.value) && editor.getAttribute("aria-invalid") !== "true");
+    }, null, { timeout: 30_000 });
+    const originalSource = await page.locator("#source-editor").inputValue();
+
+    stage = "valid Source to Viewer to Writer round trip";
+    const validSource = `${originalSource}\n[Writer Core Gate:style=demo-chorus]`;
+    await page.locator("#source-editor").fill(validSource);
+    await page.waitForFunction(() => document.querySelector("#source-editor")?.getAttribute("aria-invalid") !== "true" && /Writer Core Gate/.test(document.querySelector("#source-editor")?.value || ""), null, { timeout: 30_000 });
+    await clickHeaderButton(page, "#source-mode-switch");
+    await page.locator("#lyrics").waitFor({ state: "visible", timeout: 30_000 });
+    await page.waitForFunction(() => document.body.dataset.mode === "viewer" && /Writer Core Gate/.test(document.querySelector("#lyrics")?.innerText || ""), null, { timeout: 30_000 });
+    assert.doesNotMatch(await page.locator("#lyrics").innerText(), /base-range=0-3/, "valid Writer Source must not expose parser markup in the Viewer");
+    await clickHeaderButton(page, "#mode-switch");
+    await page.waitForFunction(() => document.body.dataset.mode === "writer", null, { timeout: 30_000 });
+    await clickHeaderButton(page, "#source-mode-switch");
+    await page.locator("#source-editor").waitFor({ state: "visible", timeout: 30_000 });
+    await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source, validSource, { timeout: 30_000 });
+    assert.equal(await page.locator("#source-editor").inputValue(), validSource, "valid Source round trip must preserve the entered Author Source");
+
+    stage = "invalid Source keeps the current Document";
+    const invalidSource = `${validSource}\n[x:base-range=0-3]`;
+    await page.locator("#source-editor").fill(invalidSource);
+    await page.waitForFunction(() => document.querySelector("#source-editor")?.getAttribute("aria-invalid") === "true", null, { timeout: 30_000 });
+    await clickHeaderButton(page, "#source-mode-switch");
+    await page.locator("#lyrics").waitFor({ state: "visible", timeout: 30_000 });
+    await page.waitForFunction(() => document.body.dataset.mode === "viewer" && /Writer Core Gate/.test(document.querySelector("#lyrics")?.innerText || ""), null, { timeout: 30_000 });
+    assert.doesNotMatch(await page.locator("#lyrics").innerText(), /base-range=0-3/, "invalid Source markup must not reach the Viewer");
+    await clickHeaderButton(page, "#source-mode-switch");
+    await page.locator("#source-editor").waitFor({ state: "visible", timeout: 30_000 });
+    await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source && document.querySelector("#source-editor")?.getAttribute("aria-invalid") === null, validSource, { timeout: 30_000 });
+    assert.equal(await page.locator("#source-editor").inputValue(), validSource, "invalid Source must not replace the current Author Source");
+
+    await page.screenshot({ path: screenshot, fullPage: false });
+    assert.deepEqual({ consoleErrors, pageErrors, failedRequests, badResponses }, { consoleErrors: [], pageErrors: [], failedRequests: [], badResponses: [] });
+    return { status: "PASS", targetUrl, screenshot };
+  } catch (error) {
+    await page.screenshot({ path: path.join(outputRoot, "chromium-writer-core-failure.png"), fullPage: false }).catch(() => {});
+    const state = await page.evaluate(() => ({ mode: document.body.dataset.mode || "", source: document.querySelector("#source-editor")?.value || "", invalid: document.querySelector("#source-editor")?.getAttribute("aria-invalid") || null, viewer: document.querySelector("#lyrics")?.innerText || "" })).catch(() => ({}));
+    const message = `${error instanceof Error ? error.message : String(error)} stage=${stage} state=${JSON.stringify({ mode: state.mode, invalid: state.invalid, sourceTail: state.source.slice(-500), viewerTail: state.viewer.slice(-500) })} console=${JSON.stringify(consoleErrors)} page=${JSON.stringify(pageErrors)} failed=${JSON.stringify(failedRequests)} responses=${JSON.stringify(badResponses)}`.replace(/[\r\n]+/g, " ");
+    if (process.env.GITHUB_ACTIONS) console.log(`::error title=Writer Core Gate failure::${message}`);
+    throw new Error(message);
+  } finally {
+    await context.close();
+    await browser.close();
+  }
+}
+
 async function runGate(targetUrl) {
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({ locale: "ja-JP", colorScheme: "light" });
@@ -1009,7 +1081,7 @@ const local = requestedUrl ? null : await startLocalServer();
 const targetUrl = requestedUrl || local.url;
 try {
   const gates = [
-    ["writer", runGate],
+    ["writer", runWriterCoreGate],
     ["writerSource", runWriterSourceGate],
     ["writerDocument", runWriterDocumentGate],
     ["writerWysiwyg", runWriterWysiwygGate],
