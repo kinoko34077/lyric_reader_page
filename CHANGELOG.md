@@ -4,6 +4,7 @@
 
 ### Reader Kernel優先への方針転換
 
+- 組版設定へ行間・字間・段落間隔を追加し、ViewerではUser View Overrideとして保存する一方、作品既定Themeへの反映はWriterの明示ボタンへ分離した。CSS固定値をTheme由来の変数へ置き換え、Mobile既定の行間も維持する。
 - Viewerの文字サイズ設定へ14〜32pxのプリセットSelectを追加し、A±・Slider・Select・CSS変数を同じ更新経路へ接続した。Header/Footerを自動収納中でも本文のpointer/touch操作、設定開閉、スクロール、画面端操作でChromeを復帰できるようにし、Chromium/WebKit Mobile Viewer Gateで同期と復帰を確認する。
 - Source ModeをActive Variant本文だけの編集面からCanonical Container全体の編集面へ変更した。`LYRIC-READER/1`のJSON HeaderとAuthor Source Bodyをまとめて検証し、全Variant・Registry・Theme・Metadata・Extensionsをparse成功時だけDocumentへtransaction反映する。Source Modeの失敗時はCurrent Documentを保持し、Container本文内のParser位置をtextareaの行・列・Caretへ写像する。
 - Source EditorのVariant切替ではDocument全体を誤って再利用せず、Variantごとの入力Sourceを分離して保持する。別Variantの編集がOriginal Sourceへ混入しないことをBrowser Gateで確認する。

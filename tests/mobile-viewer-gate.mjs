@@ -106,6 +106,18 @@ async function checkScenario(scenario, targetUrl) {
     }));
     assert.deepEqual(sizeState, { css: "24px", select: "24", range: "24" }, `${scenario.id}: size controls must stay synchronized`);
 
+    await page.locator("#line-height-range").fill("1.5");
+    await page.locator("#letter-spacing-range").fill("0.08");
+    await page.locator("#paragraph-spacing-range").fill("0.5");
+    await page.waitForFunction(() => getComputedStyle(document.documentElement).getPropertyValue("--reader-line-height").trim() === "1.5" && getComputedStyle(document.documentElement).getPropertyValue("--reader-letter-spacing").trim() === "0.08em" && getComputedStyle(document.documentElement).getPropertyValue("--reader-paragraph-spacing").trim() === "0.5em");
+    const typographyState = await page.evaluate(() => ({
+      lineHeight: getComputedStyle(document.documentElement).getPropertyValue("--reader-line-height").trim(),
+      letterSpacing: getComputedStyle(document.documentElement).getPropertyValue("--reader-letter-spacing").trim(),
+      paragraphSpacing: getComputedStyle(document.documentElement).getPropertyValue("--reader-paragraph-spacing").trim(),
+      dirty: document.body.dataset.dirty
+    }));
+    assert.deepEqual(typographyState, { lineHeight: "1.5", letterSpacing: "0.08em", paragraphSpacing: "0.5em", dirty: "false" }, `${scenario.id}: Viewer typography overrides must not dirty the Document`);
+
     await page.locator("#settings-toggle").click();
     await page.evaluate(() => {
       document.body.classList.add("chrome-hidden");

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="description" content="外部の歌詞テキストを読むための静的リーダー">
     <title>歌詞リーダー</title>
-    <link rel="stylesheet" href="assets/css/reader.css?v=20260910-025">
+    <link rel="stylesheet" href="assets/css/reader.css?v=20260910-026">
   </head>
   <body>
     <header class="site-header" id="site-header">
@@ -40,6 +40,12 @@
           <div class="size-controls"><button id="size-decrease" type="button" aria-label="文字を小さく">A−</button><output id="size-value">20px</output><button id="size-increase" type="button" aria-label="文字を大きく">A＋</button></div>
           <label><span>プリセット</span><select id="size-select" aria-label="文字サイズ（プリセット）"><option value="14">14px</option><option value="16">16px</option><option value="18">18px</option><option value="20" selected>20px</option><option value="22">22px</option><option value="24">24px</option><option value="26">26px</option><option value="28">28px</option><option value="32">32px</option></select></label>
           <input id="size-range" type="range" min="14" max="32" step="1" value="20" aria-label="文字サイズ">
+        </fieldset>
+        <fieldset>
+          <legend>組版</legend>
+          <label><span>行間 <output id="line-height-value">2.05</output></span><input id="line-height-range" type="range" min="1" max="3" step="0.05" value="2.05" aria-label="行間"></label>
+          <label><span>字間 <output id="letter-spacing-value">0.04em</output></span><input id="letter-spacing-range" type="range" min="-0.1" max="0.2" step="0.01" value="0.04" aria-label="字間"></label>
+          <label><span>段落間隔 <output id="paragraph-spacing-value">1.7em</output></span><input id="paragraph-spacing-range" type="range" min="0" max="3" step="0.1" value="1.7" aria-label="段落間隔"></label>
         </fieldset>
         <fieldset>
           <legend>配色</legend>
@@ -78,6 +84,7 @@
           <legend>編集操作</legend>
           <button class="action-button" id="undo-button" type="button" disabled>元に戻す</button>
           <button class="action-button" id="redo-button" type="button" disabled>やり直す</button>
+          <button class="action-button" id="document-typography-button" type="button">現在の組版を作品既定へ保存</button>
           <label><span>Palette Bank</span><select id="palette-bank" aria-label="Palette Bank"><option value="default">default</option></select></label>
           <label><span>Palette Slot</span><select id="palette-slot" aria-label="Palette Slot"><option value="0">Slot 0</option><option value="1">Slot 1</option><option value="2">Slot 2</option><option value="3">Slot 3</option></select></label>
           <label><span>Slot色</span><input id="palette-color" type="color" value="#d02020" aria-label="Palette Slotの色"></label>
@@ -101,6 +108,6 @@
 
     <footer class="site-footer" id="site-footer"><span>外部データをブラウザ上で読み込んで表示しています</span><nav class="footer-links" id="footer-links" aria-label="楽曲リンク"></nav></footer>
     <div class="drop-overlay" id="drop-overlay" hidden><strong>TXT / .lyric.txt / Reader JSONをドロップ</strong><span>画面のどこに置いても本文を開けます</span></div>
-    <script type="module" src="assets/js/app.js?v=20260910-025"></script>
+    <script type="module" src="assets/js/app.js?v=20260910-026"></script>
   </body>
 </html>

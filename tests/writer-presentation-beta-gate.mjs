@@ -5,6 +5,7 @@ import { createServer } from "node:http";
 import os from "node:os";
 import path from "node:path";
 import { chromium } from "playwright";
+import { parseLyricContainer } from "../assets/js/lyric-container.js";
 
 const root = path.resolve(process.cwd());
 const outputRoot = process.env.WRITER_PRESENTATION_GATE_OUTPUT || path.join(os.tmpdir(), "lyric-reader-writer-presentation-gate");
@@ -153,6 +154,19 @@ async function runGate(targetUrl) {
     await page.waitForFunction(() => /Presentation Gate Seed/.test(document.querySelector("#source-editor")?.value || ""), null, { timeout: 30_000 });
     await toWriter(page);
     assert.ok(await page.locator("#lyrics").textContent().then(text => text?.includes("Presentation Gate Seed")), "seed must render in Writer");
+
+    stage = "document typography defaults";
+    await ensureSettingsOpen(page);
+    const dirtyBeforeTypography = await page.locator("body").getAttribute("data-dirty");
+    await page.locator("#line-height-range").fill("1.4");
+    await page.locator("#letter-spacing-range").fill("0.06");
+    await page.locator("#paragraph-spacing-range").fill("0.8");
+    assert.equal(await page.locator("body").getAttribute("data-dirty"), dirtyBeforeTypography, "Typography changes remain preference-only until explicitly saved");
+    await page.locator("#document-typography-button").click({ force: true });
+    await toSource(page);
+    const typographyContainer = parseLyricContainer(await page.locator("#source-editor").inputValue());
+    assert.deepEqual(typographyContainer.header.document.theme.typography, { lineHeight: 1.4, letterSpacing: 0.06, paragraphSpacing: 0.8 }, "explicit Writer action must persist typography in the document Theme");
+    await toWriter(page);
 
     stage = "Style authoring";
     await ensureSettingsOpen(page);
