@@ -113,7 +113,7 @@ Source、Manifest、Reader Document、Registry、Assetはそれぞれ別のvalid
 Reader v0.xの完成条件には含めないが、正本上のWriter方針は次のとおりとする。
 
 - `K1`: 文書を開く操作自体もUndo対象とする。実装済み。Open前に現在Documentを履歴へcheckpointし、Source URL / name / identityを含むSnapshotをUndoで復元する。`tests/document-state.test.mjs`と`tests/writer-beta-gate.mjs`で確認する。
-- `K6`: Browser TabごとにDraftを分離し、別TabのDraftを相互に上書き・復元候補へ混入させない。実装済み。`tests/document-state.test.mjs`と`tests/writer-beta-gate.mjs`でキー分離を確認する。Draft共有を前提とした別Tab更新警告は提供しない。
+- `K6`: Browser TabごとにDraftを分離し、別TabのDraftを相互に上書き・復元候補へ混入させない。実装済み。`tests/document-state.test.mjs`と`tests/writer-beta-gate.mjs`でキー分離を確認し、一方のTabでDraftを破棄しても他方のDraftが残ることまで確認する。Draft共有を前提とした別Tab更新警告は提供しない。
 
 ## 13. HOLD
 

@@ -142,6 +142,15 @@ async function runGate(targetUrl) {
       const tabKeys = draftKeys.map(key => key.split(":tab:")[1]).filter(Boolean);
       assert.ok(tabKeys.length >= 2, "each Tab must create an independent Draft key");
       assert.equal(new Set(tabKeys).size, tabKeys.length, "Draft keys must not share a Tab identity");
+      const draftEntries = await page.evaluate(() => Object.keys(localStorage).filter(key => key.startsWith("lyric-reader:draft:")).map(key => [key, localStorage.getItem(key) || ""]));
+      const firstTabDraftKey = draftEntries.find(([, value]) => value.includes("[Writer Gate:style=demo-chorus]"))?.[0];
+      const secondTabDraftKey = draftEntries.find(([, value]) => value.includes("[Writer Gate:second-tab]"))?.[0];
+      assert.ok(firstTabDraftKey, "the first Tab must have its own recoverable Draft");
+      assert.ok(secondTabDraftKey, "the second Tab must have its own recoverable Draft");
+      const secondTabDraftBeforeCleanup = await page.evaluate(key => localStorage.getItem(key), secondTabDraftKey);
+      await page.locator("#draft-discard").click({ force: true });
+      await page.waitForFunction(key => localStorage.getItem(key) === null, firstTabDraftKey, { timeout: 30_000 });
+      assert.equal(await page.evaluate(key => localStorage.getItem(key), secondTabDraftKey), secondTabDraftBeforeCleanup, "discarding one Tab's Draft must not remove another Tab's Draft");
     } finally {
       await secondTab.close();
     }
