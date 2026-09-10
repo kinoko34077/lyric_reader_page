@@ -659,6 +659,16 @@ async function runWriterWysiwygGate(targetUrl) {
     });
     assert.equal(copiedRubyTitle, "｜題《だい》", "Title Ruby copy must preserve Portable Ruby notation");
 
+    stage = "native copy failure remains fail-soft";
+    await resetWriterSource(semanticTitleSource);
+    assert.equal(await selectTextInRoot(page.locator("#song-title"), "Semantic Title"), true, "Title fallback copy gate must select text");
+    const pageErrorsBeforeCopyFallback = pageErrors.length;
+    await page.locator("#song-title").evaluate(element => element.dispatchEvent(new Event("copy", { bubbles: true, cancelable: true })));
+    assert.equal(pageErrors.length, pageErrorsBeforeCopyFallback, "Title copy without clipboardData must not raise a page error");
+    assert.equal(await selectTextInRoot(page.locator("#lyrics"), "本文"), true, "Body fallback copy gate must select text");
+    await page.locator("#lyrics").evaluate(element => element.dispatchEvent(new Event("copy", { bubbles: true, cancelable: true })));
+    assert.equal(pageErrors.length, pageErrorsBeforeCopyFallback, "Body copy without clipboardData must not raise a page error");
+
     await resetWriterSource(originalSource);
     await clickHeaderButton(page, "#source-mode-switch");
     await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source, originalSource, { timeout: 30_000 });
