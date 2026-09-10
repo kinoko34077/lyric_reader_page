@@ -596,6 +596,100 @@ async function runGate(targetUrl) {
   }
 }
 
+async function runWriterSourceGate(targetUrl) {
+  const browser = await chromium.launch({ headless: true });
+  const context = await browser.newContext({ locale: "ja-JP", colorScheme: "light" });
+  const page = await context.newPage();
+  const consoleErrors = [];
+  const pageErrors = [];
+  const failedRequests = [];
+  const badResponses = [];
+  const successfulResponses = new Set();
+  page.on("console", message => { if (message.type() === "error" && !expectedAssetFailure(message.location().url) && !/Failed to load resource:/i.test(message.text())) consoleErrors.push(`${message.text()} (${message.location().url})`); });
+  page.on("pageerror", error => pageErrors.push(String(error)));
+  page.on("response", response => { if (response.ok()) successfulResponses.add(response.url()); else if (!expectedAssetFailure(response.url())) badResponses.push(`${response.status()} ${response.url()}`); });
+  page.on("requestfailed", request => {
+    const failure = request.failure()?.errorText || "unknown";
+    const harmlessCancellation = failure === "net::ERR_ABORTED" && successfulResponses.has(request.url());
+    if (!expectedAssetFailure(request.url()) && !harmlessCancellation) failedRequests.push(`${request.method()} ${request.url()} [${failure}]`);
+  });
+  let stage = "initial";
+  let originalSource = "";
+  try {
+    await page.goto(targetUrl, { waitUntil: "domcontentloaded", timeout: 30_000 });
+    await page.locator("#source-editor").waitFor({ state: "visible", timeout: 30_000 });
+    await page.waitForFunction(() => /晴々撥条|如何《どう》/.test(document.querySelector("#source-editor")?.value || ""), null, { timeout: 30_000 });
+    originalSource = await page.locator("#source-editor").inputValue();
+    assert.match(originalSource, /晴々撥条|如何《どう》/);
+
+    stage = "variant source isolation";
+    await clickHeaderButton(page, "#settings-toggle");
+    assert.ok(await page.locator("#variant-mode option").count() >= 2, "Source Editor must expose the document Variant Set");
+    await page.locator("#variant-mode").selectOption("modernized");
+    await page.waitForFunction(() => /こちらへ来たのだろう/.test(document.querySelector("#source-editor")?.value || ""), null, { timeout: 30_000 });
+    const modernSource = await page.locator("#source-editor").inputValue();
+    await page.locator("#source-editor").fill(`${modernSource}\n[Source Variant Gate:style=demo-chorus]`);
+    await page.waitForFunction(() => /Source Variant Gate/.test(document.querySelector("#source-editor")?.value || ""), null, { timeout: 30_000 });
+    await page.locator("#variant-mode").selectOption("original");
+    await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source, originalSource, { timeout: 30_000 });
+    await page.locator("#variant-mode").selectOption("modernized");
+    await page.waitForFunction(() => /Source Variant Gate/.test(document.querySelector("#source-editor")?.value || ""), null, { timeout: 30_000 });
+    await page.locator("#variant-mode").selectOption("original");
+    await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source, originalSource, { timeout: 30_000 });
+    await clickHeaderButton(page, "#settings-toggle");
+
+    stage = "valid source to viewer round trip";
+    const validSource = `${originalSource}\n[Source Gate:style=demo-chorus]`;
+    await page.locator("#source-editor").fill(validSource);
+    await page.waitForFunction(() => document.body.dataset.dirty === "true");
+    await clickHeaderButton(page, "#source-mode-switch");
+    await page.locator("#lyrics").waitFor({ state: "visible", timeout: 30_000 });
+    assert.match(await page.locator("#lyrics").innerText(), /Source Gate/);
+    await clickHeaderButton(page, "#source-mode-switch");
+    await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source, validSource, { timeout: 30_000 });
+    assert.equal(await page.locator("#source-editor").inputValue(), validSource, "Source to Viewer round-trip must preserve the entered Author Source");
+
+    stage = "invalid source protection";
+    const invalidSource = `${validSource}\n[x:base-range=0-3]`;
+    await page.locator("#source-editor").fill(invalidSource);
+    await page.waitForFunction(() => document.querySelector("#source-editor")?.getAttribute("aria-invalid") === "true", null, { timeout: 30_000 });
+    const invalidEditorState = await page.locator("#source-editor").evaluate(element => ({ value: element.value, selectionStart: element.selectionStart, selectionEnd: element.selectionEnd }));
+    const invalidMarker = invalidSource.lastIndexOf("base-range");
+    assert.equal(invalidEditorState.selectionStart, invalidMarker, "parse failure must move the caret to the reported source position");
+    assert.equal(invalidEditorState.selectionEnd, invalidMarker + 1, "the failing token should be selected when possible");
+    assert.match(await page.locator("#source-status").textContent() || "", /Sourceを反映できません/);
+    assert.match(await page.locator("#source-status").textContent() || "", /付近.*base-range/);
+    await clickHeaderButton(page, "#source-mode-switch");
+    await page.locator("#lyrics").waitFor({ state: "visible", timeout: 30_000 });
+    assert.match(await page.locator("#lyrics").innerText(), /Source Gate/);
+    assert.doesNotMatch(await page.locator("#lyrics").innerText(), /base-range=0-3/);
+    await clickHeaderButton(page, "#source-mode-switch");
+    assert.equal(await page.locator("#source-editor").getAttribute("aria-invalid"), null, "Viewer fallback must clear the transient Source Editor error");
+    await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source, validSource, { timeout: 30_000 });
+
+    stage = "native source undo";
+    await page.locator("#source-editor").focus();
+    await page.keyboard.press("Control+End");
+    await page.keyboard.insertText("\n[Source Native Undo Gate]");
+    await page.waitForFunction(() => /Source Native Undo Gate/.test(document.querySelector("#source-editor")?.value || ""), null, { timeout: 30_000 });
+    await page.keyboard.press("Control+z");
+    await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source, validSource, { timeout: 30_000 });
+    assert.equal(await page.locator("#source-editor").inputValue(), validSource, "Source Editor must retain the textarea native Undo path");
+
+    assert.deepEqual({ consoleErrors, pageErrors, failedRequests, badResponses }, { consoleErrors: [], pageErrors: [], failedRequests: [], badResponses: [] });
+    return { status: "PASS", targetUrl };
+  } catch (error) {
+    const state = await page.evaluate(() => ({ mode: document.body.dataset.mode || "", invalid: document.querySelector("#source-editor")?.getAttribute("aria-invalid"), status: document.querySelector("#source-status")?.textContent || "", dirty: document.body.dataset.dirty || "" })).catch(() => ({}));
+    const sourceTail = await page.locator("#source-editor").inputValue().catch(() => "");
+    const message = `${error instanceof Error ? error.message : String(error)} stage=${stage} sourceTail=${JSON.stringify(sourceTail.slice(-500))} state=${JSON.stringify(state)} console=${JSON.stringify(consoleErrors)} page=${JSON.stringify(pageErrors)}`.replace(/[\r\n]+/g, " ");
+    if (process.env.GITHUB_ACTIONS) console.log(`::error title=Writer Source Gate failure::${message}`);
+    throw new Error(message);
+  } finally {
+    await context.close();
+    await browser.close();
+  }
+}
+
 async function runWriterTabGate(targetUrl) {
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({ locale: "ja-JP", colorScheme: "light" });
@@ -725,7 +819,7 @@ async function runMalformedDraftGate(targetUrl) {
 const local = requestedUrl ? null : await startLocalServer();
 const targetUrl = requestedUrl || local.url;
 try {
-  console.log(JSON.stringify({ writer: await runGate(targetUrl), writerTab: await runWriterTabGate(targetUrl), storageFailure: await runStorageFailureGate(targetUrl), malformedDraft: await runMalformedDraftGate(targetUrl) }, null, 2));
+  console.log(JSON.stringify({ writer: await runGate(targetUrl), writerSource: await runWriterSourceGate(targetUrl), writerTab: await runWriterTabGate(targetUrl), storageFailure: await runStorageFailureGate(targetUrl), malformedDraft: await runMalformedDraftGate(targetUrl) }, null, 2));
 } finally {
   if (local) await new Promise(resolve => local.server.close(resolve));
 }

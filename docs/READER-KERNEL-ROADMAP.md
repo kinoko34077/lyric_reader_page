@@ -78,7 +78,7 @@ Palette、Style、Glyph、Combine、Font、Outlineを閲覧用途として維持
 
 Reader Kernelは`stable` / `reader-v0.1.0`の`925cfc7`で凍結し、`main`はWriter Betaを進める。Source Editorは`?mode=source`とヘッダーの`Source`切替からAuthor Sourceを直接編集し、parse成功時だけ現在のVariantへ反映する。無効なPresentationはCurrent Documentへcommitせず、行・列・失敗位置付近のcontextを表示する。初期reload完了前の置換操作はBrowser Gateで確定Sourceを待ってから実行し、不正文書・不正文DraftはCurrentを保持する。
 
-Writer Stateでは、全Variant・Registry・Metadata・Theme・Source routingを含むDraft、`K6`（Tab単位Draft分離と片側破棄保護）、`K1`（文書を開く操作自体のUndo）を実装済み。Presentation AuthoringはPalette、Style、Ruby Base/Reading、Glyph、Combine、Outline、Fontまで、WYSIWYGは本文置換・Caret入力・削除・Plain Text paste・Title編集・Variant isolationまでBrowser Gateで確認済み。`npm run test:writer`は通常Writer、独立Tab、Storage故障、不正文Draftの下位Gateを報告し、Reader Release Gateからは分離する。
+Writer Stateでは、全Variant・Registry・Metadata・Theme・Source routingを含むDraft、`K6`（Tab単位Draft分離と片側破棄保護）、`K1`（文書を開く操作自体のUndo）を実装済み。Presentation AuthoringはPalette、Style、Ruby Base/Reading、Glyph、Combine、Outline、Fontまで、WYSIWYGは本文置換・Caret入力・削除・Plain Text paste・Title編集・Variant isolationまでBrowser Gateで確認済み。`npm run test:writer`は通常Writer、Source Editor、独立Tab、Storage故障、不正文Draftの下位Gateを報告し、Reader Release Gateからは分離する。
 
 次のWriter作業は、既存Gateを壊さない範囲でSource / Document / Presentation / WYSIWYGのBrowserシナリオをさらに独立実行単位へ分割すること。Caret、IME、Touch selection、soft keyboard、Style rename UI、Gradient最終仕様、HOLD群はReaderの再設計理由にせず、Writer Betaの後段へ残す。
 
