@@ -4,6 +4,7 @@
 
 ### Reader Kernel優先への方針転換
 
+- Registry FontをDocument Themeの`font`（`registry:name` / `{type:"registry",name}`）から解決し、読み込めた場合はReader全体へ`ReaderFont-name`として適用するようにした。未読込・CORS・Asset失敗時は標準FontへFallbackし、元本文を継続表示する。Nishiki-tekiの選択肢を端末インストール有無で無効化せず、文書Fontの失敗も表示専用Warning/Statusで扱う。Writer Presentation GateでTheme→作品既定適用→Fallbackを確認する。
 - 組版設定へ行間・字間・段落間隔を追加し、ViewerではUser View Overrideとして保存する一方、作品既定Themeへの反映はWriterの明示ボタンへ分離した。CSS固定値をTheme由来の変数へ置き換え、Mobile既定の行間も維持する。
 - Viewerの文字サイズ設定へ14〜32pxのプリセットSelectを追加し、A±・Slider・Select・CSS変数を同じ更新経路へ接続した。Header/Footerを自動収納中でも本文のpointer/touch操作、設定開閉、スクロール、画面端操作でChromeを復帰できるようにし、Chromium/WebKit Mobile Viewer Gateで同期と復帰を確認する。
 - Source ModeをActive Variant本文だけの編集面からCanonical Container全体の編集面へ変更した。`LYRIC-READER/1`のJSON HeaderとAuthor Source Bodyをまとめて検証し、全Variant・Registry・Theme・Metadata・Extensionsをparse成功時だけDocumentへtransaction反映する。Source Modeの失敗時はCurrent Documentを保持し、Container本文内のParser位置をtextareaの行・列・Caretへ写像する。

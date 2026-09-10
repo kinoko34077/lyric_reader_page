@@ -41,6 +41,13 @@ function expectedAssetFailure(url) {
   return /invalid\.example|missing-glyph\.svg|missing-reader\.txt/.test(url);
 }
 
+function withThemeFont(containerText, font) {
+  const parsed = parseLyricContainer(containerText);
+  const header = structuredClone(parsed.header);
+  header.document.theme = { ...(header.document.theme || {}), font };
+  return `LYRIC-READER/1\n${JSON.stringify(header)}\n\n${parsed.source}`;
+}
+
 async function clickHeaderButton(page, selector) {
   await page.evaluate(target => { document.body.classList.remove("chrome-hidden"); document.querySelector(target)?.click(); }, selector);
 }
@@ -167,6 +174,19 @@ async function runGate(targetUrl) {
     const typographyContainer = parseLyricContainer(await page.locator("#source-editor").inputValue());
     assert.deepEqual(typographyContainer.header.document.theme.typography, { lineHeight: 1.4, letterSpacing: 0.06, paragraphSpacing: 0.8 }, "explicit Writer action must persist typography in the document Theme");
     await toWriter(page);
+
+    stage = "document Registry Font fallback";
+    await toSource(page);
+    const registryFontSource = withThemeFont(await page.locator("#source-editor").inputValue(), { type: "registry", name: "nishiki" });
+    await page.locator("#source-editor").fill(registryFontSource);
+    await page.waitForFunction(() => document.querySelector("#source-editor")?.value.includes('"type":"registry"'), null, { timeout: 30_000 });
+    await toWriter(page);
+    await ensureSettingsOpen(page);
+    await page.locator("#document-defaults-button").click({ force: true });
+    assert.equal(await page.locator('#font-family option[value="registry:nishiki"]').isDisabled(), false, "Registry Font must remain selectable when the asset is unavailable");
+    assert.equal(await page.locator("#font-family").inputValue(), "registry:nishiki", "Document Theme Registry Font must select the resolved option");
+    await page.waitForFunction(() => !getComputedStyle(document.documentElement).getPropertyValue("--reader-font").includes("ReaderFont-nishiki"), null, { timeout: 30_000 });
+    assert.match(await page.locator("#lyrics").textContent() || "", /Presentation Gate Seed/, "Registry Font failure must keep Reader text visible");
 
     stage = "Style authoring";
     await ensureSettingsOpen(page);
