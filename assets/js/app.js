@@ -280,6 +280,38 @@ function commitSemanticTitleEdit(range, value) {
   const document = replaceText({ type: "document", nodes: state.titleNodes }, range, value);
   return writeTitleDocument(document);
 }
+function preserveWysiwygTitleDeletion(event) {
+  if (state.mode !== "writer" || state.compositionActive || event.isComposing || !["deleteContentBackward", "deleteContentForward"].includes(event.inputType)) return false;
+  const root = $("song-title"); const selection = window.getSelection();
+  if (!selection || !selection.rangeCount || !root?.contains(selection.getRangeAt(0).commonAncestorContainer)) return false;
+  const selected = semanticSelectionRange(root);
+  if (!selected) return false;
+  if (!selection.isCollapsed) { event.preventDefault(); commitSemanticTitleEdit(selected, ""); return true; }
+  const length = (state.titleNodes || []).reduce((sum, node) => sum + nodeLength(node), 0); const offset = Number(selected.start);
+  const range = event.inputType === "deleteContentBackward"
+    ? (offset > 0 ? { start: offset - 1, end: offset } : null)
+    : (offset < length ? { start: offset, end: offset + 1 } : null);
+  if (!range) return false;
+  event.preventDefault(); commitSemanticTitleEdit(range, ""); return true;
+}
+function commitPortableTitlePaste(range, text) {
+  const value = String(text || "").replace(/\r\n?/g, "").replace(/\n/g, "");
+  if (!value && range.start === range.end) return false;
+  const replacement = portablePasteNodes(value);
+  const document = replaceDocumentRange({ type: "document", nodes: state.titleNodes }, range, replacement);
+  if (!writeTitleDocument(document)) return false;
+  restoreCaret(Number(range.start) + replacement.reduce((sum, node) => sum + nodeLength(node), 0), $("song-title"));
+  return true;
+}
+function preserveWysiwygTitlePaste(event) {
+  if (state.mode !== "writer" || state.compositionActive || event.defaultPrevented) return false;
+  const root = $("song-title"); const selection = window.getSelection();
+  if (!selection || !selection.rangeCount || !root?.contains(selection.getRangeAt(0).commonAncestorContainer)) return false;
+  const range = semanticSelectionRange(root); if (!range) return false;
+  const text = event.clipboardData?.getData("text/plain") || "";
+  if (!text && range.start === range.end) return false;
+  event.preventDefault(); return commitPortableTitlePaste(range, text);
+}
 function preserveWysiwygTitleTextInput(event) {
   if (state.mode !== "writer" || state.compositionActive || event.isComposing || !["insertText", "insertReplacementText"].includes(event.inputType) || typeof event.data !== "string" || !event.data) return false;
   const root = $("song-title"); const selection = window.getSelection();
@@ -743,7 +775,9 @@ function bind() {
   $("outline-button").addEventListener("click", () => { const name = $("outline-name").value.trim(); if (!isSafePresentationName(name)) return setStatus("Outline名は予約語以外の英数字・ハイフン・アンダースコアで指定してください"); applySelectedPresentation({ outline: { type: "outline", name } }); });
   $("presentation-font-button").addEventListener("click", () => { const name = $("presentation-font-name").value.trim(); if (!isSafePresentationName(name)) return setStatus("範囲Font名は予約語以外の英数字・ハイフン・アンダースコアで指定してください"); applySelectedPresentation({ font: { type: "font", name } }); });
   $("song-title").addEventListener("input", titleInput); $("lyrics").addEventListener("paste", event => { if (state.mode !== "writer") return; event.preventDefault(); const editRuby = selectionTouchesRuby(); const text = event.clipboardData?.getData("text/plain") || ""; const offsets = selectionOffsets(); const caret = caretOffset(); const semanticRange = offsets && !offsets.ruby ? offsets : caret == null || editRuby ? null : { start: caret, end: caret }; if (semanticRange && !selectionTouchesPresentation() && (text || semanticRange.start !== semanticRange.end)) { commitPortablePaste(semanticRange, text); return; } const selection = window.getSelection(); if (!selection?.rangeCount) return; insertPastedText(selection.getRangeAt(0), text); bodyInput({ editRuby }); }); $("lyrics").addEventListener("input", bodyInput); $("lyrics").setAttribute("spellcheck", "false"); $("lyrics").setAttribute("autocorrect", "off"); $("lyrics").setAttribute("autocapitalize", "off"); $("song-title").setAttribute("spellcheck", "false"); $("song-title").setAttribute("autocorrect", "off"); $("song-title").setAttribute("autocapitalize", "off"); $("lyrics").addEventListener("copy", event => { if (!window.getSelection()?.isCollapsed) { event.preventDefault(); const range = selectionOffsets(); event.clipboardData.setData("text/plain", range ? rawText(state.nodes, range) : selectedEditedSource()); } });
-  $("song-title").addEventListener("beforeinput", event => { if (event.defaultPrevented || handleTitleBodyBoundary(event)) return; preserveWysiwygTitleTextInput(event); }); $("lyrics").addEventListener("beforeinput", handleTitleBodyBoundary);
+  $("song-title").addEventListener("beforeinput", event => { if (event.defaultPrevented || handleTitleBodyBoundary(event)) return; if (preserveWysiwygTitleDeletion(event)) return; preserveWysiwygTitleTextInput(event); }); $("lyrics").addEventListener("beforeinput", handleTitleBodyBoundary);
+  $("song-title").addEventListener("paste", preserveWysiwygTitlePaste);
+  $("song-title").addEventListener("copy", event => { if (!window.getSelection()?.isCollapsed) { event.preventDefault(); const range = selectionOffsets(); event.clipboardData?.setData("text/plain", range ? rawText(state.titleNodes, range) : titleSourceText()); } });
   $("draft-restore").addEventListener("click", applyDraft); $("draft-discard").addEventListener("click", clearDraft);
   $("reader-shell").addEventListener("wheel", event => { if (event.target.closest(".settings") || state.writingMode !== "vertical") return; event.preventDefault(); $("reader-shell").scrollLeft -= event.deltaY || event.deltaX; }, { passive: false });
   let scrollTimer; $("reader-shell").addEventListener("scroll", () => { document.body.classList.add("is-scrolling"); revealChrome(); clearTimeout(scrollTimer); scrollTimer = setTimeout(() => { document.body.classList.remove("is-scrolling"); document.body.classList.add("chrome-hidden"); saveScroll(); }, 900); });

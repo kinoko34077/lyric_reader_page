@@ -610,6 +610,42 @@ async function runWriterWysiwygGate(targetUrl) {
     await page.waitForFunction(expected => document.querySelector("#source-editor")?.value.includes(expected), `${titleBefore}!`, { timeout: 30_000 });
     assert.equal(parseLyricContainer(await page.locator("#source-editor").inputValue()).source.split(/\r?\n/, 1)[0], `${titleBefore}!`, "Title Source transaction must commit the inserted text");
 
+    const semanticTitleSource = containerWithActiveSource(wysiwygSeedSource, "Semantic Title\n本文");
+    stage = "semantic title deletion";
+    await resetWriterSource(semanticTitleSource);
+    assert.equal(await placeCaretAtRootBoundary(page.locator("#song-title"), true), true, "Title deletion gate must place a caret at the title end");
+    const titleDeleteEvent = await page.locator("#song-title").evaluate(root => {
+      const event = new InputEvent("beforeinput", { bubbles: true, cancelable: true, inputType: "deleteContentBackward", data: null });
+      root.dispatchEvent(event);
+      return { defaultPrevented: event.defaultPrevented };
+    });
+    assert.equal(titleDeleteEvent.defaultPrevented, true, "Title deletion must be handled as a Source transaction");
+    await page.waitForFunction(() => document.querySelector("#source-editor")?.value.includes("Semantic Titl"), null, { timeout: 30_000 });
+    assert.equal(parseLyricContainer(await page.locator("#source-editor").inputValue()).source.split(/\r?\n/, 1)[0], "Semantic Titl", "Title deletion must update only the Source title line");
+
+    stage = "semantic title paste";
+    await resetWriterSource(semanticTitleSource);
+    await placeCaretAtRootBoundary(page.locator("#song-title"), true);
+    await page.locator("#song-title").evaluate(root => {
+      const event = new Event("paste", { bubbles: true, cancelable: true });
+      Object.defineProperty(event, "clipboardData", { value: { getData: type => type === "text/plain" ? "貼付" : "<strong>unsafe</strong>" } });
+      root.dispatchEvent(event);
+    });
+    await page.waitForFunction(() => document.querySelector("#song-title")?.innerText.includes("貼付"), null, { timeout: 30_000 });
+    assert.equal(parseLyricContainer(await page.locator("#source-editor").inputValue()).source.split(/\r?\n/, 1)[0], "Semantic Title貼付", "Title paste must commit plain text through the Source transaction");
+
+    stage = "semantic title copy";
+    await resetWriterSource(semanticTitleSource);
+    assert.equal(await selectTextInRoot(page.locator("#song-title"), "Semantic Title"), true, "Title copy gate must select the complete title");
+    const copiedTitle = await page.locator("#song-title").evaluate(element => {
+      let value = "";
+      const event = new Event("copy", { bubbles: true, cancelable: true });
+      Object.defineProperty(event, "clipboardData", { value: { setData: (type, next) => { if (type === "text/plain") value = next; } } });
+      element.dispatchEvent(event);
+      return value;
+    });
+    assert.equal(copiedTitle, "Semantic Title", "Title copy must expose the portable Source text");
+
     await resetWriterSource(originalSource);
     await clickHeaderButton(page, "#source-mode-switch");
     await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source, originalSource, { timeout: 30_000 });
