@@ -1,4 +1,4 @@
-import { loadInput, parseJsonText, parseLocalInput } from "./data-loader.js";
+import { loadInput, parseJsonText, parseLocalInput, validateSourceText } from "./data-loader.js";
 import { MAX_READER_DOCUMENT_JSON_BYTES, MAX_SOURCE_BYTES } from "./config.js";
 import { firstLineInfo, withFirstLineBody } from "./content-boundary.js";
 import { boundedHistory, clone, documentIdentity, documentPayload, draftDiffers, draftPayload, draftStorageKey, localSourceIdentity, migrateReaderDocument, normalizeDraft, readerDocumentExtensions } from "./document-state.js";
@@ -129,7 +129,35 @@ function saveDraft() { if (!state.data) return; try { storageSet(draftKey(), JSO
 function scheduleHistory() { clearTimeout(historyTimer); historyTimer = setTimeout(pushHistory, 500); }
 function clearDraft() { storageRemove(draftKey()); state.draft = null; $("draft-notice").hidden = true; }
 function showDraftIfNeeded() { $("draft-notice").hidden = true; state.draft = null; try { const draft = normalizeDraft(JSON.parse(storageGet(draftKey()) || "null")); const current = documentPayload(state.data, titleSourceText(), state.activeVariantId); if (draft && draftDiffers(draft, current)) { state.draft = draft; $("draft-notice").hidden = false; } } catch { storageRemove(draftKey()); } }
-function applyDraft() { if (!state.draft) return; const payload = state.draft.document; const nextManifest = validatedManifest(payload.manifest); const nextVariants = normalizeVariants({ variants: clone(payload.variants || normalizeVariants(payload)) }); validateLoadedVariants(nextManifest, nextVariants); const nextData = { ...state.data, variants: nextVariants, links: clone(payload.links || []), variantOverrides: clone(payload.variantOverrides || {}), metadata: clone(payload.metadata || state.data.metadata || {}), sourceMetadata: clone(payload.sourceMetadata || {}), titleSource: payload.titleSource || "first-line", manifest: nextManifest, documentExtensions: clone(payload.documentExtensions || {}), sourceUrl: payload.sourceUrl ?? state.data.sourceUrl, sourceName: payload.sourceName ?? state.data.sourceName, sourceIdentity: payload.sourceIdentity ?? state.data.sourceIdentity }; state.data = nextData; clearReaderError(); state.activeVariantId = normalizeActiveVariantId(nextVariants, payload.activeVariantId); applyManifest(state.data.manifest, true, true); applyAppearance(); render(); markDirty({ source: true, document: true }); saveDraft(); $("draft-notice").hidden = false; updateStatus("未保存の編集を復元しました"); pushHistory(); }
+function applyDraft() {
+  if (!state.draft) return;
+  try {
+    const payload = state.draft.document;
+    if (!payload || typeof payload !== "object") throw new Error("Draftの文書形式が不正です。");
+    const nextManifest = validatedManifest(payload.manifest);
+    const nextVariants = normalizeVariants({ variants: clone(payload.variants || normalizeVariants(payload)) });
+    if (!nextVariants.some(variant => variant.source.text)) throw new Error("Draftに本文がありません。");
+    for (const variant of nextVariants) validateSourceText(variant.source.text);
+    validateLoadedVariants(nextManifest, nextVariants);
+    const nextData = { ...state.data, variants: nextVariants, links: clone(payload.links || []), variantOverrides: clone(payload.variantOverrides || {}), metadata: clone(payload.metadata || state.data.metadata || {}), sourceMetadata: clone(payload.sourceMetadata || {}), titleSource: payload.titleSource || "first-line", manifest: nextManifest, documentExtensions: clone(payload.documentExtensions || {}), sourceUrl: payload.sourceUrl ?? state.data.sourceUrl, sourceName: payload.sourceName ?? state.data.sourceName, sourceIdentity: payload.sourceIdentity ?? state.data.sourceIdentity };
+    state.data = nextData;
+    clearReaderError();
+    state.activeVariantId = normalizeActiveVariantId(nextVariants, payload.activeVariantId);
+    applyManifest(state.data.manifest, true, true);
+    applyAppearance();
+    render();
+    markDirty({ source: true, document: true });
+    saveDraft();
+    $("draft-notice").hidden = false;
+    updateStatus("未保存の編集を復元しました");
+    pushHistory();
+  } catch (error) {
+    state.draft = null;
+    $("draft-notice").hidden = true;
+    const message = error instanceof Error ? error.message : "Draftの形式が不正です。";
+    setStatus(`Draftを復元できません: ${message} 現在の本文は保持されています`);
+  }
+}
 function titleInput() { const title = renderedBodySource($("song-title")).replace(/[\r\n]/g, "").trim() || "無題"; const record = currentRecord(); if (state.data.titleSource === "first-line") { const raw = record.source.text; const info = sourceInfo(record); const bom = raw.startsWith("\uFEFF") ? "\uFEFF" : ""; const nextText = `${bom}${title}${info.newline}${raw.slice(info.bodyStart)}`; try { currentAdapter().parse(nextText); } catch (error) { setStatus(error instanceof Error ? error.message : "タイトルを更新できませんでした"); render(captureScroll()); return; } state.data = replaceVariantSource(state.data, record.id, nextText); } else { state.data.sourceMetadata = { ...(state.data.sourceMetadata || {}), title }; } markDirty({ source: state.data.titleSource === "first-line", document: state.data.titleSource !== "first-line" }); saveDraft(); scheduleHistory(); render(captureScroll()); updateStatus(); }
 function renderedBodySource(container = $("lyrics")) { return serializeRenderedBodySource(container, currentAdapter()); }
 function bodyInput() { const caret = caretOffset(); const rawBody = renderedBodySource(); const record = currentRecord(); const nextText = state.data.titleSource === "first-line" ? withFirstLineBody(record.source.text, rawBody) : rawBody; let parsed; try { parsed = currentAdapter().parse(nextText); } catch (error) { setStatus(error instanceof Error ? error.message : "本文を更新できませんでした"); render(captureScroll()); return; } state.selectionBookmark = null; state.data = replaceVariantSource(state.data, record.id, nextText); state.nodes = parsed.nodes; markDirty({ source: true }); saveDraft(); scheduleHistory(); render(captureScroll()); restoreCaret(caret); updateStatus(); }

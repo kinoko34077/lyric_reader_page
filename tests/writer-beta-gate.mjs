@@ -101,6 +101,7 @@ async function runGate(targetUrl) {
 
     await page.reload({ waitUntil: "domcontentloaded", timeout: 30_000 });
     await page.locator("#source-editor").waitFor({ state: "visible", timeout: 30_000 });
+    await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source, originalSource, { timeout: 30_000 });
     await page.locator("#source-file").setInputFiles({ name: "broken.reader.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify({ version: 3, content: { variants: [] } })) });
     await page.locator("#reader-error").waitFor({ state: "visible", timeout: 30_000 });
     assert.match(await page.locator("#reader-error").textContent() || "", /本文がありません/);
@@ -646,10 +647,43 @@ async function runStorageFailureGate(targetUrl) {
   }
 }
 
+async function runMalformedDraftGate(targetUrl) {
+  const browser = await chromium.launch({ headless: true });
+  const context = await browser.newContext({ locale: "ja-JP", colorScheme: "light" });
+  const page = await context.newPage();
+  const consoleErrors = [];
+  const pageErrors = [];
+  page.on("console", message => { if (message.type() === "error" && !/Failed to load resource:/i.test(message.text())) consoleErrors.push(message.text()); });
+  page.on("pageerror", error => pageErrors.push(String(error)));
+  try {
+    await page.goto(targetUrl, { waitUntil: "domcontentloaded", timeout: 30_000 });
+    await page.locator("#source-editor").waitFor({ state: "visible", timeout: 30_000 });
+    await page.waitForFunction(() => /晴々撥条|如何《どう》/.test(document.querySelector("#source-editor")?.value || ""), null, { timeout: 30_000 });
+    const original = await page.locator("#source-editor").inputValue();
+    await page.locator("#source-editor").fill(`${original}\n[Malformed Draft Seed]`);
+    await page.waitForFunction(() => document.body.dataset.dirty === "true");
+    const draftKey = await page.evaluate(() => Object.entries(localStorage).find(([key, value]) => key.startsWith("lyric-reader:draft:") && value.includes("Malformed Draft Seed"))?.[0] || "");
+    assert.ok(draftKey, "malformed Draft gate must find the current Tab's Draft key");
+    await page.evaluate(key => localStorage.setItem(key, JSON.stringify({ version: 3, document: { variants: [{ id: "broken", label: "Broken", source: { text: "" } }], manifest: {} } })), draftKey);
+    await page.reload({ waitUntil: "domcontentloaded", timeout: 30_000 });
+    await page.locator("#source-editor").waitFor({ state: "visible", timeout: 30_000 });
+    await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source, original, { timeout: 30_000 });
+    await page.locator("#draft-notice").waitFor({ state: "visible", timeout: 30_000 });
+    await page.locator("#draft-restore").click({ force: true });
+    await page.waitForFunction(() => /Draft|本文/.test(document.querySelector("#source-status")?.textContent || ""), null, { timeout: 30_000 });
+    assert.equal(await page.locator("#source-editor").inputValue(), original, "an empty malformed Draft must not replace the current Author Source");
+    assert.deepEqual({ consoleErrors, pageErrors }, { consoleErrors: [], pageErrors: [] });
+    return { status: "PASS", targetUrl };
+  } finally {
+    await context.close();
+    await browser.close();
+  }
+}
+
 const local = requestedUrl ? null : await startLocalServer();
 const targetUrl = requestedUrl || local.url;
 try {
-  console.log(JSON.stringify({ writer: await runGate(targetUrl), storageFailure: await runStorageFailureGate(targetUrl) }, null, 2));
+  console.log(JSON.stringify({ writer: await runGate(targetUrl), storageFailure: await runStorageFailureGate(targetUrl), malformedDraft: await runMalformedDraftGate(targetUrl) }, null, 2));
 } finally {
   if (local) await new Promise(resolve => local.server.close(resolve));
 }

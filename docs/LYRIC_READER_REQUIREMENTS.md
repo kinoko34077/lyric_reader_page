@@ -89,7 +89,7 @@ v0.xの既定表面は次の形式とする。
 
 ## 10. State / UX / Security
 
-- localStorage失敗は編集失敗に波及させず、自動復元不可を通知して編集を継続する。Draftは永続保存を保証しない。
+- localStorage失敗は編集失敗に波及させず、自動復元不可を通知して編集を継続する。Draftは永続保存を保証しない。不正文Draftの復元候補もCurrent Documentへ反映せず、本文を保持したまま警告する。
 - Local Draft identityはファイル名だけでなくsize、mtime、content hashを含め、同名別文書を分離する。Writer BetaのDraftキーは`sessionStorage`でタブ固有IDを持ち、同一文書を別Tabで編集してもDraftを共有しない（`K6`）。Draft Payload / restoreは全Variant、Registry、Metadata、Theme、Source routing fieldsを保持する。
 - Historyは件数・概算メモリを制限する。文書を開く操作自体もUndo対象にする`K1`はWriter Betaで実装し、文書Open前のSnapshotとSource routing fieldsを履歴へ保持する。Reader v0.xのRelease Gate外である点は変わらない。
 - 外部HTML pasteはplain textへ限定し、IME中のUndo横取りを避け、caretを可能な範囲で維持する。Clipboard拒否時は選択コピーFallbackを示す。
