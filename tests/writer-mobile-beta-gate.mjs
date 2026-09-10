@@ -160,6 +160,44 @@ async function checkScenario(scenario, targetUrl) {
     await clickHeaderButton(page, "#source-mode-switch");
     await page.locator("#source-editor").waitFor({ state: "visible", timeout: 30_000 });
     const originalSource = await page.locator("#source-editor").inputValue();
+
+    stage = "IME composition on mobile Writer";
+    const dispatchCompositionWithoutFinalInput = async (locator, data) => locator.evaluate((root, value) => {
+      root.dispatchEvent(new CompositionEvent("compositionstart", { bubbles: true, data: "" }));
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+      const textNode = walker.nextNode();
+      if (!textNode) throw new Error("mobile composition fixture has no text node");
+      textNode.nodeValue += value;
+      root.dispatchEvent(new CompositionEvent("compositionupdate", { bubbles: true, data: value }));
+      root.dispatchEvent(new CompositionEvent("compositionend", { bubbles: true, data: value }));
+    }, data);
+    const readMobileSource = async () => {
+      await clickHeaderButton(page, "#source-mode-switch");
+      await page.locator("#source-editor").waitFor({ state: "visible", timeout: 30_000 });
+      return parseLyricContainer(await page.locator("#source-editor").inputValue()).source;
+    };
+    const compositionFixture = containerWithActiveSource(originalSource, "Mobile IME\n本文");
+    await page.locator("#source-editor").fill(compositionFixture);
+    await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source && document.querySelector("#source-editor")?.getAttribute("aria-invalid") !== "true", compositionFixture, { timeout: 30_000 });
+    await clickHeaderButton(page, "#source-mode-switch");
+    await clickHeaderButton(page, "#mode-switch");
+    await placeCaretAtRootBoundary(page.locator("#song-title"), true);
+    await dispatchCompositionWithoutFinalInput(page.locator("#song-title"), "かな");
+    await page.waitForFunction(() => /Mobile IMEかな/.test(document.querySelector("#source-editor")?.value || ""), null, { timeout: 30_000 });
+    assert.equal((await readMobileSource()).split(/\r?\n/, 1)[0], "Mobile IMEかな", `${scenario.id}: WebKit compositionend must commit title text without a trailing input event`);
+    await clickHeaderButton(page, "#source-mode-switch");
+    await clickHeaderButton(page, "#mode-switch");
+    await clickHeaderButton(page, "#source-mode-switch");
+    await page.locator("#source-editor").waitFor({ state: "visible", timeout: 30_000 });
+    await page.locator("#source-editor").fill(compositionFixture);
+    await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source && document.querySelector("#source-editor")?.getAttribute("aria-invalid") !== "true", compositionFixture, { timeout: 30_000 });
+    await clickHeaderButton(page, "#source-mode-switch");
+    await clickHeaderButton(page, "#mode-switch");
+    await dispatchCompositionWithoutFinalInput(page.locator("#lyrics"), "かな");
+    await page.waitForFunction(() => /本文かな/.test(document.querySelector("#source-editor")?.value || ""), null, { timeout: 30_000 });
+    assert.equal(await readMobileSource(), "Mobile IME\n本文かな", `${scenario.id}: WebKit compositionend must commit body text without a trailing input event`);
+
+    stage = "Title/body boundary on mobile Writer";
     const boundaryFixture = containerWithActiveSource(originalSource, "Mobile Boundary\n本文");
     await page.locator("#source-editor").fill(boundaryFixture);
     await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source && document.querySelector("#source-editor")?.getAttribute("aria-invalid") !== "true", boundaryFixture, { timeout: 30_000 });
