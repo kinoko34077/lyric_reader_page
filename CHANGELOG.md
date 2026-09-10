@@ -4,6 +4,7 @@
 
 ### Reader Kernel優先への方針転換
 
+- 縦書き表示時の`〳〵` / `〴〵`を表示専用の反復記号ペアへまとめ、Source/Portable Textは変更せずに字間とinline advanceを補正した。Chromium Pixel 5 / WebKit iPhone相当の矩形測定Gateで前後文字との重なりがないことを確認する。
 - Registry FontをDocument Themeの`font`（`registry:name` / `{type:"registry",name}`）から解決し、読み込めた場合はReader全体へ`ReaderFont-name`として適用するようにした。未読込・CORS・Asset失敗時は標準FontへFallbackし、元本文を継続表示する。Nishiki-tekiの選択肢を端末インストール有無で無効化せず、文書Fontの失敗も表示専用Warning/Statusで扱う。Writer Presentation GateでTheme→作品既定適用→Fallbackを確認する。
 - 組版設定へ行間・字間・段落間隔を追加し、ViewerではUser View Overrideとして保存する一方、作品既定Themeへの反映はWriterの明示ボタンへ分離した。CSS固定値をTheme由来の変数へ置き換え、Mobile既定の行間も維持する。
 - Viewerの文字サイズ設定へ14〜32pxのプリセットSelectを追加し、A±・Slider・Select・CSS変数を同じ更新経路へ接続した。Header/Footerを自動収納中でも本文のpointer/touch操作、設定開閉、スクロール、画面端操作でChromeを復帰できるようにし、Chromium/WebKit Mobile Viewer Gateで同期と復帰を確認する。

@@ -30,7 +30,7 @@ class FakeNode {
   setAttribute(name, value) { this.attributes[name] = String(value); }
   dispatchEvent(event) { for (const listener of this.listeners[event.type] || []) listener.call(this, event); }
   closest() { return null; }
-  querySelectorAll(selector) { const found = []; const visit = node => { if (selector === "[data-source-start]" && node.dataset?.sourceStart) found.push(node); if (selector.includes(".ruby-presentation-part") && node.classList?.contains("ruby-presentation-part")) found.push(node); node.childNodes?.forEach(visit); }; this.childNodes.forEach(visit); return found; }
+  querySelectorAll(selector) { const found = []; const visit = node => { if (selector === "[data-source-start]" && node.dataset?.sourceStart) found.push(node); if (selector.includes(".ruby-presentation-part") && node.classList?.contains("ruby-presentation-part")) found.push(node); if (selector === ".repeat-mark-pair" && node.classList?.contains("repeat-mark-pair")) found.push(node); node.childNodes?.forEach(visit); }; this.childNodes.forEach(visit); return found; }
   querySelector(selector) { if (selector === "ruby" || selector === "rt") { let found = null; const visit = node => { if (found) return; if (node.tagName?.toLowerCase() === selector) { found = node; return; } node.childNodes?.forEach(visit); }; this.childNodes.forEach(visit); return found; } return null; }
 }
 
@@ -61,6 +61,20 @@ test("rendered DOM round-trips through Author Source and Reader JSON", () => {
     const loaded = parseJsonText(json, "reader-document");
     assert.equal(loaded.content.variants[0].source.text, source);
     assert.equal(loaded.registry.styles.shout.weight, "700");
+  } finally { restore(); }
+});
+
+test("vertical repeat marks use a display-only visual run without changing Author Source", () => {
+  const restore = installDocument();
+  try {
+    const source = "前〳〵後\n前〴〵後";
+    const vertical = new FakeNode("DIV");
+    renderLyrics(vertical, source, { mode: "writer", writingMode: "vertical", preserveSource: true });
+    assert.equal(vertical.querySelectorAll(".repeat-mark-pair").length, 2);
+    assert.equal(renderedBodySource(vertical), source);
+    const horizontal = new FakeNode("DIV");
+    renderLyrics(horizontal, source, { mode: "writer", writingMode: "horizontal", preserveSource: true });
+    assert.equal(horizontal.querySelectorAll(".repeat-mark-pair").length, 0);
   } finally { restore(); }
 });
 

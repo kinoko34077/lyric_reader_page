@@ -133,11 +133,38 @@ async function checkScenario(scenario, targetUrl) {
 
     await page.locator("#vertical-toggle").check();
     await page.waitForFunction(() => getComputedStyle(document.querySelector("#song-title")).writingMode === "vertical-rl" && getComputedStyle(document.querySelector("#lyrics")).writingMode === "vertical-rl");
-    const vertical = await page.evaluate(() => ({ rootOverflow: document.documentElement.scrollWidth > document.documentElement.clientWidth + 2, titleMode: getComputedStyle(document.querySelector("#song-title")).writingMode, bodyMode: getComputedStyle(document.querySelector("#lyrics")).writingMode, bodyHeight: document.querySelector("#lyrics").getBoundingClientRect().height }));
+    const vertical = await page.evaluate(() => {
+      const root = document.querySelector("#lyrics");
+      const overlapArea = (left, right) => Math.max(0, Math.min(left.right, right.right) - Math.max(left.left, right.left)) * Math.max(0, Math.min(left.bottom, right.bottom) - Math.max(left.top, right.top));
+      const textUnits = node => {
+        const units = [...(node.nodeValue || "")]; const offsets = [0];
+        for (const unit of units) offsets.push(offsets.at(-1) + unit.length);
+        return { units, offsets };
+      };
+      const rangeRect = (node, start, end) => { const range = document.createRange(); range.setStart(node, start); range.setEnd(node, end); return range.getBoundingClientRect(); };
+      const repeatMarks = [];
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+      while (walker.nextNode()) {
+        const node = walker.currentNode; const { units, offsets } = textUnits(node);
+        for (const mark of ["〳〵", "〴〵"]) {
+          for (let index = 0; index <= units.length - mark.length; index++) {
+            if (units.slice(index, index + mark.length).join("") !== mark) continue;
+            const previous = index > 0 ? rangeRect(node, offsets[index - 1], offsets[index]) : null;
+            const first = rangeRect(node, offsets[index], offsets[index + 1]);
+            const second = rangeRect(node, offsets[index + 1], offsets[index + 2]);
+            const next = index + mark.length < units.length ? rangeRect(node, offsets[index + mark.length], offsets[index + mark.length + 1]) : null;
+            repeatMarks.push({ mark, overlapBefore: previous ? Math.max(overlapArea(previous, first), overlapArea(previous, second)) : 0, overlapAfter: next ? Math.max(overlapArea(next, first), overlapArea(next, second)) : 0 });
+          }
+        }
+      }
+      return { rootOverflow: document.documentElement.scrollWidth > document.documentElement.clientWidth + 2, titleMode: getComputedStyle(document.querySelector("#song-title")).writingMode, bodyMode: getComputedStyle(root).writingMode, bodyHeight: root.getBoundingClientRect().height, repeatMarks };
+    });
     assert.equal(vertical.rootOverflow, false, `${scenario.id}: vertical mode must not create document overflow`);
     assert.equal(vertical.titleMode, "vertical-rl", `${scenario.id}: title writing mode must follow body`);
     assert.equal(vertical.bodyMode, "vertical-rl", `${scenario.id}: body writing mode must be vertical`);
     assert.ok(vertical.bodyHeight > 0, `${scenario.id}: vertical body must remain visible`);
+    assert.ok(vertical.repeatMarks.length > 0, `${scenario.id}: vertical fixture must exercise repeat marks`);
+    assert.equal(vertical.repeatMarks.some(sample => sample.overlapBefore > 0.25 || sample.overlapAfter > 0.25), false, `${scenario.id}: vertical repeat marks must not overlap adjacent glyphs: ${JSON.stringify(vertical.repeatMarks.filter(sample => sample.overlapBefore > 0.25 || sample.overlapAfter > 0.25).slice(0, 4))}`);
     await page.screenshot({ path: `${screenshotBase}-vertical.png`, fullPage: false });
 
     await page.locator("#copy-all-button").click();
