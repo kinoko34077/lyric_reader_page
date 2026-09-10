@@ -10,6 +10,7 @@
 - Viewerの本文色変更をSession/User View Overrideへ分離し、Document registry/theme・dirty・Draftを変更しないようにした。非表示要素へ`[hidden]`契約を適用し、stale Draft通知がCSSの`display:flex`で誤表示される経路も修正した。
 - Canonical Source編集後も元文書のSource identity / nameを保持し、再読込時にDraft keyが変わって復元候補を見失う問題を修正した。
 - WriterのTitle末尾Enter／本文先頭BackspaceをDocument境界操作として扱い、別contenteditable間でもSourceを再構築せずTitle・本文の編集面を往復できるようにした。Browser境界Gateを追加した。
+- WriterのIME compositionを対象Editor単位で追跡し、確定後の`input`が省略・遅延されるBrowserでも`compositionend`後に最終DOMを一度だけSource transactionへ反映する。Title／本文双方のcomposition Gateを追加した。
 - WriterのRuby編集経路をSource-SSOTへ寄せ、表示DOMがSafari相当の平坦化を受けても編集対象外のRubyを`data-source-raw`から復元するようにした。縮約Caret入力はsemantic IR rangeへ直接挿入し、Ruby境界での隣接入力による平文化を防止する。
 - Portable RubyのCopy→PasteをWriter Browser Gateへ追加し、`｜親文字《ルビ》`をParser / Renderer経由で貼り付けてAuthor SourceへRubyとして再構成する。Ruby直前・直後入力、Reading編集、flattened DOM保護をUnit / DOM / Browserで回帰検証する。
 - 完成条件を汎用Writer全体から、Input → Syntax Adapter / Parser → IR → Registry Resolver → Renderer → ProjectionのReader Kernelへ切り替え。

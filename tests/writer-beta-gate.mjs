@@ -753,6 +753,71 @@ async function runWriterBoundaryGate(targetUrl) {
   }
 }
 
+async function runWriterCompositionGate(targetUrl) {
+  const browser = await chromium.launch({ headless: true });
+  const context = await browser.newContext({ locale: "ja-JP", colorScheme: "light" });
+  const page = await context.newPage();
+  const consoleErrors = [];
+  const pageErrors = [];
+  page.on("console", message => { if (message.type() === "error" && !expectedAssetFailure(message.location().url) && !/Failed to load resource:/i.test(message.text())) consoleErrors.push(`${message.text()} (${message.location().url})`); });
+  page.on("pageerror", error => pageErrors.push(String(error)));
+  const fixture = "IME Title\n本文";
+  let stage = "initial";
+  try {
+    await page.goto(targetUrl, { waitUntil: "domcontentloaded", timeout: 30_000 });
+    await page.locator("#source-editor").waitFor({ state: "visible", timeout: 30_000 });
+    await page.waitForFunction(() => /^LYRIC-READER\/1\n/.test(document.querySelector("#source-editor")?.value || ""), null, { timeout: 30_000 });
+    const originalSource = await page.locator("#source-editor").inputValue();
+    const fixtureSource = containerWithActiveSource(originalSource, fixture);
+    const resetWriterSource = async () => {
+      if (await page.evaluate(() => document.body.dataset.mode) !== "source") await clickHeaderButton(page, "#source-mode-switch");
+      await page.locator("#source-editor").fill(fixtureSource);
+      await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source && document.querySelector("#source-editor")?.getAttribute("aria-invalid") !== "true", fixtureSource, { timeout: 30_000 });
+      await clickHeaderButton(page, "#source-mode-switch");
+      await clickHeaderButton(page, "#mode-switch");
+      await page.locator("#lyrics").waitFor({ state: "visible", timeout: 30_000 });
+    };
+    const readSource = async () => {
+      await clickHeaderButton(page, "#source-mode-switch");
+      await page.locator("#source-editor").waitFor({ state: "visible", timeout: 30_000 });
+      return parseLyricContainer(await page.locator("#source-editor").inputValue()).source;
+    };
+    const dispatchCompositionWithoutFinalInput = async (locator, data) => locator.evaluate((root, value) => {
+      root.dispatchEvent(new CompositionEvent("compositionstart", { bubbles: true, data: "" }));
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+      const textNode = walker.nextNode();
+      if (!textNode) throw new Error("composition fixture has no text node");
+      textNode.nodeValue += value;
+      root.dispatchEvent(new CompositionEvent("compositionupdate", { bubbles: true, data: value }));
+      root.dispatchEvent(new CompositionEvent("compositionend", { bubbles: true, data: value }));
+    }, data);
+
+    stage = "title composition commits without trailing input";
+    await resetWriterSource();
+    await placeCaretAtRootBoundary(page.locator("#song-title"), true);
+    await dispatchCompositionWithoutFinalInput(page.locator("#song-title"), "かな");
+    await page.waitForFunction(() => /IME Titleかな/.test(document.querySelector("#source-editor")?.value || ""), null, { timeout: 30_000 });
+    assert.equal((await readSource()).split(/\r?\n/, 1)[0], "IME Titleかな", "Title compositionend must commit the final text even without a trailing input event");
+
+    stage = "body composition commits without trailing input";
+    await resetWriterSource();
+    await dispatchCompositionWithoutFinalInput(page.locator("#lyrics"), "かな");
+    await page.waitForFunction(() => /本文かな/.test(document.querySelector("#source-editor")?.value || ""), null, { timeout: 30_000 });
+    assert.equal(await readSource(), fixture.replace("本文", "本文かな"), "Body compositionend must commit the final text even without a trailing input event");
+
+    assert.deepEqual({ consoleErrors, pageErrors }, { consoleErrors: [], pageErrors: [] });
+    return { status: "PASS", targetUrl };
+  } catch (error) {
+    const state = await page.evaluate(() => ({ mode: document.body.dataset.mode || "", active: document.activeElement?.id || document.activeElement?.className || "", source: document.querySelector("#source-editor")?.value || "", title: document.querySelector("#song-title")?.innerText || "", lyrics: document.querySelector("#lyrics")?.innerText || "" })).catch(() => ({}));
+    const message = `${error instanceof Error ? error.message : String(error)} stage=${stage} state=${JSON.stringify(state)} console=${JSON.stringify(consoleErrors)} page=${JSON.stringify(pageErrors)}`.replace(/[\r\n]+/g, " ");
+    if (process.env.GITHUB_ACTIONS) console.log(`::error title=Writer Composition Gate failure::${message}`);
+    throw new Error(message);
+  } finally {
+    await context.close();
+    await browser.close();
+  }
+}
+
 async function runWriterTabGate(targetUrl) {
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({ locale: "ja-JP", colorScheme: "light" });
@@ -890,6 +955,7 @@ try {
     ["writerWysiwyg", runWriterWysiwygGate],
     ["writerRuby", runWriterRubyGate],
     ["writerBoundary", runWriterBoundaryGate],
+    ["writerComposition", runWriterCompositionGate],
     ["writerTab", runWriterTabGate],
     ["storageFailure", runStorageFailureGate],
     ["malformedDraft", runMalformedDraftGate]

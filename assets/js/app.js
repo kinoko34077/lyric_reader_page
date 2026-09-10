@@ -18,7 +18,7 @@ const initialMode = requestedMode === "writer" || requestedMode === "source" ? r
 const state = {
   activeVariantId: "variant-A", kanji: "original", ruby: true, writingMode: "horizontal", size: 20,
   font: "serif", fontUrl: "", background: "#f5f0e6", color: "#272522", paletteBank: "default",
-  remoteFontsAllowed: true, loadedRegistryFonts: new Set(), data: null, nodes: [], selectionBookmark: null, compositionActive: false, compositionCommitPending: false, rubyEditActive: false, sourceEditorRaw: null, sourceEditorDocumentHash: null, sourceEditorRawByVariant: new Map(), mode: initialMode,
+  remoteFontsAllowed: true, loadedRegistryFonts: new Set(), data: null, nodes: [], selectionBookmark: null, compositionActive: false, compositionCommitPending: false, compositionTarget: null, rubyEditActive: false, sourceEditorRaw: null, sourceEditorDocumentHash: null, sourceEditorRawByVariant: new Map(), mode: initialMode,
   preferencesLoaded: false, sourceDirty: false, documentDirty: false, dirty: false, draft: null, history: [], historyIndex: -1, historyDocumentId: null, savedCheckpoint: null, storageAvailable: true
 };
 const PREFS_KEY = "lyric-reader:preferences:v1";
@@ -482,11 +482,28 @@ function rememberSelection() {
 function selectedEditedSource() { const selection = window.getSelection(); if (!selection || selection.isCollapsed || !selection.rangeCount) return ""; const source = renderedBodySource(selection.getRangeAt(0).cloneContents()); try { const adapter = currentAdapter(); return toPortableText(parseSource(source, adapter), adapter); } catch { return source; } }
 function bindCompositionGuards() {
   const editables = [$("lyrics"), $("song-title")];
-  for (const editable of editables) editable.addEventListener("compositionstart", () => { state.compositionActive = true; });
-  document.addEventListener("compositionend", event => { if (editables.includes(event.target)) state.compositionActive = false; }, true);
+  const editableFor = node => editables.find(editable => editable === node || editable?.contains(node)) || null;
+  for (const editable of editables) editable.addEventListener("compositionstart", () => { state.compositionActive = true; state.compositionCommitPending = false; state.compositionTarget = editable; });
+  document.addEventListener("compositionend", event => {
+    const editable = editableFor(event.target);
+    if (!editable) return;
+    state.compositionActive = false;
+    state.compositionTarget = editable;
+    state.compositionCommitPending = true;
+    requestAnimationFrame(() => {
+      if (!state.compositionCommitPending || state.compositionTarget !== editable) return;
+      state.compositionCommitPending = false;
+      if (state.mode !== "writer") return;
+      if (editable === $("song-title")) titleInput();
+      else bodyInput({ editRuby: state.rubyEditActive });
+      state.rubyEditActive = false;
+    });
+  }, true);
   document.addEventListener("input", event => {
-    if (!editables.includes(event.target)) return;
-    if (state.compositionActive || event.isComposing) event.stopImmediatePropagation();
+    const editable = editableFor(event.target);
+    if (!editable) return;
+    if (state.compositionActive || event.isComposing) { event.stopImmediatePropagation(); return; }
+    if (state.compositionCommitPending && state.compositionTarget === editable) state.compositionCommitPending = false;
   }, true);
 }
 function normalizeActivePaletteRegistry() {

@@ -64,6 +64,7 @@ test("Writer Beta main gate is a minimal core smoke with independent detail gate
   assert.match(gate, /async function runWriterRubyGate\(targetUrl\)/);
   assert.match(gate, /\["writerRuby", runWriterRubyGate\]/);
   assert.match(gate, /\["writerBoundary", runWriterBoundaryGate\]/);
+  assert.match(gate, /\["writerComposition", runWriterCompositionGate\]/);
   assert.match(gate, /\["writerTab", runWriterTabGate\]/);
   assert.doesNotMatch(gate, /async function runGate\(targetUrl\)/);
 });
