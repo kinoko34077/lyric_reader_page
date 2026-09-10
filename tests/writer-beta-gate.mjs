@@ -110,6 +110,20 @@ async function placeCaretInRoot(locator, text, offset) {
   }, { text, offset });
 }
 
+async function placeCaretAtRootBoundary(locator, end = false) {
+  return locator.evaluate((root, atEnd) => {
+    root.focus?.();
+    const range = document.createRange();
+    range.selectNodeContents(root);
+    range.collapse(Boolean(atEnd));
+    const selection = window.getSelection();
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+    document.dispatchEvent(new Event("selectionchange"));
+    return true;
+  }, end);
+}
+
 function containerWithActiveSource(containerText, source) {
   const parsed = parseLyricContainer(containerText);
   const document = containerToReaderDocument(parsed);
@@ -682,6 +696,63 @@ async function runWriterRubyGate(targetUrl) {
   }
 }
 
+async function runWriterBoundaryGate(targetUrl) {
+  const browser = await chromium.launch({ headless: true });
+  const context = await browser.newContext({ locale: "ja-JP", colorScheme: "light" });
+  const page = await context.newPage();
+  const consoleErrors = [];
+  const pageErrors = [];
+  page.on("console", message => { if (message.type() === "error" && !expectedAssetFailure(message.location().url) && !/Failed to load resource:/i.test(message.text())) consoleErrors.push(`${message.text()} (${message.location().url})`); });
+  page.on("pageerror", error => pageErrors.push(String(error)));
+  const fixture = "Boundary Title\n本文一行目\n本文二行目";
+  let stage = "initial";
+  try {
+    await page.goto(targetUrl, { waitUntil: "domcontentloaded", timeout: 30_000 });
+    await page.locator("#source-editor").waitFor({ state: "visible", timeout: 30_000 });
+    await page.waitForFunction(() => /^LYRIC-READER\/1\n/.test(document.querySelector("#source-editor")?.value || ""), null, { timeout: 30_000 });
+    const originalSource = await page.locator("#source-editor").inputValue();
+    const fixtureSource = containerWithActiveSource(originalSource, fixture);
+    const resetWriterSource = async () => {
+      if (await page.evaluate(() => document.body.dataset.mode) !== "source") await clickHeaderButton(page, "#source-mode-switch");
+      await page.locator("#source-editor").fill(fixtureSource);
+      await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source && document.querySelector("#source-editor")?.getAttribute("aria-invalid") !== "true", fixtureSource, { timeout: 30_000 });
+      await clickHeaderButton(page, "#source-mode-switch");
+      await clickHeaderButton(page, "#mode-switch");
+      await page.locator("#lyrics").waitFor({ state: "visible", timeout: 30_000 });
+    };
+    const readSource = async () => {
+      await clickHeaderButton(page, "#source-mode-switch");
+      await page.locator("#source-editor").waitFor({ state: "visible", timeout: 30_000 });
+      return parseLyricContainer(await page.locator("#source-editor").inputValue()).source;
+    };
+
+    stage = "title end Enter moves to body";
+    await resetWriterSource();
+    await placeCaretAtRootBoundary(page.locator("#song-title"), true);
+    await page.keyboard.press("Enter");
+    await page.waitForFunction(() => document.activeElement?.id === "lyrics", null, { timeout: 30_000 });
+    assert.equal(await readSource(), fixture, "Title-boundary Enter must preserve the canonical Source while moving focus to Body");
+
+    stage = "body start Backspace moves to title";
+    await resetWriterSource();
+    await placeCaretAtRootBoundary(page.locator("#lyrics"), false);
+    await page.keyboard.press("Backspace");
+    await page.waitForFunction(() => document.activeElement?.id === "song-title", null, { timeout: 30_000 });
+    assert.equal(await readSource(), fixture, "Body-boundary Backspace must preserve the canonical Source while moving focus to Title");
+
+    assert.deepEqual({ consoleErrors, pageErrors }, { consoleErrors: [], pageErrors: [] });
+    return { status: "PASS", targetUrl };
+  } catch (error) {
+    const state = await page.evaluate(() => ({ mode: document.body.dataset.mode || "", active: document.activeElement?.id || document.activeElement?.className || "", source: document.querySelector("#source-editor")?.value || "", title: document.querySelector("#song-title")?.innerText || "", lyrics: document.querySelector("#lyrics")?.innerText || "" })).catch(() => ({}));
+    const message = `${error instanceof Error ? error.message : String(error)} stage=${stage} state=${JSON.stringify(state)} console=${JSON.stringify(consoleErrors)} page=${JSON.stringify(pageErrors)}`.replace(/[\r\n]+/g, " ");
+    if (process.env.GITHUB_ACTIONS) console.log(`::error title=Writer Boundary Gate failure::${message}`);
+    throw new Error(message);
+  } finally {
+    await context.close();
+    await browser.close();
+  }
+}
+
 async function runWriterTabGate(targetUrl) {
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({ locale: "ja-JP", colorScheme: "light" });
@@ -818,6 +889,7 @@ try {
     ["writerDocument", runWriterDocumentGate],
     ["writerWysiwyg", runWriterWysiwygGate],
     ["writerRuby", runWriterRubyGate],
+    ["writerBoundary", runWriterBoundaryGate],
     ["writerTab", runWriterTabGate],
     ["storageFailure", runStorageFailureGate],
     ["malformedDraft", runMalformedDraftGate]

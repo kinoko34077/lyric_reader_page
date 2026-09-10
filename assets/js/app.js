@@ -226,6 +226,33 @@ function applyDraft() {
   }
 }
 function titleInput() { const title = renderedBodySource($("song-title")).replace(/[\r\n]/g, "").trim() || "無題"; const record = currentRecord(); if (state.data.titleSource === "first-line") { const raw = record.source.text; const info = sourceInfo(record); const bom = raw.startsWith("\uFEFF") ? "\uFEFF" : ""; const nextText = `${bom}${title}${info.newline}${raw.slice(info.bodyStart)}`; try { currentAdapter().parse(nextText); } catch (error) { setStatus(error instanceof Error ? error.message : "タイトルを更新できませんでした"); render(captureScroll()); return; } state.data = replaceVariantSource(state.data, record.id, nextText); } else { state.data.sourceMetadata = { ...(state.data.sourceMetadata || {}), title }; } markDirty({ source: state.data.titleSource === "first-line", document: state.data.titleSource !== "first-line" }); saveDraft(); scheduleHistory(); render(captureScroll()); updateStatus(); }
+function selectionAtEditorBoundary(root, end) {
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount !== 1 || !selection.isCollapsed || !root?.contains(selection.getRangeAt(0).startContainer)) return false;
+  const edge = document.createRange(); edge.selectNodeContents(root); edge.collapse(Boolean(end));
+  const range = selection.getRangeAt(0);
+  return range.compareBoundaryPoints(Range.START_TO_START, edge) === 0 && range.compareBoundaryPoints(Range.END_TO_END, edge) === 0;
+}
+function focusEditorBoundary(root, end) {
+  if (!root) return;
+  root.focus({ preventScroll: true });
+  const range = document.createRange(); range.selectNodeContents(root); range.collapse(Boolean(end));
+  const selection = window.getSelection(); selection?.removeAllRanges(); selection?.addRange(range);
+  document.dispatchEvent(new Event("selectionchange"));
+}
+function handleTitleBodyBoundary(event) {
+  if (state.mode !== "writer" || state.compositionActive || event.isComposing) return false;
+  const title = $("song-title"); const lyrics = $("lyrics");
+  const target = event.target?.nodeType === Node.ELEMENT_NODE ? event.target : event.target?.parentElement;
+  const inTitle = target === title || title?.contains(target);
+  const inLyrics = target === lyrics || lyrics?.contains(target);
+  const isKeydown = event.type === "keydown";
+  const titleEnter = inTitle && (isKeydown ? event.key === "Enter" && !event.shiftKey && !event.altKey && !event.ctrlKey && !event.metaKey : ["insertParagraph", "insertLineBreak"].includes(event.inputType));
+  const bodyBackspace = inLyrics && (isKeydown ? event.key === "Backspace" && !event.altKey && !event.ctrlKey && !event.metaKey : event.inputType === "deleteContentBackward");
+  if (titleEnter && selectionAtEditorBoundary(title, true)) { event.preventDefault(); event.stopPropagation(); focusEditorBoundary(lyrics, false); return true; }
+  if (bodyBackspace && selectionAtEditorBoundary(lyrics, false)) { event.preventDefault(); event.stopPropagation(); focusEditorBoundary(title, true); return true; }
+  return false;
+}
 function selectionTouchesRuby() {
   const selection = window.getSelection(); const lyrics = $("lyrics");
   if (!selection || !selection.rangeCount || !lyrics?.contains(selection.getRangeAt(0).commonAncestorContainer)) return false;
@@ -493,7 +520,7 @@ function savePaletteSlot() {
 function bind() {
   window.addEventListener("beforeunload", event => { if (isDirty()) { event.preventDefault(); event.returnValue = ""; } });
   $("settings-toggle").addEventListener("click", () => { const open = $("settings-panel").hidden; $("settings-panel").hidden = !open; $("settings-toggle").setAttribute("aria-expanded", String(open)); document.body.classList.remove("chrome-hidden"); }); $("document-defaults-button").addEventListener("click", applyDocumentDefaults);
-  document.addEventListener("keydown", event => { if (event.key === "Escape" && !$("settings-panel").hidden) { $("settings-panel").hidden = true; $("settings-toggle").setAttribute("aria-expanded", "false"); $("settings-toggle").focus(); } if (state.mode === "writer" && (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z") { if (event.isComposing || event.target.closest?.("input,textarea,select,#song-title") || !event.target.closest?.("#lyrics")) return; event.preventDefault(); const redo = event.shiftKey; const next = state.historyIndex + (redo ? 1 : -1); if (next >= 0 && next < state.history.length) { state.historyIndex = next; restoreSnapshot(state.history[next]); updateHistoryButtons(); } } });
+  document.addEventListener("keydown", event => { if (handleTitleBodyBoundary(event)) return; if (event.key === "Escape" && !$("settings-panel").hidden) { $("settings-panel").hidden = true; $("settings-toggle").setAttribute("aria-expanded", "false"); $("settings-toggle").focus(); } if (state.mode === "writer" && (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z") { if (event.isComposing || event.target.closest?.("input,textarea,select,#song-title") || !event.target.closest?.("#lyrics")) return; event.preventDefault(); const redo = event.shiftKey; const next = state.historyIndex + (redo ? 1 : -1); if (next >= 0 && next < state.history.length) { state.historyIndex = next; restoreSnapshot(state.history[next]); updateHistoryButtons(); } } });
   document.addEventListener("pointerdown", event => { if (!$("settings").contains(event.target) && !$("settings-panel").hidden) { $("settings-panel").hidden = true; $("settings-toggle").setAttribute("aria-expanded", "false"); } });
   $("mode-switch").addEventListener("click", () => setMode(state.mode === "writer" ? "viewer" : "writer")); $("source-mode-switch").addEventListener("click", () => setMode(state.mode === "source" ? "viewer" : "source")); $("source-editor").addEventListener("input", sourceInput);
   $("open-file-button").addEventListener("click", () => $("source-file").click()); $("source-file").addEventListener("change", () => readLocalFile($("source-file").files?.[0])); $("reload-button").addEventListener("click", reloadSource); $("reload-source-button").addEventListener("click", reloadSource); $("url-open-button").addEventListener("click", openUrlSource);
@@ -513,6 +540,7 @@ function bind() {
   $("outline-button").addEventListener("click", () => { const name = $("outline-name").value.trim(); if (!isSafePresentationName(name)) return setStatus("Outline名は予約語以外の英数字・ハイフン・アンダースコアで指定してください"); applySelectedPresentation({ outline: { type: "outline", name } }); });
   $("presentation-font-button").addEventListener("click", () => { const name = $("presentation-font-name").value.trim(); if (!isSafePresentationName(name)) return setStatus("範囲Font名は予約語以外の英数字・ハイフン・アンダースコアで指定してください"); applySelectedPresentation({ font: { type: "font", name } }); });
   $("song-title").addEventListener("input", titleInput); $("lyrics").addEventListener("paste", event => { if (state.mode !== "writer") return; event.preventDefault(); const editRuby = selectionTouchesRuby(); const text = event.clipboardData?.getData("text/plain") || ""; const selection = window.getSelection(); if (!selection?.rangeCount) return; insertPastedText(selection.getRangeAt(0), text); bodyInput({ editRuby }); }); $("lyrics").addEventListener("input", bodyInput); $("lyrics").setAttribute("spellcheck", "false"); $("lyrics").setAttribute("autocorrect", "off"); $("lyrics").setAttribute("autocapitalize", "off"); $("song-title").setAttribute("spellcheck", "false"); $("song-title").setAttribute("autocorrect", "off"); $("song-title").setAttribute("autocapitalize", "off"); $("lyrics").addEventListener("copy", event => { if (!window.getSelection()?.isCollapsed) { event.preventDefault(); const range = selectionOffsets(); event.clipboardData.setData("text/plain", range ? rawText(state.nodes, range) : selectedEditedSource()); } });
+  $("song-title").addEventListener("beforeinput", handleTitleBodyBoundary); $("lyrics").addEventListener("beforeinput", handleTitleBodyBoundary);
   $("draft-restore").addEventListener("click", applyDraft); $("draft-discard").addEventListener("click", clearDraft);
   $("reader-shell").addEventListener("wheel", event => { if (event.target.closest(".settings") || state.writingMode !== "vertical") return; event.preventDefault(); $("reader-shell").scrollLeft -= event.deltaY || event.deltaX; }, { passive: false });
   let scrollTimer; $("reader-shell").addEventListener("scroll", () => { document.body.classList.add("is-scrolling"); document.body.classList.remove("chrome-hidden"); clearTimeout(scrollTimer); scrollTimer = setTimeout(() => { document.body.classList.remove("is-scrolling"); document.body.classList.add("chrome-hidden"); saveScroll(); }, 900); });
