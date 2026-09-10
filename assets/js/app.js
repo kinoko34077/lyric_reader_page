@@ -56,7 +56,7 @@ function resolvedReaderFontFamily(selection = state.font) {
   if (registryName) return state.loadedRegistryFonts.has(registryName) ? `"ReaderFont-${registryName}", ${FONT_STACKS.serif}` : FONT_STACKS.serif;
   return selection === "custom" ? '"ReaderCustom", serif' : (FONT_STACKS[selection] || FONT_STACKS.serif);
 }
-const TYPOGRAPHY_DEFAULTS = { lineHeight: 2.05, letterSpacing: 0.04, paragraphSpacing: 1.7 };
+const TYPOGRAPHY_DEFAULTS = { lineHeight: 1.7, letterSpacing: 0.02, paragraphSpacing: 0.4 };
 function normalizeTypography(value = {}) {
   const number = (key, min, max) => { const candidate = Number(value?.[key]); return Number.isFinite(candidate) && candidate >= min && candidate <= max ? candidate : null; };
   return { lineHeight: number("lineHeight", 1, 3), letterSpacing: number("letterSpacing", -0.1, 0.2), paragraphSpacing: number("paragraphSpacing", 0, 3) };

@@ -79,7 +79,12 @@ async function checkScenario(scenario, targetUrl) {
       zCount: document.querySelectorAll("#lyrics .combine-z").length,
       glyphFallbackCount: document.querySelectorAll('#lyrics [data-glyph="missing-svg"].glyph-failed').length,
       fontFallbackCount: document.querySelectorAll('#lyrics [data-glyph="font-hare"].glyph-failed').length,
-      warningCount: document.querySelectorAll("#lyrics .view-warning").length
+      warningCount: document.querySelectorAll("#lyrics .view-warning").length,
+      defaultTypography: {
+        lineHeight: getComputedStyle(document.documentElement).getPropertyValue("--reader-line-height").trim(),
+        letterSpacing: getComputedStyle(document.documentElement).getPropertyValue("--reader-letter-spacing").trim(),
+        paragraphSpacing: getComputedStyle(document.documentElement).getPropertyValue("--reader-paragraph-spacing").trim()
+      }
     }));
     assert.ok(initial.title && initial.body, `${scenario.id}: title/body must render`);
     assert.ok(initial.rubyCount > 0, `${scenario.id}: Ruby must render`);
@@ -90,6 +95,7 @@ async function checkScenario(scenario, targetUrl) {
     assert.ok(initial.parallelCount > 0 && initial.zCount > 0, `${scenario.id}: Combine modes must render`);
     assert.ok(initial.glyphFallbackCount > 0 && initial.fontFallbackCount > 0, `${scenario.id}: failed Glyph/Font must fallback`);
     assert.ok(initial.warningCount > 0, `${scenario.id}: fallback warning must be visible`);
+    assert.deepEqual(initial.defaultTypography, { lineHeight: "1.65", letterSpacing: ".02em", paragraphSpacing: ".4em" }, `${scenario.id}: mobile default typography must stay compact`);
 
     await page.locator("#settings-toggle").click();
     const settings = await page.locator("#settings-panel").evaluate(element => { const rect = element.getBoundingClientRect(); return { visible: rect.width > 0 && rect.height > 0, withinViewport: rect.left >= -2 && rect.right <= innerWidth + 2 && rect.top >= -2 && rect.bottom <= innerHeight + 2, scrollable: element.scrollHeight > element.clientHeight }; });
