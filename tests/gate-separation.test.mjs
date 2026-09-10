@@ -60,6 +60,7 @@ test("Writer Beta main gate is a minimal core smoke with independent detail gate
   assert.match(gate, /\["writerDocument", runWriterDocumentGate\]/);
   assert.match(gate, /\["writerWysiwyg", runWriterWysiwygGate\]/);
   assert.match(gate, /\["writerTab", runWriterTabGate\]/);
+  assert.doesNotMatch(gate, /async function runGate\(targetUrl\)/);
 });
 
 test("Tab-local Draft policy does not depend on a cross-tab warning path", () => {

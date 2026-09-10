@@ -31,6 +31,7 @@
 - Writerの表示面をReader Mobile Gateから分離した`writer-mobile-beta` Gateとして追加し、Chromium `Pixel 5`相当とWebKit `iPhone 13`相当でWriter起動、Title / 本文、Ruby、設定Panel、Variant / Ruby切替、縦書き同期、横overflow、Source→Viewer→Writer往復を検証する。Writer Browser Gateと同じくadvisory jobとして実行し、Reader Pages公開の依存にはしない。
 - WriterのPresentation操作を独立した`writer-presentation-beta` Gateへ切り出し、Palette / Palette Bank、Named Style、Ruby Base / Reading、Glyph、Combine、Outline、Font fallback、複数Style conflictのAuthor Source往復と表示を通常Writerの状態遷移から分離して検証する。
 - Writer Betaの通常Browser Gateを、確定SourceのViewer往復と不正Source時のCurrent保護に絞ったCore smokeへ整理した。Source Editor、Document transaction、WYSIWYG、Tab isolation、Storage故障、不正文Draftの詳細Gateは引き続き独立実行し、長大な状態依存シナリオの連鎖失敗で結果を隠さず、各結果を集約して終了コードへ反映する。
+- WYSIWYG下位Gateへ縮約Caret入力、Presentation範囲の置換、改行、Plain Text貼付、削除、1行Title編集を移し、各操作後のAuthor Source再Parseと元Source復元まで独立検証するようにした。旧巨大シナリオ本体は削除し、実行されない重複Gateを残さない。
 - Reader JSONの未知トップレベルFieldを不活性な拡張として保持し、Document state・Draft・Historyを経由したCanonical保存でも消さないようにした。
 - URL Manifest読込でも同じ未知トップレベルField保持を適用し、入力経路による情報欠落をなくした。
 - 欠損Style / Palette / Glyph / Font / Assetを本文表示継続のまま右肩`⃠` Warning markerへ統一し、markerをPortable Copy・Author Source投影から除外。
