@@ -27,13 +27,15 @@ test("Reader, Shared, and Writer unit tests have separate workflow responsibilit
   const readerStart = workflow.indexOf("  reader-quality:");
   const writerUnitStart = workflow.indexOf("  writer-unit:");
   const writerBetaStart = workflow.indexOf("  writer-beta:");
+  const writerPresentationStart = workflow.indexOf("  writer-presentation-beta:");
   const writerMobileStart = workflow.indexOf("  writer-mobile-beta:");
   const deployStart = workflow.indexOf("  deploy:");
-  assert.ok(readerStart >= 0 && writerUnitStart > readerStart && writerBetaStart > writerUnitStart && writerMobileStart > writerBetaStart && deployStart > writerMobileStart, "workflow jobs must keep their declared order");
+  assert.ok(readerStart >= 0 && writerUnitStart > readerStart && writerBetaStart > writerUnitStart && writerPresentationStart > writerBetaStart && writerMobileStart > writerPresentationStart && deployStart > writerMobileStart, "workflow jobs must keep their declared order");
 
   const readerJob = workflow.slice(readerStart, writerUnitStart);
   const writerUnitJob = workflow.slice(writerUnitStart, writerBetaStart);
-  const writerBetaJob = workflow.slice(writerBetaStart, writerMobileStart);
+  const writerBetaJob = workflow.slice(writerBetaStart, writerPresentationStart);
+  const writerPresentationJob = workflow.slice(writerPresentationStart, writerMobileStart);
   const writerMobileJob = workflow.slice(writerMobileStart, deployStart);
   assert.match(readerJob, /npm run test:reader/);
   assert.match(readerJob, /npm run test:shared/);
@@ -42,6 +44,8 @@ test("Reader, Shared, and Writer unit tests have separate workflow responsibilit
   assert.match(writerUnitJob, /continue-on-error:\s*true/);
   assert.match(writerBetaJob, /npm run test:writer/);
   assert.match(writerBetaJob, /continue-on-error:\s*true/);
+  assert.match(writerPresentationJob, /npm run test:writer-presentation/);
+  assert.match(writerPresentationJob, /continue-on-error:\s*true/);
   assert.match(writerMobileJob, /npm run test:writer-mobile/);
   assert.match(writerMobileJob, /continue-on-error:\s*true/);
   assert.match(workflow.slice(deployStart), /needs:\s*reader-quality/);

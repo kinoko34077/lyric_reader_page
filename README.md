@@ -68,6 +68,7 @@ npm run test:shared
 npm run test:writer-unit
 npm run test:mobile
 npm run test:writer
+npm run test:writer-presentation
 npm run test:writer-mobile
 git diff --check
 ```
@@ -75,9 +76,11 @@ git diff --check
 `npm run test:mobile`はローカルの公開Demoを検証し、PlaywrightのChromium mobile / WebKit iPhone emulationを実行します。公開Pagesなど別の配信先を検証する場合は、PowerShellで`$env:MOBILE_GATE_URL="https://example.com/lyric_reader_page/?mode=viewer"; npm run test:mobile`のように指定します。実機ブラウザ、IME、soft keyboardはこの自動Gateに含めません。
 `npm run test:writer`はWriter Beta Browser Gateです。Readerの自動Mobile Gateとは独立しており、parse成功時の反映、Variant別Source、Draft復元、文書Open Undo、不正入力のCurrent Document保護、Storage書込み不能時の編集継続、不正文DraftのCurrent保護、Viewer上のStyle / Palette / Glyph / Font / Combine / Outline適用、Palette Bank / Slot指定、Ruby Base / Reading部分のScoped Style適用、2つのNamed Style競合表示、Presentation解除、VariantごとのViewer編集分離、既存Presentation内の本文直接置換・キャレット入力・改行・削除、Plain Text貼り付け、Title直接編集、Source→Viewer→SourceのAuthor Source保持をChromiumで確認します。Source EditorのVariant隔離、valid Source→Viewer往復、parse errorの位置選択・Current保護、textarea native Undoは独立した`writerSource`下位Gateでも実行します。不正文書投入前の初期Source確定、URL/File失敗時のCurrent保護、成功後のエラー解除、K1文書Open Undoは独立した`writerDocument`下位Gateで実行します。既存Presentation内の置換を対象に、Application Undo→Redoボタン→Author Source投影まで確認する`writerWysiwyg`下位Gateも実行します。K6のTab Draft分離・片側破棄保護は独立した`writerTab`下位Gateとして実行します。全下位Gateは一つが失敗しても残りを継続実行し、最後に結果を集約して終了コードへ反映します。Ruby部分指定はBaseが`base-range` / `base-style`、Readingが`ruby-range` / `ruby-style`、縁取りは`outline=name`、範囲Fontは`font=name`として保存され、欠損Fontでも元文字とWarningを維持し、解除後も元Sourceへ戻ることを確認します。Writer Beta Gateの失敗は現段階ではReader Pages公開を止めません。
 
+`npm run test:writer-presentation`はPalette／Palette Bank、Named Style、Ruby Base / Reading、Glyph、Combine、Outline、Font fallback、複数Style conflictのAuthor Source往復を、通常Writerの状態遷移から独立したChromium Gateとして確認します。失敗してもReader Release Gate、Writer State Gate、Writer Mobile Gateへ波及しないadvisory checkです。
+
 `npm run test:writer-mobile`はWriterの表示面だけをPlaywrightのChromium `Pixel 5`相当とWebKit `iPhone 13`相当で確認します。Writer modeでのTitle / 本文表示、contenteditable表示、Ruby、Variant・Ruby切替、設定Panelのviewport内表示と内部scroll、縦書き時のTitle / 本文writing-mode同期、意図しない横overflow、Source→Viewer→Writer往復を検証します。IME、Caret、soft keyboard、touch selection、Clipboard権限、実機Safari / Android ChromeはこのGateの対象外です。Reader Mobile GateおよびWriter Browser Gateとは独立したadvisory checkで、Writerの失敗はPages公開を止めません。
 
-CIでは`.nvmrc`のNode 22.14.0を使い、`reader-quality`（JavaScript構文検査、Reader専用Unit / Integration、Shared Contract、Reader自動Mobile Gate）が成功した場合だけPages Deployへ進みます。`writer-unit`、`writer-beta`、`writer-mobile-beta`は常に実行する別の助言的ジョブで、Writerの失敗はReader Pages公開を止めません。Unit / IntegrationのPASSとPages公開、Chromium以外の実機・IME・forced-colors・Clipboard権限検証は別状態として記録します。
+CIでは`.nvmrc`のNode 22.14.0を使い、`reader-quality`（JavaScript構文検査、Reader専用Unit / Integration、Shared Contract、Reader自動Mobile Gate）が成功した場合だけPages Deployへ進みます。`writer-unit`、`writer-beta`、`writer-presentation-beta`、`writer-mobile-beta`は常に実行する別の助言的ジョブで、Writerの失敗はReader Pages公開を止めません。Unit / IntegrationのPASSとPages公開、Chromium以外の実機・IME・forced-colors・Clipboard権限検証は別状態として記録します。
 
 ## 未確定事項
 

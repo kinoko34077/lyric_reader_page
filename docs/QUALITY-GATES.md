@@ -77,6 +77,12 @@ git diff --check
 - Writer Beta Gateは`writer-beta`ジョブとしてReader Release Gateから分離し、現段階では`continue-on-error: true`の助言的チェックとする。失敗はActionsへ記録するが、ReaderのPages deployを止めない。
 - Source Editorの単体・統合契約は`tests/source-editor.test.mjs`と`tests/writer-beta-gate.mjs`を正本とする。
 
+### Writer Presentation Beta Gate
+
+- `npm run test:writer-presentation`で、通常Writerシナリオの状態を引き継がず、Palette / Palette Bank、Named Style、Ruby Base / Reading、Glyph、Combine、Outline、Font fallback、複数Style conflictのAuthor Source往復と表示をChromiumで検証する。
+- Presentation操作の失敗はWriterの他下位Gateから分離して結果を記録する。失敗してもReader Release Gate、Reader Pages deploy、Writer Mobile Gateを止めない。
+- GitHub Actionsでは`writer-presentation-beta`の`continue-on-error: true`ジョブとして実行する。
+
 ### Writer Mobile Beta Gate
 
 - `npm run test:writer-mobile`で、Writerの表示面をChromium `Pixel 5`相当とPlaywright WebKit `iPhone 13`相当から独立検証する。

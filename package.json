@@ -8,6 +8,7 @@
     "test:writer-unit": "node --test tests/writer-state.test.mjs tests/editor-source.test.mjs tests/source-editor.test.mjs tests/writer-gate-runner.test.mjs",
     "test:mobile": "node tests/mobile-viewer-gate.mjs",
     "test:writer": "node tests/writer-beta-gate.mjs",
+    "test:writer-presentation": "node tests/writer-presentation-beta-gate.mjs",
     "test:writer-mobile": "node tests/writer-mobile-beta-gate.mjs"
   },
   "devDependencies": {
