@@ -186,6 +186,7 @@ async function runGate(targetUrl) {
     assert.equal(await page.locator('#font-family option[value="registry:nishiki"]').isDisabled(), false, "Registry Font must remain selectable when the asset is unavailable");
     assert.equal(await page.locator("#font-family").inputValue(), "registry:nishiki", "Document Theme Registry Font must select the resolved option");
     await page.waitForFunction(() => !getComputedStyle(document.documentElement).getPropertyValue("--reader-font").includes("ReaderFont-nishiki"), null, { timeout: 30_000 });
+    await page.waitForFunction(() => /文書指定Fontを読み込めない/.test(document.querySelector("#source-status")?.textContent || ""), null, { timeout: 30_000 });
     assert.match(await page.locator("#lyrics").textContent() || "", /Presentation Gate Seed/, "Registry Font failure must keep Reader text visible");
 
     stage = "Style authoring";
