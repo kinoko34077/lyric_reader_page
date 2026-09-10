@@ -181,6 +181,65 @@ async function runWriterCoreGate(targetUrl) {
   }
 }
 
+async function runWriterViewStateGate(targetUrl) {
+  const browser = await chromium.launch({ headless: true });
+  const context = await browser.newContext({ locale: "ja-JP", colorScheme: "light" });
+  const page = await context.newPage();
+  const consoleErrors = [];
+  const pageErrors = [];
+  page.on("console", message => { if (message.type() === "error" && !expectedAssetFailure(message.location().url) && !/Failed to load resource:/i.test(message.text())) consoleErrors.push(`${message.text()} (${message.location().url})`); });
+  page.on("pageerror", error => pageErrors.push(String(error)));
+  let stage = "initial";
+  try {
+    await page.goto(targetUrl, { waitUntil: "domcontentloaded", timeout: 30_000 });
+    await page.locator("#source-editor").waitFor({ state: "visible", timeout: 30_000 });
+    await page.waitForFunction(() => /晴々撥条|如何《どう》/.test(document.querySelector("#source-editor")?.value || ""), null, { timeout: 30_000 });
+    const originalSource = await page.locator("#source-editor").inputValue();
+
+    stage = "fresh Viewer has no dirty or Draft notice";
+    await clickHeaderButton(page, "#source-mode-switch");
+    await page.waitForFunction(() => document.body.dataset.mode === "viewer", null, { timeout: 30_000 });
+    const fresh = await page.evaluate(() => ({ dirty: document.body.dataset.dirty, draftHidden: document.querySelector("#draft-notice")?.hidden, draftKeys: Object.keys(localStorage).filter(key => key.startsWith("lyric-reader:draft:")) }));
+    assert.equal(fresh.dirty, "false", "fresh Viewer must not be dirty");
+    assert.equal(fresh.draftHidden, true, "fresh Viewer must not show a Draft recovery notice");
+    assert.deepEqual(fresh.draftKeys, [], "fresh Viewer must not create a Draft");
+
+    stage = "Viewer color override stays outside Document state";
+    await page.locator("#settings-toggle").click({ force: true });
+    await page.locator("#text-color").evaluate(element => { element.value = "#123456"; element.dispatchEvent(new Event("input", { bubbles: true })); });
+    await page.waitForFunction(() => getComputedStyle(document.documentElement).getPropertyValue("--ink").trim() === "#123456", null, { timeout: 30_000 });
+    const afterViewOverride = await page.evaluate(() => ({ dirty: document.body.dataset.dirty, draftHidden: document.querySelector("#draft-notice")?.hidden, draftKeys: Object.keys(localStorage).filter(key => key.startsWith("lyric-reader:draft:")) }));
+    assert.equal(afterViewOverride.dirty, "false", "Viewer color override must not mark the Document dirty");
+    assert.equal(afterViewOverride.draftHidden, true, "Viewer color override must not show a Draft notice");
+    assert.deepEqual(afterViewOverride.draftKeys, [], "Viewer color override must not save a Draft");
+
+    stage = "stale Draft is not a normal recovery candidate";
+    await clickHeaderButton(page, "#settings-toggle");
+    await clickHeaderButton(page, "#source-mode-switch");
+    await page.locator("#source-editor").waitFor({ state: "visible", timeout: 30_000 });
+    await page.locator("#source-editor").fill(`${originalSource}\n[Ghost Draft Gate]`);
+    await page.waitForFunction(() => document.body.dataset.dirty === "true", null, { timeout: 30_000 });
+    const draftKey = await page.evaluate(() => Object.keys(localStorage).find(key => key.startsWith("lyric-reader:draft:")) || "");
+    assert.ok(draftKey, "Writer mutation must create a Draft candidate");
+    await page.evaluate(key => { const draft = JSON.parse(localStorage.getItem(key) || "null"); draft.baseDocumentHash = "fnv1a:stale"; localStorage.setItem(key, JSON.stringify(draft)); }, draftKey);
+    await page.reload({ waitUntil: "domcontentloaded", timeout: 30_000 });
+    await page.locator("#source-editor").waitFor({ state: "visible", timeout: 30_000 });
+    await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source, originalSource, { timeout: 30_000 });
+    assert.equal(await page.locator("#draft-notice").isVisible(), false, "a stale Draft must not interrupt the normal Reader load");
+
+    assert.deepEqual({ consoleErrors, pageErrors }, { consoleErrors: [], pageErrors: [] });
+    return { status: "PASS", targetUrl };
+  } catch (error) {
+    const state = await page.evaluate(() => ({ mode: document.body.dataset.mode || "", dirty: document.body.dataset.dirty || "", source: document.querySelector("#source-editor")?.value || "", draftHidden: document.querySelector("#draft-notice")?.hidden ?? null, status: document.querySelector("#source-status")?.textContent || "" })).catch(() => ({}));
+    const message = `${error instanceof Error ? error.message : String(error)} stage=${stage} state=${JSON.stringify(state)} console=${JSON.stringify(consoleErrors)} page=${JSON.stringify(pageErrors)}`.replace(/[\r\n]+/g, " ");
+    if (process.env.GITHUB_ACTIONS) console.log(`::error title=Writer View State Gate failure::${message}`);
+    throw new Error(message);
+  } finally {
+    await context.close();
+    await browser.close();
+  }
+}
+
 async function runWriterSourceGate(targetUrl) {
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({ locale: "ja-JP", colorScheme: "light" });
@@ -732,6 +791,7 @@ const targetUrl = requestedUrl || local.url;
 try {
   const gates = [
     ["writer", runWriterCoreGate],
+    ["writerViewState", runWriterViewStateGate],
     ["writerSource", runWriterSourceGate],
     ["writerDocument", runWriterDocumentGate],
     ["writerWysiwyg", runWriterWysiwygGate],

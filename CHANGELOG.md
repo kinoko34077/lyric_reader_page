@@ -4,6 +4,8 @@
 
 ### Reader Kernel優先への方針転換
 
+- Draftへschema/base document hash/source identity/dirty timestampを記録し、実際のDocument変更時だけ保存するようにした。Viewerの表示設定だけでDraftを生成せず、基準文書と一致しないstale Draftは通常の復元通知へ出さない。
+- Viewerの本文色変更をSession/User View Overrideへ分離し、Document registry/theme・dirty・Draftを変更しないようにした。非表示要素へ`[hidden]`契約を適用し、stale Draft通知がCSSの`display:flex`で誤表示される経路も修正した。
 - WriterのRuby編集経路をSource-SSOTへ寄せ、表示DOMがSafari相当の平坦化を受けても編集対象外のRubyを`data-source-raw`から復元するようにした。縮約Caret入力はsemantic IR rangeへ直接挿入し、Ruby境界での隣接入力による平文化を防止する。
 - Portable RubyのCopy→PasteをWriter Browser Gateへ追加し、`｜親文字《ルビ》`をParser / Renderer経由で貼り付けてAuthor SourceへRubyとして再構成する。Ruby直前・直後入力、Reading編集、flattened DOM保護をUnit / DOM / Browserで回帰検証する。
 - 完成条件を汎用Writer全体から、Input → Syntax Adapter / Parser → IR → Registry Resolver → Renderer → ProjectionのReader Kernelへ切り替え。

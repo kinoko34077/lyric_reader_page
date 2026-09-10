@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
-import { boundedHistory, documentPayload, draftDiffers, draftPayload, draftStorageKey, normalizeDraft } from "../assets/js/document-state.js";
+import { boundedHistory, documentFingerprint, documentPayload, draftDiffers, draftPayload, draftStorageKey, normalizeDraft } from "../assets/js/document-state.js";
 
 const root = process.cwd();
 const data = {
@@ -29,6 +29,19 @@ test("Draft payload keeps the document-level presentation and metadata boundary"
   assert.deepEqual(draft.document.manifest.theme, { background: "#101010", color: "#eeeeee" });
   assert.equal(draft.document.variants.length, 2);
   assert.deepEqual(draft.document.manifest.registry.palettes["2"], "#d02020");
+  assert.equal(draft.schemaVersion, 3);
+  assert.equal(draft.sourceIdentity, "source-a");
+  assert.equal(draft.dirtyAtSave, true);
+  assert.equal(draft.baseDocumentHash, documentFingerprint(draft.document));
+  assert.ok(draft.savedAt > 0);
+});
+
+test("Draft metadata identifies a clean base and rejects unknown schema generations", () => {
+  const base = documentPayload(data, "題", "modern");
+  const draft = draftPayload(data, "題", "modern", { baseDocumentHash: documentFingerprint(base), savedAt: 123, dirtyAtSave: true });
+  assert.equal(normalizeDraft(draft).baseDocumentHash, documentFingerprint(base));
+  assert.equal(normalizeDraft({ ...draft, schemaVersion: 4 }), null);
+  assert.equal(normalizeDraft({ ...draft, dirtyAtSave: false }).dirtyAtSave, false);
 });
 
 test("draft round-trip detects registry-only and variant-only changes", () => {
@@ -77,4 +90,17 @@ test("download initiation preserves dirty and Draft recovery state", () => {
   assert.match(exports, /TXTダウンロードを開始しました/);
   assert.match(exports, /Reader文書ダウンロードを開始しました/);
   assert.match(exports, /\.lyric\.txtダウンロードを開始しました/);
+});
+
+test("Viewer text color is a preference and does not mutate Document Dirty state", () => {
+  const app = fs.readFileSync(path.join(root, "assets/js/app.js"), "utf8");
+  const start = app.indexOf('$("background-color")');
+  const end = app.indexOf('$("remote-font-toggle")', start);
+  assert.ok(start >= 0 && end > start, "viewer appearance handlers must remain grouped");
+  const appearance = app.slice(start, end);
+  const textColorStart = appearance.indexOf('$("text-color").addEventListener("input"');
+  assert.ok(textColorStart >= 0, "Viewer text color input handler must remain present");
+  const textColor = appearance.slice(textColorStart);
+  assert.doesNotMatch(textColor, /state\.data\.manifest|markDirty\(\{ document: true \}\)|saveDraft\(\)/);
+  assert.match(textColor, /savePreferences\(\)/);
 });

@@ -33,6 +33,14 @@ export function clone(value) {
   return value == null ? value : structuredClone(value);
 }
 
+/** Deterministic lightweight document fingerprint for Draft base-revision checks. */
+export function documentFingerprint(value) {
+  const bytes = new TextEncoder().encode(JSON.stringify(value ?? null));
+  let hash = 2166136261;
+  for (const byte of bytes) { hash ^= byte; hash = Math.imul(hash, 16777619); }
+  return `fnv1a:${(hash >>> 0).toString(16).padStart(8, "0")}`;
+}
+
 /** Keep unknown JSON fields inert so canonical save does not erase readable extensions. */
 export function readerDocumentExtensions(value = {}) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
@@ -66,27 +74,48 @@ export function documentPayload(data, title, activeVariant = null) {
   };
 }
 
-export function draftPayload(data, title, activeVariant) {
-  return { version: DOCUMENT_MODEL_VERSION, document: documentPayload(data, title, activeVariant), savedAt: Date.now() };
+export function draftPayload(data, title, activeVariant, options = {}) {
+  const document = documentPayload(data, title, activeVariant);
+  const savedAt = Number.isFinite(Number(options.savedAt)) ? Number(options.savedAt) : Date.now();
+  return {
+    version: DOCUMENT_MODEL_VERSION,
+    schemaVersion: DOCUMENT_MODEL_VERSION,
+    document,
+    baseDocumentHash: String(options.baseDocumentHash || documentFingerprint(document)),
+    sourceIdentity: document.sourceIdentity,
+    dirtyAtSave: options.dirtyAtSave ?? true,
+    savedAt
+  };
 }
 
 export function normalizeDraft(value) {
   if (!value || typeof value !== "object") return null;
-  if (value.version === DOCUMENT_MODEL_VERSION && Array.isArray(value.document?.variants)) return { ...value, document: withoutLegacyAnnotations(value.document) };
+  const schemaVersion = value.schemaVersion == null && value.version != null ? Number(value.version) : value.schemaVersion == null ? null : Number(value.schemaVersion);
+  if (schemaVersion != null && (!Number.isInteger(schemaVersion) || schemaVersion > DOCUMENT_MODEL_VERSION)) return null;
+  if (value.version === DOCUMENT_MODEL_VERSION && Array.isArray(value.document?.variants)) {
+    const document = withoutLegacyAnnotations(value.document);
+    return { ...value, schemaVersion: DOCUMENT_MODEL_VERSION, document, baseDocumentHash: typeof value.baseDocumentHash === "string" ? value.baseDocumentHash : "", sourceIdentity: String(value.sourceIdentity ?? document.sourceIdentity ?? ""), dirtyAtSave: value.dirtyAtSave ?? true, savedAt: Number(value.savedAt) || 0 };
+  }
   if (value.document && (value.version === 1 || value.version === 2)) {
     const legacy = value.document;
     const migrated = migrateLegacyContent(legacy);
-    return { ...value, version: DOCUMENT_MODEL_VERSION, document: withoutLegacyAnnotations({ ...legacy, ...migrated, version: DOCUMENT_MODEL_VERSION, titleSource: legacy.titleSource || "first-line" }) };
+    const document = withoutLegacyAnnotations({ ...legacy, ...migrated, version: DOCUMENT_MODEL_VERSION, titleSource: legacy.titleSource || "first-line" });
+    return { ...value, version: DOCUMENT_MODEL_VERSION, schemaVersion: DOCUMENT_MODEL_VERSION, document, baseDocumentHash: typeof value.baseDocumentHash === "string" ? value.baseDocumentHash : "", sourceIdentity: String(value.sourceIdentity ?? document.sourceIdentity ?? ""), dirtyAtSave: value.dirtyAtSave ?? true, savedAt: Number(value.savedAt) || 0 };
   }
   if (typeof value.raw !== "string") return null;
   const migrated = migrateLegacyContent({ historical: { text: value.raw, url: "draft:" } });
+  const document = {
+    version: DOCUMENT_MODEL_VERSION, activeVariantId: migrated.activeVariantId, title: String(value.title || "無題"), ...migrated,
+    titleSource: "first-line", manifest: { registry: clone(value.registry || {}) }
+  };
   return {
     version: DOCUMENT_MODEL_VERSION,
-    document: {
-      version: DOCUMENT_MODEL_VERSION, activeVariantId: migrated.activeVariantId, title: String(value.title || "無題"), ...migrated,
-      titleSource: "first-line", manifest: { registry: clone(value.registry || {}) }
-    },
-    savedAt: value.savedAt || 0
+    schemaVersion: DOCUMENT_MODEL_VERSION,
+    document,
+    baseDocumentHash: typeof value.baseDocumentHash === "string" ? value.baseDocumentHash : "",
+    sourceIdentity: String(value.sourceIdentity ?? ""),
+    dirtyAtSave: value.dirtyAtSave ?? true,
+    savedAt: Number(value.savedAt) || 0
   };
 }
 
