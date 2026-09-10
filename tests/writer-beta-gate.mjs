@@ -654,6 +654,33 @@ async function runWriterRubyGate(targetUrl) {
     source = await readSource();
     assert.match(source, /前B｜ペウコ《ピョコ》後/, `editing before a flattened Ruby must preserve Ruby Source: ${source}`);
 
+    stage = "Ruby neighbor deletion";
+    await resetWriterSource(fixtureContainer);
+    assert.equal(await flattenRuby(0), true, "Ruby deletion gate must be able to simulate a flattened Ruby DOM");
+    assert.equal(await placeCaretInRoot(page.locator("#lyrics"), "後", 0), true, "Ruby deletion gate must place a caret after the first Ruby");
+    await page.keyboard.press("Backspace");
+    await page.waitForFunction(() => !/読確認/.test(document.querySelector("#lyrics")?.innerText || ""), null, { timeout: 30_000 });
+    source = await readSource();
+    assert.match(source, /前後\r?\n/, `deleting across a flattened Ruby must remove the Ruby as one semantic unit: ${source}`);
+
+    stage = "Ruby previous-neighbor deletion";
+    await resetWriterSource(fixtureContainer);
+    assert.equal(await flattenRuby(0), true, "Ruby previous-neighbor gate must be able to simulate a flattened Ruby DOM");
+    assert.equal(await placeCaretInRoot(page.locator("#lyrics"), "読確認よみかくにん", 0), true, "Ruby previous-neighbor gate must place a caret before the flattened Ruby");
+    await page.keyboard.press("Backspace");
+    await page.waitForFunction(() => /読確認よみかくにん/.test(document.querySelector("#lyrics")?.innerText || ""), null, { timeout: 30_000 });
+    source = await readSource();
+    assert.match(source, /\r?\n｜読確認《よみかくにん》後/, `deleting before a flattened Ruby must preserve Ruby Source: ${source}`);
+
+    stage = "Ruby-crossing selection deletion";
+    await resetWriterSource(fixtureContainer);
+    assert.equal(await selectTextInRoot(page.locator("#lyrics"), "前読確認よみかくにん後"), true, "Ruby crossing selection must include the complete Ruby and neighboring text");
+    await page.keyboard.press("Backspace");
+    await page.waitForFunction(() => !/読確認/.test(document.querySelector("#lyrics")?.innerText || ""), null, { timeout: 30_000 });
+    source = await readSource();
+    assert.doesNotMatch(source, /読確認|よみかくにん/, `Ruby-crossing deletion must remove the selected Ruby as one semantic range: ${source}`);
+    assert.match(source, /前｜ペウコ《ピョコ》後/, `Ruby-crossing deletion must preserve the untouched Ruby: ${source}`);
+
     stage = "Ruby reading edit";
     await resetWriterSource(fixtureContainer);
     assert.equal(await selectTextInRoot(page.locator("#lyrics .source-ruby").first(), "よみかくにん"), true, "Ruby gate must select the reading portion");
