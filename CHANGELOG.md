@@ -22,6 +22,7 @@
 - 文書指定の外部Fontを既定で自動取得するようにし、ユーザーが明示的にOFFにした場合だけ停止する。取得失敗時は標準Fontと元Source表示へFallbackする。
 - 欠損Registry参照・Font・Assetの表示用Warning markerを旧`⚠`から右肩の`⃠`へ統一し、Copy / Author Source projectionからは引き続き除外する。
 - TXT / Reader JSON / `.lyric.txt`のダウンロード開始時にDirty状態やDraft Recoveryを消去しないよう修正した。保存完了ではなく開始checkpointという表示契約を維持する。
+- Writer BetaのK6 Tab Draft分離を独立`writerTab`下位Gateとして記録し、Requirements MatrixとReader/Writer別の検証コマンドを現行CI構成へ同期した。
 - Reader JSONの未知トップレベルFieldを不活性な拡張として保持し、Document state・Draft・Historyを経由したCanonical保存でも消さないようにした。
 - URL Manifest読込でも同じ未知トップレベルField保持を適用し、入力経路による情報欠落をなくした。
 - 欠損Style / Palette / Glyph / Font / Assetを本文表示継続のまま右肩`⃠` Warning markerへ統一し、markerをPortable Copy・Author Source投影から除外。

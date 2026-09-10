@@ -94,7 +94,11 @@ Writer Stateでは、全Variant・Registry・Metadata・Theme・Source routing�
 ## 検証コマンド
 
 ```text
-node --test tests/*.test.mjs
+npm run test:reader
+npm run test:shared
+npm run test:writer-unit
+npm run test:mobile
+npm run test:writer
 node --check assets/js/*.js
 git diff --check
 ```

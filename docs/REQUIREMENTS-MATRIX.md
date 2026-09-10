@@ -26,7 +26,7 @@
 | Generic Variant Set | `normalizeVariants`, `activeVariant`, loader/app | `document-model`, `data-loader`, browser quality fixture | Document-defined ID / label / role、複数Variant切替を確認 | 旧形式Migrationは互換入口のみ |
 | Semantic Link / shared presentation | `linkedPresentation`, `setVariantOverride`, normalized `links` | `document-model.test.mjs` | 異なる本文長でもoffsetに依存せず共有値とOverrideを分離 | anchorの表面MarkupとRendererへの範囲適用は仕様未確定 |
 | Draft / History isolation | `document-state.js`, `app.js` | `document-state.test.mjs`, `writer-beta-gate.mjs`, full suite | version 3、全Variant・Registry・Metadata・Theme・Source routing fieldsのDraft保持/復元、旧version migration、unknown versionのBest-effort変換、count/byte bounded | localStorage evictionはBrowser環境依存 |
-| Writer K1 / K6 | Writer Betaの状態管理 | K1はOpen前checkpoint・Source routing fields付きSnapshot・URL open→Undoを`tests/writer-beta-gate.mjs`で検証。K6は`sessionStorage`由来のTab固有Draft keyを同ゲートと`document-state.test.mjs`で検証 | K1=文書OpenをUndo対象、K6=Tab単位Draft分離。いずれもReader v0.xの完成条件外 | K1/K6とも実装済み。Native Undo完全整合とStorage evictionは別途残る |
+| Writer K1 / K6 | Writer Betaの状態管理 | K1はOpen前checkpoint・Source routing fields付きSnapshot・URL open→Undoを`tests/writer-beta-gate.mjs`で検証。K6は`sessionStorage`由来のTab固有Draft keyを`tests/writer-beta-gate.mjs`の独立`writerTab`下位Gateと`document-state.test.mjs`で検証 | K1=文書OpenをUndo対象、K6=Tab単位Draft分離。いずれもReader v0.xの完成条件外 | K1/K6とも実装済み。Native Undo完全整合とStorage evictionは別途残る |
 | vNext `[target:attrs]` | `narouTextAdapter`, `syntax-adapter.js` | `syntax-adapter.test.mjs` | color/style/glyph/combine/weight等をTyped IRへ変換 | v0.xの表面互換は保証しない |
 | Legacy syntax isolation | `legacyNarouTextAdapter`, `getSyntaxAdapter` | adapter router test、legacy editor serialization test | `narou-legacy`だけが`{}`形式を出力。既定Adapterへ混在しない | 旧文書の実機編集をGate 8で確認 |
 | Escape / unknown literal | bounded scanner、`isSafePresentationName` | syntax fuzz / escape / reserved-name tests | escapeは意味保持、未知属性はLiteral、予約名は拒否 | 正式Escape対象一覧はSyntax v1で再確認 |
@@ -56,9 +56,12 @@
 ## Required commands
 
 ```text
-node --check assets/js/app.js
-node --test tests/*.test.mjs
+npm run test:reader
+npm run test:shared
+npm run test:writer-unit
 npm run test:mobile
+npm run test:writer
+node --check assets/js/*.js
 git diff --check
 ```
 
