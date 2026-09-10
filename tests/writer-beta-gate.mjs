@@ -597,6 +597,19 @@ async function runWriterWysiwygGate(targetUrl) {
     assert.equal(titleContainer.source.split(/\r?\n/, 1)[0], "Writer Title", `Title editing must update only the first Author Source line: ${titleContainer.source.slice(0, 200)}`);
     assert.match(titleContainer.source, /Writer Gate/, "Title editing must preserve the body Source");
 
+    stage = "semantic title input";
+    await resetWriterSource(wysiwygSeedSource);
+    const titleBefore = (await page.locator("#song-title").innerText()).trim();
+    assert.equal(await placeCaretInRoot(page.locator("#song-title"), titleBefore, titleBefore.length), true, "Title semantic gate must place a collapsed caret at the title end");
+    const titleInputEvent = await page.locator("#song-title").evaluate(root => {
+      const event = new InputEvent("beforeinput", { bubbles: true, cancelable: true, inputType: "insertText", data: "!" });
+      root.dispatchEvent(event);
+      return { defaultPrevented: event.defaultPrevented };
+    });
+    assert.equal(titleInputEvent.defaultPrevented, true, "Title text input must be handled as a Source transaction");
+    await page.waitForFunction(expected => document.querySelector("#source-editor")?.value.includes(expected), `${titleBefore}!`, { timeout: 30_000 });
+    assert.equal(parseLyricContainer(await page.locator("#source-editor").inputValue()).source.split(/\r?\n/, 1)[0], `${titleBefore}!`, "Title Source transaction must commit the inserted text");
+
     await resetWriterSource(originalSource);
     await clickHeaderButton(page, "#source-mode-switch");
     await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source, originalSource, { timeout: 30_000 });
@@ -861,6 +874,13 @@ async function runWriterCompositionGate(targetUrl) {
       root.dispatchEvent(new CompositionEvent("compositionupdate", { bubbles: true, data: value }));
       root.dispatchEvent(new CompositionEvent("compositionend", { bubbles: true, data: value }));
     }, data);
+    const dispatchCompositionData = async (locator, data, finalInput) => locator.evaluate((root, options) => {
+      root.focus();
+      root.dispatchEvent(new CompositionEvent("compositionstart", { bubbles: true, data: "" }));
+      root.dispatchEvent(new CompositionEvent("compositionupdate", { bubbles: true, data: options.data }));
+      root.dispatchEvent(new CompositionEvent("compositionend", { bubbles: true, data: options.data }));
+      if (options.finalInput) root.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertText", data: options.data }));
+    }, { data, finalInput });
 
     stage = "title composition commits without trailing input";
     await resetWriterSource();
@@ -874,6 +894,34 @@ async function runWriterCompositionGate(targetUrl) {
     await dispatchCompositionWithoutFinalInput(page.locator("#lyrics"), "かな");
     await page.waitForFunction(() => /本文かな/.test(document.querySelector("#source-editor")?.value || ""), null, { timeout: 30_000 });
     assert.equal(await readSource(), fixture.replace("本文", "本文かな"), "Body compositionend must commit the final text even without a trailing input event");
+
+    stage = "title composition Source transaction without DOM mutation";
+    await resetWriterSource();
+    await placeCaretAtRootBoundary(page.locator("#song-title"), true);
+    await dispatchCompositionData(page.locator("#song-title"), "確定", false);
+    await page.waitForFunction(() => /IME Title確定/.test(document.querySelector("#source-editor")?.value || ""), null, { timeout: 30_000 });
+    assert.equal((await readSource()).split(/\r?\n/, 1)[0], "IME Title確定", "Title compositionend data must commit through the Source transaction even when the DOM has no final text");
+
+    stage = "body composition Source transaction without DOM mutation";
+    await resetWriterSource();
+    await placeCaretAtRootBoundary(page.locator("#lyrics"), true);
+    await dispatchCompositionData(page.locator("#lyrics"), "確定", false);
+    await page.waitForFunction(() => /本文確定/.test(document.querySelector("#source-editor")?.value || ""), null, { timeout: 30_000 });
+    assert.equal(await readSource(), fixture.replace("本文", "本文確定"), "Body compositionend data must commit through the Source transaction even when the DOM has no final text");
+
+    stage = "title composition final input Source transaction";
+    await resetWriterSource();
+    await placeCaretAtRootBoundary(page.locator("#song-title"), true);
+    await dispatchCompositionData(page.locator("#song-title"), "入力", true);
+    await page.waitForFunction(() => /IME Title入力/.test(document.querySelector("#source-editor")?.value || ""), null, { timeout: 30_000 });
+    assert.equal((await readSource()).split(/\r?\n/, 1)[0], "IME Title入力", "Title final input must not be required for a second DOM serialization");
+
+    stage = "body composition final input Source transaction";
+    await resetWriterSource();
+    await placeCaretAtRootBoundary(page.locator("#lyrics"), true);
+    await dispatchCompositionData(page.locator("#lyrics"), "入力", true);
+    await page.waitForFunction(() => /本文入力/.test(document.querySelector("#source-editor")?.value || ""), null, { timeout: 30_000 });
+    assert.equal(await readSource(), fixture.replace("本文", "本文入力"), "Body final input must not be required for a second DOM serialization");
 
     assert.deepEqual({ consoleErrors, pageErrors }, { consoleErrors: [], pageErrors: [] });
     return { status: "PASS", targetUrl };

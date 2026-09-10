@@ -4,6 +4,7 @@
 
 ### Reader Kernel優先への方針転換
 
+- WriterのTitle／本文IME compositionを開始時のSource範囲と`compositionend.data`によるsemantic transactionへ統一し、末尾`input`イベントの有無やDOMの一時状態に依存せずCanonical Sourceへ一度だけ反映する。通常のSource範囲を取得できないRuby内部等は既存の保護付きfallbackへ戻し、Title／本文のComposition Browser Gate（確定inputあり・なし）を追加した。
 - Readerの既定組版を詰め、行間を1.70（Mobile 1.65）、字間を0.02em、段落間隔を0.4emへ調整した。作品ThemeやViewer Overrideでの個別調整は維持し、Mobile Viewer Gateで初期値と設定Panelの表示を検証する。
 - Writerで「作品既定の表示設定に戻す」を実行した際も、Document ThemeのRegistry Fontを再解決し、非同期読込完了後のReader全体へ適用するようにした。読込失敗時はFallback Statusを表示し、本文を維持する。
 - 縦書き表示時の`〳〵` / `〴〵`を表示専用の反復記号ペアへまとめ、Source/Portable Textは変更せずに字間とinline advanceを補正した。Chromium Pixel 5 / WebKit iPhone相当の矩形測定Gateで前後文字との重なりがないことを確認する。

@@ -190,6 +190,13 @@ async function checkScenario(scenario, targetUrl) {
       root.dispatchEvent(new CompositionEvent("compositionupdate", { bubbles: true, data: value }));
       root.dispatchEvent(new CompositionEvent("compositionend", { bubbles: true, data: value }));
     }, data);
+    const dispatchCompositionData = async (locator, data, finalInput = false) => locator.evaluate((root, options) => {
+      root.focus();
+      root.dispatchEvent(new CompositionEvent("compositionstart", { bubbles: true, data: "" }));
+      root.dispatchEvent(new CompositionEvent("compositionupdate", { bubbles: true, data: options.data }));
+      root.dispatchEvent(new CompositionEvent("compositionend", { bubbles: true, data: options.data }));
+      if (options.finalInput) root.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertText", data: options.data }));
+    }, { data, finalInput });
     const readMobileSource = async () => {
       await clickHeaderButton(page, "#source-mode-switch");
       await page.locator("#source-editor").waitFor({ state: "visible", timeout: 30_000 });
@@ -215,6 +222,25 @@ async function checkScenario(scenario, targetUrl) {
     await dispatchCompositionWithoutFinalInput(page.locator("#lyrics"), "かな");
     await page.waitForFunction(() => /本文かな/.test(document.querySelector("#source-editor")?.value || ""), null, { timeout: 30_000 });
     assert.equal(await readMobileSource(), "Mobile IME\n本文かな", `${scenario.id}: WebKit compositionend must commit body text without a trailing input event`);
+
+    stage = "IME Source transaction on mobile Writer";
+    await page.locator("#source-editor").fill(compositionFixture);
+    await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source && document.querySelector("#source-editor")?.getAttribute("aria-invalid") !== "true", compositionFixture, { timeout: 30_000 });
+    await clickHeaderButton(page, "#source-mode-switch");
+    await clickHeaderButton(page, "#mode-switch");
+    await placeCaretAtRootBoundary(page.locator("#song-title"), true);
+    await dispatchCompositionData(page.locator("#song-title"), "確定", false);
+    await page.waitForFunction(() => /Mobile IME確定/.test(document.querySelector("#source-editor")?.value || ""), null, { timeout: 30_000 });
+    assert.equal((await readMobileSource()).split(/\r?\n/, 1)[0], "Mobile IME確定", `${scenario.id}: mobile title composition must use the Source transaction without DOM text`);
+
+    await page.locator("#source-editor").fill(compositionFixture);
+    await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source && document.querySelector("#source-editor")?.getAttribute("aria-invalid") !== "true", compositionFixture, { timeout: 30_000 });
+    await clickHeaderButton(page, "#source-mode-switch");
+    await clickHeaderButton(page, "#mode-switch");
+    await placeCaretAtRootBoundary(page.locator("#lyrics"), true);
+    await dispatchCompositionData(page.locator("#lyrics"), "確定", false);
+    await page.waitForFunction(() => /本文確定/.test(document.querySelector("#source-editor")?.value || ""), null, { timeout: 30_000 });
+    assert.equal(await readMobileSource(), "Mobile IME\n本文確定", `${scenario.id}: mobile body composition must use the Source transaction without DOM text`);
 
     stage = "Title/body boundary on mobile Writer";
     const boundaryFixture = containerWithActiveSource(originalSource, "Mobile Boundary\n本文");
@@ -288,7 +314,7 @@ async function checkScenario(scenario, targetUrl) {
     await page.waitForFunction(() => (document.querySelectorAll("#lyrics .source-ruby").length || 0) >= 3, null, { timeout: 30_000 });
     await clickHeaderButton(page, "#source-mode-switch");
     source = await page.locator("#source-editor").inputValue();
-    assert.match(source, /前｜読確認《よみかくにん》｜ペウコ《ピョコ》後/, `${scenario.id}: mobile Portable Ruby paste must restore Ruby Source`);
+    assert.equal(parseLyricContainer(source).source, "Ruby Mobile Gate\n前｜読確認《よみかくにん》後\n前｜ペウコ《ピョコ》｜読確認《よみかくにん》後", `${scenario.id}: mobile Portable Ruby paste must restore the complete Ruby Source at the selected caret`);
 
     stage = "Portable Ruby paste at a normal text caret";
     await page.locator("#source-editor").fill(rubyFixture);
@@ -300,13 +326,14 @@ async function checkScenario(scenario, targetUrl) {
     await page.waitForFunction(() => (document.querySelectorAll("#lyrics .source-ruby").length || 0) >= 3, null, { timeout: 30_000 });
     await clickHeaderButton(page, "#source-mode-switch");
     source = await page.locator("#source-editor").inputValue();
-    assert.match(source, /前｜読確認《よみかくにん》｜読確認《よみかくにん》後/, `${scenario.id}: mobile Portable Ruby paste at a normal text caret must use the semantic Source transaction`);
+    assert.equal(parseLyricContainer(source).source, "Ruby Mobile Gate\n前｜読確認《よみかくにん》｜読確認《よみかくにん》後\n前｜ペウコ《ピョコ》後", `${scenario.id}: mobile Portable Ruby paste at a normal text caret must use the semantic Source transaction`);
 
     assert.deepEqual({ consoleErrors, pageErrors, failedRequests, badResponses }, { consoleErrors: [], pageErrors: [], failedRequests: [], badResponses: [] });
     return { id: scenario.id, status: "PASS", screenshot: screenshotBase, initial, vertical };
   } catch (error) {
     await page.screenshot({ path: `${screenshotBase}-failure.png`, fullPage: false }).catch(() => {});
-    const state = await page.evaluate(() => ({ mode: document.body.dataset.mode || "", lyricsHidden: document.querySelector("#lyrics")?.hidden ?? null, status: document.querySelector("#source-status")?.textContent || "" })).catch(() => ({}));
+    const state = await page.evaluate(() => ({ mode: document.body.dataset.mode || "", lyricsHidden: document.querySelector("#lyrics")?.hidden ?? null, status: document.querySelector("#source-status")?.textContent || "", rubyCount: document.querySelectorAll("#lyrics .source-ruby").length, lyrics: (document.querySelector("#lyrics")?.innerText || "").slice(0, 500), source: document.querySelector("#source-editor")?.value || "" })).catch(() => ({}));
+    if (state.source) { try { state.sourceBody = parseLyricContainer(state.source).source; } catch { /* Keep the raw diagnostic when the editor is already invalid. */ } }
     const message = `${scenario.id}: ${error instanceof Error ? error.message : String(error)} stage=${stage} state=${JSON.stringify(state)} console=${JSON.stringify(consoleErrors)} page=${JSON.stringify(pageErrors)}`.replace(/[\r\n]+/g, " ");
     if (process.env.GITHUB_ACTIONS) console.log(`::error title=Writer Mobile Gate failure::${message}`);
     throw new Error(message);
