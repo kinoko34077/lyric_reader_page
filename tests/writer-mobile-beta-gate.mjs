@@ -65,7 +65,7 @@ async function selectTextInRoot(locator, text) {
 }
 
 async function placeCaretBeforeRuby(page, index) {
-  return page.locator("#lyrics .source-ruby").nth(index).evaluate(node => { const range = document.createRange(); range.setStartBefore(node); range.collapse(true); const selection = window.getSelection(); selection?.removeAllRanges(); selection?.addRange(range); node.parentElement?.focus(); document.dispatchEvent(new Event("selectionchange")); return true; });
+  return page.locator("#lyrics .source-ruby").nth(index).evaluate(node => { node.parentElement?.focus(); const range = document.createRange(); range.setStartBefore(node); range.collapse(true); const selection = window.getSelection(); selection?.removeAllRanges(); selection?.addRange(range); document.dispatchEvent(new Event("selectionchange")); return true; });
 }
 
 async function placeCaretInRoot(locator, text, offset) {
@@ -88,7 +88,7 @@ async function placeCaretInRoot(locator, text, offset) {
 }
 
 async function placeCaretAtRootBoundary(locator, end = false) {
-  return locator.evaluate((root, atEnd) => { root.focus(); const range = document.createRange(); range.selectNodeContents(root); range.collapse(Boolean(atEnd)); const selection = window.getSelection(); selection?.removeAllRanges(); selection?.addRange(range); document.dispatchEvent(new Event("selectionchange")); return true; }, end);
+  return locator.evaluate((root, atEnd) => { root.focus(); const range = document.createRange(); range.selectNodeContents(root); range.collapse(!Boolean(atEnd)); const selection = window.getSelection(); selection?.removeAllRanges(); selection?.addRange(range); document.dispatchEvent(new Event("selectionchange")); return true; }, end);
 }
 
 async function checkScenario(scenario, targetUrl) {
@@ -314,7 +314,7 @@ async function checkScenario(scenario, targetUrl) {
     await page.waitForFunction(() => (document.querySelectorAll("#lyrics .source-ruby").length || 0) >= 3, null, { timeout: 30_000 });
     await clickHeaderButton(page, "#source-mode-switch");
     source = await page.locator("#source-editor").inputValue();
-    assert.equal(parseLyricContainer(source).source, "Ruby Mobile Gate\n前｜読確認《よみかくにん》後\n前｜ペウコ《ピョコ》｜読確認《よみかくにん》後", `${scenario.id}: mobile Portable Ruby paste must restore the complete Ruby Source at the selected caret`);
+    assert.equal(parseLyricContainer(source).source, "Ruby Mobile Gate\n前｜読確認《よみかくにん》後\n前｜読確認《よみかくにん》｜ペウコ《ピョコ》後", `${scenario.id}: mobile Portable Ruby paste must restore the complete Ruby Source at the selected caret`);
 
     stage = "Portable Ruby paste at a normal text caret";
     await page.locator("#source-editor").fill(rubyFixture);

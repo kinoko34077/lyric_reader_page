@@ -323,14 +323,14 @@ function preserveWysiwygTitleTextInput(event) {
 function selectionAtEditorBoundary(root, end) {
   const selection = window.getSelection();
   if (!selection || selection.rangeCount !== 1 || !selection.isCollapsed || !root?.contains(selection.getRangeAt(0).startContainer)) return false;
-  const edge = document.createRange(); edge.selectNodeContents(root); edge.collapse(Boolean(end));
+  const edge = document.createRange(); edge.selectNodeContents(root); edge.collapse(!Boolean(end));
   const range = selection.getRangeAt(0);
   return range.compareBoundaryPoints(Range.START_TO_START, edge) === 0 && range.compareBoundaryPoints(Range.END_TO_END, edge) === 0;
 }
 function focusEditorBoundary(root, end) {
   if (!root) return;
   root.focus({ preventScroll: true });
-  const range = document.createRange(); range.selectNodeContents(root); range.collapse(Boolean(end));
+  const range = document.createRange(); range.selectNodeContents(root); range.collapse(!Boolean(end));
   const selection = window.getSelection(); selection?.removeAllRanges(); selection?.addRange(range);
   document.dispatchEvent(new Event("selectionchange"));
 }
@@ -365,16 +365,45 @@ function selectionTouchesRuby(root = $("lyrics")) {
 function renderedBodySource(container = $("lyrics"), options = {}) { return serializeRenderedBodySource(container, currentAdapter(), { ...options, preserveRuby: options.preserveRuby ?? !state.rubyEditActive }); }
 function bodyInput(options = {}) { const caret = caretOffset(); const editRuby = options.editRuby ?? (state.rubyEditActive || selectionTouchesRuby()); const rawBody = renderedBodySource($("lyrics"), { editRuby }); const record = currentRecord(); const nextText = state.data.titleSource === "first-line" ? withFirstLineBody(record.source.text, rawBody) : rawBody; let parsed; try { parsed = currentAdapter().parse(nextText); } catch (error) { setStatus(error instanceof Error ? error.message : "本文を更新できませんでした"); render(captureScroll()); return; } finally { state.rubyEditActive = false; } state.selectionBookmark = null; state.data = replaceVariantSource(state.data, record.id, nextText); state.nodes = parsed.nodes; markDirty({ source: true }); saveDraft(); scheduleHistory(); render(captureScroll()); restoreCaret(caret); updateStatus(); }
 function commitSemanticTextEdit(range, value) { const document = replaceText({ type: "document", nodes: state.nodes }, range, value); writeBodyDocument(document); restoreCaret(Number(range.start) + graphemes(value).length); }
+function domPathFromRoot(root, node) {
+  const path = [];
+  let current = node;
+  while (current && current !== root) {
+    const parent = current.parentNode;
+    if (!parent) return null;
+    const index = [...parent.childNodes].indexOf(current);
+    if (index < 0) return null;
+    path.unshift(index);
+    current = parent;
+  }
+  return current === root ? path : null;
+}
+function compareDomPaths(left, right) {
+  const length = Math.min(left.length, right.length);
+  for (let index = 0; index < length; index += 1) {
+    if (left[index] !== right[index]) return left[index] > right[index] ? 1 : -1;
+  }
+  return left.length === right.length ? 0 : left.length > right.length ? 1 : -1;
+}
+function domBoundaryPath(root, container, offset) {
+  const path = domPathFromRoot(root, container);
+  return path ? [...path, Number(offset) || 0] : null;
+}
 function sourceOffsetAtPoint(root, container, offset) {
   if (!root?.contains(container) && root !== container) return null;
-  const point = document.createRange();
-  try { point.setStart(container, offset); point.collapse(true); } catch { return null; }
+  const point = domBoundaryPath(root, container, offset);
+  if (!point) return null;
   let result = 0;
   for (const marker of root.querySelectorAll("[data-source-start][data-source-end]")) {
-    const markerRange = document.createRange(); markerRange.selectNode(marker);
-    try {
-      if (point.compareBoundaryPoints(Range.START_TO_END, markerRange) >= 0) result = Math.max(result, Number(marker.dataset.sourceEnd) || 0);
-    } catch { /* Ignore a marker detached during a browser edit. */ }
+    const parent = marker.parentNode;
+    const parentPath = parent ? domPathFromRoot(root, parent) : null;
+    if (!parentPath) continue;
+    const markerIndex = [...parent.childNodes].indexOf(marker);
+    if (markerIndex < 0) continue;
+    // A caret immediately before a marker is at that marker's start, not its end.
+    // Comparing tree paths avoids browser-specific Range boundary normalization
+    // at contenteditable host boundaries and cannot jump across the next Ruby.
+    if (compareDomPaths(point, [...parentPath, markerIndex]) > 0) result = Math.max(result, Number(marker.dataset.sourceEnd) || 0);
   }
   return result;
 }

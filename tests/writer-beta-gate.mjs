@@ -115,7 +115,7 @@ async function placeCaretAtRootBoundary(locator, end = false) {
     root.focus?.();
     const range = document.createRange();
     range.selectNodeContents(root);
-    range.collapse(Boolean(atEnd));
+    range.collapse(!Boolean(atEnd));
     const selection = window.getSelection();
     selection?.removeAllRanges();
     selection?.addRange(range);
@@ -695,8 +695,9 @@ async function runWriterRubyGate(targetUrl) {
       return page.locator("#source-editor").inputValue();
     };
     const placeCaretBeforeRuby = async index => page.locator("#lyrics .source-ruby").nth(index).evaluate(node => {
+      node.parentElement?.focus();
       const range = document.createRange(); range.setStartBefore(node); range.collapse(true);
-      const selection = window.getSelection(); selection?.removeAllRanges(); selection?.addRange(range); node.parentElement?.focus();
+      const selection = window.getSelection(); selection?.removeAllRanges(); selection?.addRange(range);
       document.dispatchEvent(new Event("selectionchange")); return true;
     });
     const flattenRuby = async index => page.locator("#lyrics .source-ruby").nth(index).evaluate(node => {

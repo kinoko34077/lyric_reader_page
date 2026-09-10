@@ -1,9 +1,10 @@
 # Changelog
 
-## [Unreleased] — 2026-09-10
+## [Unreleased] — 2026-09-11
 
 ### Reader Kernel優先への方針転換
 
+- WriterのRuby隣接入力で、contenteditableのhost境界に置かれたCaretを次のRubyの終端へ誤って進めるSource offset計算を修正した。rootからのDOM child pathでmarker開始位置を比較する決定的な写像へ変更し、表示DOMがRubyを平坦化した状態でもRuby直前の入力を正しいAuthor Source範囲へtransaction適用する。Chromium Writer Ruby GateとWebKit Mobile Ruby Gateの補助Caret設定もfocus後に範囲を設定する順序へ統一した。
 - WriterのTitle編集にもSource範囲transactionを適用し、通常文字入力だけでなく一文字削除・範囲削除・Plain Text／Portable Ruby Paste・選択CopyをDOM全体の再シリアライズなしで処理する。タイトルは1行制約を保ちつつ、本文と同じAuthor Source保全経路を通り、未対応ブラウザ操作時だけ従来fallbackへ戻る。
 - WriterのTitle／本文IME compositionを開始時のSource範囲と`compositionend.data`によるsemantic transactionへ統一し、末尾`input`イベントの有無やDOMの一時状態に依存せずCanonical Sourceへ一度だけ反映する。通常のSource範囲を取得できないRuby内部等は既存の保護付きfallbackへ戻し、Title／本文のComposition Browser Gate（確定inputあり・なし）を追加した。
 - Readerの既定組版を詰め、行間を1.70（Mobile 1.65）、字間を0.02em、段落間隔を0.4emへ調整した。作品ThemeやViewer Overrideでの個別調整は維持し、Mobile Viewer Gateで初期値と設定Panelの表示を検証する。
