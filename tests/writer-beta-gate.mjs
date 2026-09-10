@@ -6,6 +6,7 @@ import os from "node:os";
 import path from "node:path";
 import { chromium } from "playwright";
 import { getSyntaxAdapter, parseSource, toPortableText } from "../assets/js/syntax-adapter.js";
+import { containerToReaderDocument, parseLyricContainer, serializeLyricContainer } from "../assets/js/lyric-container.js";
 import { runWriterGateSuite } from "./writer-gate-runner.mjs";
 
 const root = path.resolve(process.cwd());
@@ -109,6 +110,13 @@ async function placeCaretInRoot(locator, text, offset) {
   }, { text, offset });
 }
 
+function containerWithActiveSource(containerText, source) {
+  const parsed = parseLyricContainer(containerText);
+  const document = containerToReaderDocument(parsed);
+  document.content.variants = document.content.variants.map(variant => variant.id === parsed.activeVariantId ? { ...variant, source: { text: source, url: "container:" } } : variant);
+  return serializeLyricContainer(document, parsed.activeVariantId);
+}
+
 async function runWriterCoreGate(targetUrl) {
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({ locale: "ja-JP", colorScheme: "light" });
@@ -137,7 +145,6 @@ async function runWriterCoreGate(targetUrl) {
       return Boolean(editor && /晴々撥条|如何《どう》/.test(editor.value) && editor.getAttribute("aria-invalid") !== "true");
     }, null, { timeout: 30_000 });
     const originalSource = await page.locator("#source-editor").inputValue();
-
     stage = "valid Source to Viewer to Writer round trip";
     const validSource = `${originalSource}\n[Writer Core Gate:style=demo-chorus]`;
     await page.locator("#source-editor").fill(validSource);
@@ -265,21 +272,32 @@ async function runWriterSourceGate(targetUrl) {
     await page.waitForFunction(() => /晴々撥条|如何《どう》/.test(document.querySelector("#source-editor")?.value || ""), null, { timeout: 30_000 });
     originalSource = await page.locator("#source-editor").inputValue();
     assert.match(originalSource, /晴々撥条|如何《どう》/);
+    assert.match(originalSource, /^LYRIC-READER\/1\n/, "Source mode must expose the canonical full-document Container");
 
     stage = "variant source isolation";
     await clickHeaderButton(page, "#settings-toggle");
     assert.ok(await page.locator("#variant-mode option").count() >= 2, "Source Editor must expose the document Variant Set");
+    stage = "Source Variant select modern";
     await page.locator("#variant-mode").selectOption("modernized");
     await page.waitForFunction(() => /こちらへ来たのだろう/.test(document.querySelector("#source-editor")?.value || ""), null, { timeout: 30_000 });
     const modernSource = await page.locator("#source-editor").inputValue();
     await page.locator("#source-editor").fill(`${modernSource}\n[Source Variant Gate:style=demo-chorus]`);
+    stage = "Source Variant first edit";
     await page.waitForFunction(() => /Source Variant Gate/.test(document.querySelector("#source-editor")?.value || ""), null, { timeout: 30_000 });
+    stage = "Source Variant switch original after edit";
     await page.locator("#variant-mode").selectOption("original");
-    await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source, originalSource, { timeout: 30_000 });
+    await page.waitForFunction(() => document.querySelector("#variant-mode")?.value === "original" && Boolean(document.querySelector("#source-editor")?.value), null, { timeout: 30_000 });
+    const originalAfterVariantEdit = parseLyricContainer(await page.locator("#source-editor").inputValue());
+    assert.equal(originalAfterVariantEdit.activeVariantId, "original");
+    assert.equal(originalAfterVariantEdit.source, parseLyricContainer(originalSource).source, "editing another Variant must not change the active Original Source");
+    stage = "Source Variant revisit modern";
     await page.locator("#variant-mode").selectOption("modernized");
     await page.waitForFunction(() => /Source Variant Gate/.test(document.querySelector("#source-editor")?.value || ""), null, { timeout: 30_000 });
+    stage = "Source Variant switch original after revisit";
     await page.locator("#variant-mode").selectOption("original");
-    await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source, originalSource, { timeout: 30_000 });
+    await page.waitForFunction(() => document.querySelector("#variant-mode")?.value === "original" && Boolean(document.querySelector("#source-editor")?.value), null, { timeout: 30_000 });
+    const originalAfterSecondVariantSwitch = parseLyricContainer(await page.locator("#source-editor").inputValue());
+    assert.equal(originalAfterSecondVariantSwitch.source, parseLyricContainer(originalSource).source, "switching back must preserve the Original Source after another Variant edit");
     await clickHeaderButton(page, "#settings-toggle");
 
     stage = "valid source to viewer round trip";
@@ -539,8 +557,9 @@ async function runWriterWysiwygGate(targetUrl) {
     await page.waitForFunction(() => /Writer Title/.test(document.querySelector("#song-title")?.innerText || ""), null, { timeout: 30_000 });
     await clickHeaderButton(page, "#source-mode-switch");
     const titleSource = await page.locator("#source-editor").inputValue();
-    assert.equal(titleSource.split(/\r?\n/, 1)[0], "Writer Title", `Title editing must update only the first Author Source line: ${titleSource.slice(0, 200)}`);
-    assert.match(titleSource, /Writer Gate/, "Title editing must preserve the body Source");
+    const titleContainer = parseLyricContainer(titleSource);
+    assert.equal(titleContainer.source.split(/\r?\n/, 1)[0], "Writer Title", `Title editing must update only the first Author Source line: ${titleContainer.source.slice(0, 200)}`);
+    assert.match(titleContainer.source, /Writer Gate/, "Title editing must preserve the body Source");
 
     await resetWriterSource(originalSource);
     await clickHeaderButton(page, "#source-mode-switch");
@@ -568,11 +587,12 @@ async function runWriterRubyGate(targetUrl) {
   page.on("console", message => { if (message.type() === "error" && !expectedAssetFailure(message.location().url) && !/Failed to load resource:/i.test(message.text())) consoleErrors.push(`${message.text()} (${message.location().url})`); });
   page.on("pageerror", error => pageErrors.push(String(error)));
   let stage = "initial";
-  const fixture = "Ruby Gate\n前｜読確認《よみかくにん》後\n前｜ペウコ《ピョコ》後\n如何《どう》";
+    const fixture = "Ruby Gate\n前｜読確認《よみかくにん》後\n前｜ペウコ《ピョコ》後\n如何《どう》";
   try {
     await page.goto(targetUrl, { waitUntil: "domcontentloaded", timeout: 30_000 });
     await page.locator("#source-editor").waitFor({ state: "visible", timeout: 30_000 });
     await page.waitForFunction(() => /晴々撥条|如何《どう》/.test(document.querySelector("#source-editor")?.value || ""), null, { timeout: 30_000 });
+    const originalSource = await page.locator("#source-editor").inputValue();
 
     const resetWriterSource = async source => {
       if (await page.evaluate(() => document.body.dataset.mode) !== "source") await clickHeaderButton(page, "#source-mode-switch");
@@ -598,8 +618,10 @@ async function runWriterRubyGate(targetUrl) {
       const ruby = node.querySelector("ruby"); if (!ruby) return false; ruby.replaceWith(document.createTextNode(node.textContent || "")); return true;
     });
 
+    const fixtureContainer = containerWithActiveSource(originalSource, fixture);
+
     stage = "Ruby before-neighbor input";
-    await resetWriterSource(fixture);
+    await resetWriterSource(fixtureContainer);
     assert.equal(await flattenRuby(0), true, "Ruby gate must be able to simulate a flattened Ruby DOM");
     assert.equal(await placeCaretInRoot(page.locator("#lyrics"), "後", 0), true, "Ruby gate must place a caret after the first Ruby");
     const caretBeforeRubyInput = await page.evaluate(() => { const selection = window.getSelection(); return { active: document.activeElement?.id || document.activeElement?.className || "", anchor: selection?.anchorNode?.parentElement?.outerHTML?.slice(0, 240) || "", text: selection?.toString() || "" }; });
@@ -610,7 +632,7 @@ async function runWriterRubyGate(targetUrl) {
     assert.match(source, /前｜読確認《よみかくにん》A後/, `editing after a flattened Ruby must preserve Ruby Source: ${source}`);
 
     stage = "Ruby after-neighbor input";
-    await resetWriterSource(fixture);
+    await resetWriterSource(fixtureContainer);
     assert.equal(await flattenRuby(1), true, "Ruby gate must flatten the second Ruby");
     await placeCaretBeforeRuby(1);
     await page.keyboard.insertText("B");
@@ -619,7 +641,7 @@ async function runWriterRubyGate(targetUrl) {
     assert.match(source, /前B｜ペウコ《ピョコ》後/, `editing before a flattened Ruby must preserve Ruby Source: ${source}`);
 
     stage = "Ruby reading edit";
-    await resetWriterSource(fixture);
+    await resetWriterSource(fixtureContainer);
     assert.equal(await selectTextInRoot(page.locator("#lyrics .source-ruby").first(), "よみかくにん"), true, "Ruby gate must select the reading portion");
     await page.keyboard.insertText("読み");
     await page.waitForFunction(() => /読み/.test(document.querySelector("#lyrics")?.innerText || ""), null, { timeout: 30_000 });
@@ -627,7 +649,7 @@ async function runWriterRubyGate(targetUrl) {
     assert.match(source, /前｜読確認《読み》後/, `editing Ruby reading must keep Ruby syntax: ${source}`);
 
     stage = "Portable Ruby copy and paste";
-    await resetWriterSource(fixture);
+    await resetWriterSource(fixtureContainer);
     assert.equal(await selectTextInRoot(page.locator("#lyrics .source-ruby").first(), "読確認よみかくにん"), true, "Ruby gate must select the complete Ruby for copy");
     const copied = await page.locator("#lyrics").evaluate(element => {
       let value = "";

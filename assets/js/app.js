@@ -4,10 +4,10 @@ import { firstLineInfo, withFirstLineBody } from "./content-boundary.js";
 import { boundedHistory, clone, documentFingerprint, documentIdentity, documentPayload, draftDiffers, draftPayload, draftStorageKey, localSourceIdentity, migrateReaderDocument, normalizeDraft, readerDocumentExtensions } from "./document-state.js";
 import { applyPresentation, applyRubyPresentation, assertCapabilities, clearPresentation, clearRubyPresentation, getSyntaxAdapter, graphemes, isSafePresentationName, parseSource, replaceText, serializeSource, toPortableText, toPortableTextSafe } from "./syntax-adapter.js";
 import { renderLyrics, rawText } from "./reader-view.js";
-import { parseLyricContainer, serializeLyricContainer } from "./lyric-container.js";
+import { containerToReaderDocument, isLyricContainerText, parseLyricContainer, serializeLyricContainer } from "./lyric-container.js";
 import { normalizeRegistry, paletteValue, validateRegistry } from "./registry.js";
 import { renderedBodySource as serializeRenderedBodySource } from "./editor-source.js";
-import { parseSourceEditorInput } from "./source-editor.js";
+import { sourceErrorContext, sourceErrorLocation } from "./source-editor.js";
 import { activeVariant, normalizeActiveVariantId, normalizeDocumentData, normalizeVariants, replaceVariantSource, resolveMetadata, resolveTitle } from "./document-model.js";
 import { captureScrollPosition, commitDocumentCandidate, restoreScrollPosition, scrollStorageKey } from "./runtime-integrity.js";
 
@@ -18,7 +18,7 @@ const initialMode = requestedMode === "writer" || requestedMode === "source" ? r
 const state = {
   activeVariantId: "variant-A", kanji: "original", ruby: true, writingMode: "horizontal", size: 20,
   font: "serif", fontUrl: "", background: "#f5f0e6", color: "#272522", paletteBank: "default",
-  remoteFontsAllowed: true, loadedRegistryFonts: new Set(), data: null, nodes: [], selectionBookmark: null, compositionActive: false, compositionCommitPending: false, rubyEditActive: false, mode: initialMode,
+  remoteFontsAllowed: true, loadedRegistryFonts: new Set(), data: null, nodes: [], selectionBookmark: null, compositionActive: false, compositionCommitPending: false, rubyEditActive: false, sourceEditorRaw: null, sourceEditorDocumentHash: null, sourceEditorRawByVariant: new Map(), mode: initialMode,
   preferencesLoaded: false, sourceDirty: false, documentDirty: false, dirty: false, draft: null, history: [], historyIndex: -1, historyDocumentId: null, savedCheckpoint: null, storageAvailable: true
 };
 const PREFS_KEY = "lyric-reader:preferences:v1";
@@ -115,8 +115,75 @@ function captureScroll() { const shell = $("reader-shell"); const lyrics = $("ly
 function savedScroll() { try { const value = JSON.parse(storageGet(scrollStorageKey(scrollIdentity())) || "null"); return value && typeof value === "object" ? { offset: value.anchor, ...value } : null; } catch { return null; } }
 function saveScroll() { try { storageSet(scrollStorageKey(scrollIdentity()), JSON.stringify(captureScroll())); } catch { /* Storage loss must not stop reading or editing. */ } }
 function restoreScroll(anchor) { requestAnimationFrame(() => { const shell = $("reader-shell"); const lyrics = $("lyrics"); const target = anchor?.offset == null ? null : [...lyrics.querySelectorAll("[data-source-start]")].find(node => Number(node.dataset.sourceStart) >= anchor.offset); if (target) target.scrollIntoView({ block: "nearest", inline: "nearest" }); else { const restored = restoreScrollPosition(anchor || {}, { scrollHeight: shell.scrollHeight, scrollWidth: shell.scrollWidth, clientHeight: shell.clientHeight, clientWidth: shell.clientWidth }); shell.scrollTop = restored.top; shell.scrollLeft = restored.left; } saveScroll(); }); }
-function syncSourceEditor() { const editor = $("source-editor"); if (editor && state.data) { editor.value = currentRaw(); editor.setCustomValidity(""); editor.removeAttribute("aria-invalid"); } }
-function sourceInput() { if (state.mode !== "source" || !state.data) return; const editor = $("source-editor"); const start = editor.selectionStart; const end = editor.selectionEnd; const result = parseSourceEditorInput(editor.value, currentAdapter()); if (!result.ok) { editor.setCustomValidity(result.error.message); editor.setAttribute("aria-invalid", "true"); const offset = result.error.sourceLocation?.offset; if (Number.isInteger(offset)) { editor.focus({ preventScroll: true }); const markerEnd = offset < editor.value.length ? offset + 1 : offset; editor.setSelectionRange(offset, markerEnd); } const context = result.error.sourceContext ? ` 付近「${result.error.sourceContext}」` : ""; setStatus(`Sourceを反映できません: ${result.error.message}${context}`); return; } clearReaderError(); editor.setCustomValidity(""); editor.removeAttribute("aria-invalid"); const record = currentRecord(); state.data = replaceVariantSource(state.data, record.id, result.source); state.nodes = result.document.nodes; if (state.data.titleSource === "first-line") state.data.manifest.title = resolveTitle({ source: result.source }); markDirty({ source: true }); saveDraft(); scheduleHistory(); render(captureScroll()); editor.focus(); editor.setSelectionRange(Math.min(start, editor.value.length), Math.min(end, editor.value.length)); updateStatus(); }
+function currentDocumentHash() { return state.data ? documentFingerprint(documentPayload(state.data, state.data.manifest?.title || titleSourceText(), null)) : null; }
+function syncSourceEditor() {
+  const editor = $("source-editor");
+  if (!editor || !state.data) return;
+  const hash = currentDocumentHash();
+  const cached = state.sourceEditorRawByVariant.get(state.activeVariantId);
+  if (cached?.hash === hash) {
+    state.sourceEditorRaw = cached.raw;
+    state.sourceEditorDocumentHash = hash;
+  } else {
+    state.sourceEditorRaw = serializeLyricContainer(buildReaderDocument(), state.activeVariantId);
+    state.sourceEditorDocumentHash = hash;
+    state.sourceEditorRawByVariant.set(state.activeVariantId, { raw: state.sourceEditorRaw, hash });
+  }
+  editor.value = state.sourceEditorRaw;
+  editor.setCustomValidity("");
+  editor.removeAttribute("aria-invalid");
+}
+function sourceInput() {
+  if (state.mode !== "source" || !state.data) return;
+  const editor = $("source-editor");
+  const start = editor.selectionStart;
+  const end = editor.selectionEnd;
+  const value = editor.value;
+  let candidate;
+  let warnings = [];
+  let container = null;
+  try {
+    if (!isLyricContainerText(value)) throw new Error("Source ModeではLYRIC-READER/1 Container全体を編集してください。");
+    container = parseLyricContainer(value);
+    warnings = container.warnings || [];
+    const document = containerToReaderDocument(container);
+    candidate = commitDocumentCandidate(state.data, document, next => normalizeReaderDocumentCandidate(next, state.data.sourceName || "Source Editor", state.data.sourceIdentity || "", { strictSource: true, sourceUrl: state.data.sourceUrl, sourceName: state.data.sourceName || "" }).data);
+    if (!candidate.ok) throw candidate.error;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Canonical Sourceを解析できませんでした。";
+    editor.setCustomValidity(message);
+    editor.setAttribute("aria-invalid", "true");
+    const sourceOffset = Number(error?.sourceIndex);
+    let locationText = "";
+    if (Number.isInteger(sourceOffset) && Number.isInteger(container?.bodyStart) && (!error?.sourceVariantId || error.sourceVariantId === container.activeVariantId)) {
+      const offset = Math.max(0, Math.min(editor.value.length, container.bodyStart + sourceOffset));
+      editor.focus({ preventScroll: true });
+      editor.setSelectionRange(offset, offset < editor.value.length ? offset + 1 : offset);
+      const location = sourceErrorLocation(value, { sourceIndex: offset });
+      locationText = `（行${location.line}・列${location.column}） 付近「${sourceErrorContext(value, { sourceIndex: offset })}」`;
+    }
+    setStatus(`Sourceを反映できません: ${message}${locationText}`);
+    return;
+  }
+  clearReaderError();
+  editor.setCustomValidity("");
+  editor.removeAttribute("aria-invalid");
+  state.data = candidate.value;
+  state.activeVariantId = candidate.value.activeVariantId;
+  state.loadedRegistryFonts = new Set();
+  applyManifest(state.data.manifest, true, true);
+  applyAppearance();
+  state.sourceEditorRaw = value;
+  state.sourceEditorDocumentHash = currentDocumentHash();
+  state.sourceEditorRawByVariant.set(state.activeVariantId, { raw: value, hash: state.sourceEditorDocumentHash });
+  markDirty({ source: true, document: true });
+  saveDraft();
+  scheduleHistory();
+  render(captureScroll());
+  editor.focus();
+  editor.setSelectionRange(Math.min(start, editor.value.length), Math.min(end, editor.value.length));
+  updateStatus(warnings.length ? "Sourceを反映しました（一部のReader定義に警告があります）" : undefined);
+}
 function setMode(mode) { state.mode = mode; applyMode(); applyAppearance(); updateUrlMode(); if (state.data) { render(); syncSourceEditor(); } updateStatus(mode === "writer" ? "編集中" : mode === "source" ? "Source編集中" : undefined); savePreferences(); }
 function render(anchor = captureScroll()) { const renderOptions = state.mode === "writer" ? { ...state, kanji: "original", registry: state.data?.manifest?.registry, loadedRegistryFonts: state.loadedRegistryFonts, adapter: currentAdapter() } : { ...state, registry: state.data?.manifest?.registry, loadedRegistryFonts: state.loadedRegistryFonts, adapter: currentAdapter() }; state.nodes = renderLyrics($("lyrics"), currentBody(), renderOptions); renderLyrics($("song-title"), titleSourceText(), renderOptions); applyMode(); syncSourceEditor(); restoreScroll(anchor); }
 function snapshot() { return documentPayload(state.data, titleSourceText(), state.activeVariantId); }
@@ -183,25 +250,56 @@ function writeBodyDocument(document, documentChanged = false) { const record = c
 async function hashText(text) { const bytes = new TextEncoder().encode(text); if (globalThis.crypto?.subtle) { try { const digest = await crypto.subtle.digest("SHA-256", bytes); return [...new Uint8Array(digest)].map(value => value.toString(16).padStart(2, "0")).join(""); } catch { /* fall through to a deterministic local fingerprint */ } } let hash = 2166136261; for (const byte of bytes) { hash ^= byte; hash = Math.imul(hash, 16777619); } return (hash >>> 0).toString(16); }
 function setLocalSource(text, name = "ローカル本文", sourceIdentity = "", format = "narou-text") { const raw = String(text); const title = resolveTitle({ source: raw, fallback: name.replace(/\.(txt|json)$/i, "") || "ローカル本文" }); const variants = [{ id: "variant-A", label: "Variant A", role: "", source: { text: raw, url: "local:" } }]; const manifest = validatedManifest({ title, description: "この本文はブラウザ内だけで読み込んでいます。", content: { format } }); validateLoadedVariants(manifest, variants); checkpointBeforeDocumentOpen(); state.loadedRegistryFonts = new Set(); state.data = { manifest, variants, activeVariantId: variants[0].id, links: [], variantOverrides: {}, titleSource: "first-line", sourceMetadata: {}, metadata: { title }, sourceUrl: "local:", sourceName: name, sourceIdentity: sourceIdentity || localSourceIdentity(name, new TextEncoder().encode(raw).byteLength, 0) }; clearReaderError(); state.activeVariantId = variants[0].id; clearDirty({ source: true, document: true }); applyManifest(state.data.manifest, true, true); applyAppearance(); render({ offset: 0, top: 0, left: 0 }); setCleanCheckpoint(); showDraftIfNeeded(); updateStatus(`「${title}」を表示中`); pushHistory(); }
 async function readLocalFile(file) { if (!file) return; if (!confirmReplaceCurrent()) { $("source-file").value = ""; return; } try { const likelyContainer = /\.lyric\.txt$/i.test(file.name); const likelyJson = !likelyContainer && /\.json$/i.test(file.name); const maximum = likelyContainer ? MAX_READER_DOCUMENT_JSON_BYTES + MAX_SOURCE_BYTES : likelyJson ? MAX_READER_DOCUMENT_JSON_BYTES : MAX_SOURCE_BYTES; if (Number.isFinite(file.size) && file.size > maximum) throw new Error(likelyContainer || likelyJson ? "Reader文書が大きすぎます。" : "本文が大きすぎます。"); const text = await file.text(); const fileIdentity = file.webkitRelativePath || file.name; const identity = localSourceIdentity(fileIdentity, file.size, file.lastModified, await hashText(text)); const loaded = parseLocalInput(text, file.name, file.type); if (loaded.kind === "reader-document") { setReaderDocument(loaded.document, file.name, identity); if (loaded.warnings?.length) setStatus("未知のContainer Versionを読み込みました。現行形式で保存してください"); } else setLocalSource(loaded.source, file.name, identity, loaded.format); } catch (error) { $("reader-error").hidden = false; $("reader-error").textContent = error instanceof Error ? error.message : "ファイルの形式を確認してください。既存の本文は保持されています。"; setStatus("読込失敗"); } finally { $("source-file").value = ""; } }
+function normalizeReaderDocumentCandidate(doc, name = "Reader文書", sourceIdentity = "", options = {}) {
+  const value = migrateReaderDocument(doc);
+  let migrationWarnings = Array.isArray(value.warnings) ? value.warnings : [];
+  const contentMeta = typeof value?.content === "object" && value.content ? value.content : {};
+  const variants = normalizeVariants(contentMeta);
+  if (!variants.some(variant => variant.source.text)) throw new Error("Reader文書に本文がありません。");
+  for (const variant of variants) validateSourceText(variant.source.text);
+  const meta = value.meta || value;
+  const sourceMetadata = value.sourceMetadata && typeof value.sourceMetadata === "object" && Object.keys(value.sourceMetadata).length ? value.sourceMetadata : (contentMeta.sourceMetadata || {});
+  const semanticLinks = Array.isArray(contentMeta.links) ? contentMeta.links : (Array.isArray(value.links) ? value.links : []);
+  const externalLinks = value.links && typeof value.links === "object" && !Array.isArray(value.links) ? value.links : {};
+  const manifest = validatedManifest({ ...value, ...(value.meta || {}), title: meta.title || "Reader文書", content: { format: contentMeta.format || value.format || "narou-text" }, defaults: value.defaults || {}, theme: value.theme || {}, registry: value.registry || {}, links: externalLinks });
+  migrationWarnings = [...new Set([...migrationWarnings, ...(manifest.warnings || [])])];
+  const adapter = validateLoadedVariants(manifest, variants);
+  if (options.strictSource) {
+    for (const variant of variants) {
+      try { adapter.parse(variant.source.text); }
+      catch (error) { if (error && typeof error === "object") error.sourceVariantId = variant.id; throw error; }
+    }
+  }
+  return {
+    data: { manifest, variants, activeVariantId: normalizeActiveVariantId(variants, contentMeta.activeVariantId || value.activeVariantId), links: semanticLinks, variantOverrides: contentMeta.variantOverrides || value.variantOverrides || {}, titleSource: contentMeta.titleSource || value.titleSource || "first-line", sourceMetadata, metadata: meta, documentExtensions: readerDocumentExtensions(value), sourceUrl: options.sourceUrl ?? "reader:", sourceName: options.sourceName ?? name, sourceIdentity },
+    warnings: migrationWarnings
+  };
+}
 function setReaderDocument(doc, name = "Reader文書", sourceIdentity = "") {
   let migrationWarnings = [];
-  const previous = { data: state.data, activeVariantId: state.activeVariantId, loadedRegistryFonts: state.loadedRegistryFonts, history: state.history, historyIndex: state.historyIndex, historyDocumentId: state.historyDocumentId, savedCheckpoint: state.savedCheckpoint };
-  const candidate = commitDocumentCandidate(previous.data, doc, value => {
-    value = migrateReaderDocument(value); migrationWarnings = Array.isArray(value.warnings) ? value.warnings : []; const contentMeta = typeof value?.content === "object" && value.content ? value.content : {}; const variants = normalizeVariants(contentMeta);
-    if (!variants.some(variant => variant.source.text)) throw new Error("Reader文書に本文がありません。");
-    for (const variant of variants) validateSourceText(variant.source.text);
-    const meta = value.meta || value; const sourceMetadata = value.sourceMetadata && typeof value.sourceMetadata === "object" && Object.keys(value.sourceMetadata).length ? value.sourceMetadata : (contentMeta.sourceMetadata || {});
-    const semanticLinks = Array.isArray(contentMeta.links) ? contentMeta.links : (Array.isArray(value.links) ? value.links : []); const externalLinks = value.links && typeof value.links === "object" && !Array.isArray(value.links) ? value.links : {};
-    const manifest = validatedManifest({ ...value, ...(value.meta || {}), title: meta.title || "Reader文書", content: { format: contentMeta.format || value.format || "narou-text" }, defaults: value.defaults || {}, theme: value.theme || {}, registry: value.registry || {}, links: externalLinks }); migrationWarnings = [...new Set([...migrationWarnings, ...(manifest.warnings || [])])];
-    validateLoadedVariants(manifest, variants);
-    return { manifest, variants, activeVariantId: normalizeActiveVariantId(variants, contentMeta.activeVariantId || value.activeVariantId), links: semanticLinks, variantOverrides: contentMeta.variantOverrides || value.variantOverrides || {}, titleSource: contentMeta.titleSource || value.titleSource || "first-line", sourceMetadata, metadata: meta, documentExtensions: readerDocumentExtensions(value), sourceUrl: "reader:", sourceName: name, sourceIdentity };
-  });
+  const previous = { data: state.data, activeVariantId: state.activeVariantId, loadedRegistryFonts: state.loadedRegistryFonts, history: state.history, historyIndex: state.historyIndex, historyDocumentId: state.historyDocumentId, savedCheckpoint: state.savedCheckpoint, sourceEditorRaw: state.sourceEditorRaw, sourceEditorDocumentHash: state.sourceEditorDocumentHash, sourceEditorRawByVariant: state.sourceEditorRawByVariant };
+  const candidate = commitDocumentCandidate(previous.data, doc, value => { const normalized = normalizeReaderDocumentCandidate(value, name, sourceIdentity); migrationWarnings = normalized.warnings; return normalized.data; });
   if (!candidate.ok) throw candidate.error;
   try {
-    checkpointBeforeDocumentOpen(); state.loadedRegistryFonts = new Set(); state.data = candidate.value; clearReaderError(); state.activeVariantId = state.data.activeVariantId; if (state.data.titleSource === "first-line") state.data.manifest.title = titleSourceText(activeVariant(state.data)); clearDirty({ source: true, document: true }); applyManifest(state.data.manifest, true, true); applyAppearance(); render(savedScroll() || { offset: 0, top: 0, left: 0 }); void loadConfiguredFont().then(() => render(captureScroll())).catch(error => { render(captureScroll()); setStatus(error instanceof Error ? error.message : "フォントを読み込めませんでした"); }); setCleanCheckpoint(); showDraftIfNeeded(); updateStatus(migrationWarnings.includes("unknown-version") ? `${name}を現行形式へ変換して読み込みました。保存時も現行形式になります` : migrationWarnings.length ? `${name}を読み込みました（一部のReader定義に警告があります）` : `${name}を読み込みました`); pushHistory();
+    checkpointBeforeDocumentOpen(); state.loadedRegistryFonts = new Set(); state.data = candidate.value; state.sourceEditorRaw = null; state.sourceEditorDocumentHash = null; state.sourceEditorRawByVariant = new Map(); clearReaderError(); state.activeVariantId = state.data.activeVariantId; if (state.data.titleSource === "first-line") state.data.manifest.title = titleSourceText(activeVariant(state.data)); clearDirty({ source: true, document: true }); applyManifest(state.data.manifest, true, true); applyAppearance(); render(savedScroll() || { offset: 0, top: 0, left: 0 }); void loadConfiguredFont().then(() => render(captureScroll())).catch(error => { render(captureScroll()); setStatus(error instanceof Error ? error.message : "フォントを読み込めませんでした"); }); setCleanCheckpoint(); showDraftIfNeeded(); updateStatus(migrationWarnings.includes("unknown-version") ? `${name}を現行形式へ変換して読み込みました。保存時も現行形式になります` : migrationWarnings.length ? `${name}を読み込みました（一部のReader定義に警告があります）` : `${name}を読み込みました`); pushHistory();
   } catch (error) { Object.assign(state, previous); throw error; }
 }
-function buildReaderDocument() { return { ...(state.data.documentExtensions || {}), version: 3, content: { variants: normalizeVariants(state.data).map(variant => ({ ...variant, source: { ...variant.source } })), activeVariantId: state.activeVariantId, links: state.data.links || [], variantOverrides: state.data.variantOverrides || {}, format: state.data.manifest.content?.format || "narou-text", titleSource: state.data.titleSource }, meta: { title: titleSourceText(), artist: $("song-artist").textContent, description: $("song-description").textContent }, sourceMetadata: state.data.sourceMetadata || {}, theme: { font: state.font === "custom" ? { type: "remote", url: state.fontUrl } : state.font, background: state.background, color: state.color }, defaults: { variantId: state.activeVariantId, kanji: state.kanji, ruby: state.ruby, writingMode: state.writingMode }, registry: state.data.manifest.registry || {}, links: Object.fromEntries([...$("song-links").querySelectorAll("a")].map(a => [a.textContent, a.href])) }; }
+function buildReaderDocument() {
+  const manifest = state.data?.manifest || {};
+  const persistedTheme = clone(manifest.theme || {});
+  const persistedDefaults = clone(manifest.defaults || manifest.theme?.defaults || {});
+  return {
+    ...(state.data.documentExtensions || {}),
+    version: 3,
+    content: { variants: normalizeVariants(state.data).map(variant => ({ ...variant, source: { ...variant.source } })), activeVariantId: state.activeVariantId, links: clone(state.data.links || []), variantOverrides: clone(state.data.variantOverrides || {}), format: manifest.content?.format || "narou-text", titleSource: state.data.titleSource },
+    meta: { ...(clone(state.data.metadata || {}) || {}), title: titleSourceText(), artist: $("song-artist").textContent, description: $("song-description").textContent },
+    sourceMetadata: clone(state.data.sourceMetadata || {}),
+    theme: persistedTheme,
+    defaults: persistedDefaults,
+    registry: clone(manifest.registry || {}),
+    links: clone(manifest.links || {})
+  };
+}
 function filename(extension) { const title = ($( "song-title").textContent || "lyrics").replace(/[<>:"/\\|?*\u0000-\u001f]/g, "_").trim() || "lyrics"; return `${title}.${extension}`; }
 function download(blob, name) { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 0); }
 async function copy(text) { try { if (!navigator.clipboard?.writeText) throw new Error("Clipboard API unavailable"); await navigator.clipboard.writeText(text); setStatus("コピーしました"); return true; } catch { try { const area = document.createElement("textarea"); area.value = text; area.setAttribute("readonly", ""); area.style.position = "fixed"; area.style.opacity = "0"; document.body.append(area); area.select(); const ok = document.execCommand("copy"); area.remove(); if (ok) { setStatus("コピーしました"); return true; } } catch { /* fall through */ } setStatus("コピーに失敗しました。本文を選択してコピーしてください"); return false; }

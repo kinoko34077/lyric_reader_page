@@ -4,8 +4,11 @@
 
 ### Reader Kernel優先への方針転換
 
+- Source ModeをActive Variant本文だけの編集面からCanonical Container全体の編集面へ変更した。`LYRIC-READER/1`のJSON HeaderとAuthor Source Bodyをまとめて検証し、全Variant・Registry・Theme・Metadata・Extensionsをparse成功時だけDocumentへtransaction反映する。Source Modeの失敗時はCurrent Documentを保持し、Container本文内のParser位置をtextareaの行・列・Caretへ写像する。
+- Source EditorのVariant切替ではDocument全体を誤って再利用せず、Variantごとの入力Sourceを分離して保持する。別Variantの編集がOriginal Sourceへ混入しないことをBrowser Gateで確認する。
 - Draftへschema/base document hash/source identity/dirty timestampを記録し、実際のDocument変更時だけ保存するようにした。Viewerの表示設定だけでDraftを生成せず、基準文書と一致しないstale Draftは通常の復元通知へ出さない。
 - Viewerの本文色変更をSession/User View Overrideへ分離し、Document registry/theme・dirty・Draftを変更しないようにした。非表示要素へ`[hidden]`契約を適用し、stale Draft通知がCSSの`display:flex`で誤表示される経路も修正した。
+- Canonical Source編集後も元文書のSource identity / nameを保持し、再読込時にDraft keyが変わって復元候補を見失う問題を修正した。
 - WriterのRuby編集経路をSource-SSOTへ寄せ、表示DOMがSafari相当の平坦化を受けても編集対象外のRubyを`data-source-raw`から復元するようにした。縮約Caret入力はsemantic IR rangeへ直接挿入し、Ruby境界での隣接入力による平文化を防止する。
 - Portable RubyのCopy→PasteをWriter Browser Gateへ追加し、`｜親文字《ルビ》`をParser / Renderer経由で貼り付けてAuthor SourceへRubyとして再構成する。Ruby直前・直後入力、Reading編集、flattened DOM保護をUnit / DOM / Browserで回帰検証する。
 - 完成条件を汎用Writer全体から、Input → Syntax Adapter / Parser → IR → Registry Resolver → Renderer → ProjectionのReader Kernelへ切り替え。

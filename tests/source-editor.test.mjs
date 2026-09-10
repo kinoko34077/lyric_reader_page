@@ -60,5 +60,6 @@ test("Source mode has an explicit textarea and application route", () => {
   assert.match(html, /id="source-editor"/);
   assert.match(app, /mode === "source"/);
   assert.match(app, /source-editor/);
-  assert.match(app, /parseSourceEditorInput/);
+  assert.match(app, /parseLyricContainer/);
+  assert.match(app, /containerToReaderDocument/);
 });

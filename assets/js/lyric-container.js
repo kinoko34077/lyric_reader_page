@@ -75,7 +75,7 @@ export function parseLyricContainer(value) {
   const active = variants.find(variant => String(variant?.id || "") === activeId);
   if (!active || active.source?.kind !== "body") throw new Error("ContainerのActive Source参照が不正です。");
   const warnings = version === 1 ? [] : ["unknown-version"];
-  return { kind: "lyric-container", version, header, source: text.slice(bodyStart), activeVariantId: activeId, warnings };
+  return { kind: "lyric-container", version, header, source: text.slice(bodyStart), bodyStart, activeVariantId: activeId, warnings };
 }
 
 export function containerToReaderDocument(container) {
