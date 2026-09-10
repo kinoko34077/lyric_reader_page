@@ -541,6 +541,15 @@ async function runWriterWysiwygGate(targetUrl) {
     const caretSource = await page.locator("#source-editor").inputValue();
     assert.match(caretSource, /\[Writer XGate:style=demo-chorus\]/, `collapsed caret input must retain the existing Presentation: ${caretSource.slice(-500)}`);
 
+    stage = "contenteditable semantic selection replacement";
+    await resetWriterSource(wysiwygSeedSource);
+    assert.equal(await selectTextInRoot(page.locator("#lyrics"), "Writer Gate"), true, "WYSIWYG gate must select the presentation text before semantic replacement");
+    await page.keyboard.insertText("Writer Replace");
+    await page.waitForFunction(() => /Writer Replace/.test(document.querySelector("#lyrics")?.innerText || ""), null, { timeout: 30_000 });
+    await clickHeaderButton(page, "#source-mode-switch");
+    const replacementSource = await page.locator("#source-editor").inputValue();
+    assert.match(replacementSource, /\[Writer Replace:style=demo-chorus\]/, `selection replacement must update Source through the existing Presentation boundary: ${replacementSource.slice(-500)}`);
+
     stage = "contenteditable newline";
     await resetWriterSource(wysiwygSeedSource);
     assert.equal(await placeCaretInRoot(page.locator("#lyrics"), "Writer Gate", 7), true, "WYSIWYG gate must place a caret before the newline operation");

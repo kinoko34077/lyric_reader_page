@@ -307,6 +307,15 @@ function selectionTouchesRuby() {
 function renderedBodySource(container = $("lyrics"), options = {}) { return serializeRenderedBodySource(container, currentAdapter(), { ...options, preserveRuby: options.preserveRuby ?? !state.rubyEditActive }); }
 function bodyInput(options = {}) { const caret = caretOffset(); const editRuby = options.editRuby ?? (state.rubyEditActive || selectionTouchesRuby()); const rawBody = renderedBodySource($("lyrics"), { editRuby }); const record = currentRecord(); const nextText = state.data.titleSource === "first-line" ? withFirstLineBody(record.source.text, rawBody) : rawBody; let parsed; try { parsed = currentAdapter().parse(nextText); } catch (error) { setStatus(error instanceof Error ? error.message : "本文を更新できませんでした"); render(captureScroll()); return; } finally { state.rubyEditActive = false; } state.selectionBookmark = null; state.data = replaceVariantSource(state.data, record.id, nextText); state.nodes = parsed.nodes; markDirty({ source: true }); saveDraft(); scheduleHistory(); render(captureScroll()); restoreCaret(caret); updateStatus(); }
 function commitSemanticTextEdit(range, value) { const document = replaceText({ type: "document", nodes: state.nodes }, range, value); writeBodyDocument(document); restoreCaret(Number(range.start) + graphemes(value).length); }
+function semanticSelectionRange() {
+  const selection = window.getSelection();
+  if (!selection || !selection.rangeCount) return null;
+  const range = selectionOffsets();
+  if (!selection.isCollapsed) return range && !range.ruby ? range : null;
+  if (selectionTouchesRuby()) return null;
+  const offset = caretOffset();
+  return offset == null ? null : { start: offset, end: offset };
+}
 function preserveWysiwygDeletion(event) {
   if (state.mode !== "writer" || state.compositionActive || event.isComposing || !["deleteContentBackward", "deleteContentForward"].includes(event.inputType)) return false;
   const selection = window.getSelection(); const lyrics = $("lyrics");
@@ -325,8 +334,27 @@ function preserveWysiwygDeletion(event) {
   if (!range) return false;
   event.preventDefault(); commitSemanticTextEdit(range, ""); return true;
 }
-function preserveWysiwygTextInput(event) { if (state.mode !== "writer" || state.compositionActive || event.isComposing || !["insertText", "insertReplacementText"].includes(event.inputType) || typeof event.data !== "string" || !event.data) return false; state.rubyEditActive = selectionTouchesRuby(); const selection = window.getSelection(); const lyrics = $("lyrics"); if (!selection || !selection.rangeCount || !lyrics?.contains(selection.getRangeAt(0).commonAncestorContainer)) return false; if (selection.isCollapsed && !state.rubyEditActive) { const start = caretOffset(); if (start == null) return false; event.preventDefault(); commitSemanticTextEdit({ start, end: start }, event.data); state.rubyEditActive = false; return true; } if (selection.isCollapsed) return false; const range = selection.getRangeAt(0); event.preventDefault(); range.deleteContents(); const node = document.createTextNode(event.data); range.insertNode(node); range.setStartAfter(node); range.collapse(true); selection.removeAllRanges(); selection.addRange(range); bodyInput({ editRuby: state.rubyEditActive }); return true; }
-function handleWysiwygBeforeInput(event) { state.rubyEditActive = state.mode === "writer" && selectionTouchesRuby(); if (preserveWysiwygDeletion(event)) return; preserveWysiwygTextInput(event); }
+function preserveWysiwygParagraph(event) {
+  if (state.mode !== "writer" || state.compositionActive || event.isComposing || !["insertParagraph", "insertLineBreak"].includes(event.inputType)) return false;
+  const selection = window.getSelection(); const lyrics = $("lyrics");
+  if (!selection || !selection.rangeCount || !lyrics?.contains(selection.getRangeAt(0).commonAncestorContainer)) return false;
+  const range = semanticSelectionRange();
+  if (!range) return false;
+  event.preventDefault(); commitSemanticTextEdit(range, "\n"); return true;
+}
+function preserveWysiwygTextInput(event) {
+  if (state.mode !== "writer" || state.compositionActive || event.isComposing || !["insertText", "insertReplacementText"].includes(event.inputType) || typeof event.data !== "string" || !event.data) return false;
+  state.rubyEditActive = selectionTouchesRuby();
+  const selection = window.getSelection(); const lyrics = $("lyrics");
+  if (!selection || !selection.rangeCount || !lyrics?.contains(selection.getRangeAt(0).commonAncestorContainer)) return false;
+  const sourceRange = semanticSelectionRange();
+  if (sourceRange && (!selection.isCollapsed || !state.rubyEditActive)) {
+    event.preventDefault(); commitSemanticTextEdit(sourceRange, event.data); state.rubyEditActive = false; return true;
+  }
+  if (selection.isCollapsed) return false;
+  const range = selection.getRangeAt(0); event.preventDefault(); range.deleteContents(); const node = document.createTextNode(event.data); range.insertNode(node); range.setStartAfter(node); range.collapse(true); selection.removeAllRanges(); selection.addRange(range); bodyInput({ editRuby: state.rubyEditActive }); return true;
+}
+function handleWysiwygBeforeInput(event) { state.rubyEditActive = state.mode === "writer" && selectionTouchesRuby(); if (preserveWysiwygParagraph(event)) return; if (preserveWysiwygDeletion(event)) return; preserveWysiwygTextInput(event); }
 function writeBodyDocument(document, documentChanged = false) { const record = currentRecord(); const adapter = currentAdapter(); const serialized = serializeSource(document, adapter); const nextText = state.data.titleSource === "first-line" ? withFirstLineBody(record.source.text, serialized) : serialized; try { adapter.parse(nextText); } catch (error) { setStatus(error instanceof Error ? error.message : "本文を更新できませんでした"); return; } state.selectionBookmark = null; state.data = replaceVariantSource(state.data, record.id, nextText); state.nodes = document.nodes; render(); markDirty({ source: true, document: documentChanged }); saveDraft(); pushHistory(); updateStatus(); }
 async function hashText(text) { const bytes = new TextEncoder().encode(text); if (globalThis.crypto?.subtle) { try { const digest = await crypto.subtle.digest("SHA-256", bytes); return [...new Uint8Array(digest)].map(value => value.toString(16).padStart(2, "0")).join(""); } catch { /* fall through to a deterministic local fingerprint */ } } let hash = 2166136261; for (const byte of bytes) { hash ^= byte; hash = Math.imul(hash, 16777619); } return (hash >>> 0).toString(16); }
 function setLocalSource(text, name = "ローカル本文", sourceIdentity = "", format = "narou-text") { const raw = String(text); const title = resolveTitle({ source: raw, fallback: name.replace(/\.(txt|json)$/i, "") || "ローカル本文" }); const variants = [{ id: "variant-A", label: "Variant A", role: "", source: { text: raw, url: "local:" } }]; const manifest = validatedManifest({ title, description: "この本文はブラウザ内だけで読み込んでいます。", content: { format } }); validateLoadedVariants(manifest, variants); checkpointBeforeDocumentOpen(); state.loadedRegistryFonts = new Set(); state.data = { manifest, variants, activeVariantId: variants[0].id, links: [], variantOverrides: {}, titleSource: "first-line", sourceMetadata: {}, metadata: { title }, sourceUrl: "local:", sourceName: name, sourceIdentity: sourceIdentity || localSourceIdentity(name, new TextEncoder().encode(raw).byteLength, 0) }; clearReaderError(); state.activeVariantId = variants[0].id; clearDirty({ source: true, document: true }); applyManifest(state.data.manifest, true, true); applyAppearance(); render({ offset: 0, top: 0, left: 0 }); setCleanCheckpoint(); showDraftIfNeeded(); updateStatus(`「${title}」を表示中`); pushHistory(); }

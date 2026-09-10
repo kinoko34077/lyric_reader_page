@@ -453,6 +453,12 @@ function partitionDocument(document, range) {
   return { before, selected, after, start, end };
 }
 
+function presentationalText(value, presentation) {
+  const lines = String(value).split("\n"); const result = [];
+  lines.forEach((line, index) => { if (line) result.push(...wrap([{ type: "text", value: line }], presentation)); if (index < lines.length - 1) result.push({ type: "text", value: "\n" }); });
+  return result;
+}
+
 function insertTextAt(nodes, position, value) {
   const result = []; let offset = 0; let inserted = false;
   const insert = () => { if (!inserted && value) { result.push({ type: "text", value }); inserted = true; } };
@@ -460,7 +466,10 @@ function insertTextAt(nodes, position, value) {
     const length = nodeLength(node);
     if (!inserted && position <= offset) insert();
     if (!inserted && node.type === "span" && position < offset + length) {
-      result.push({ ...node, children: insertTextAt(node.children || [], position - offset, value) });
+      if (String(value).includes("\n")) {
+        const parts = partitionNode(node, position - offset, position - offset);
+        result.push(...parts.before, ...presentationalText(value, node.presentation), ...parts.after);
+      } else result.push({ ...node, children: insertTextAt(node.children || [], position - offset, value) });
       inserted = true;
     } else if (!inserted && node.type === "text" && position > offset && position < offset + length) {
       const chars = graphemes(node.value); const local = position - offset;
@@ -485,7 +494,10 @@ export function replaceDocumentRange(document, range, replacementNodes = []) {
 export function replaceText(document, range, value) {
   const start = Math.max(0, Number(range?.start) || 0); const end = Math.max(start, Number(range?.end) || start); const text = String(value ?? "");
   if (start === end) return { ...document, nodes: insertTextAt(document?.nodes || [], start, text) };
-  return replaceDocumentRange(document, { start, end }, text ? [{ type: "text", value: text }] : []);
+  const parts = partitionDocument(document, { start, end });
+  const selected = parts.selected.length === 1 && parts.selected[0]?.type === "span" ? parts.selected[0] : null;
+  const replacement = text ? (selected ? wrap([{ type: "text", value: text }], selected.presentation) : [{ type: "text", value: text }]) : [];
+  return { ...document, nodes: normalizeNodes([...parts.before, ...replacement, ...parts.after]) };
 }
 
 function stripPresentation(nodes) { return nodes.flatMap(node => { if (node.type === "span") return stripPresentation(node.children || []); if (node.type !== "ruby") return [node]; const plain = { ...node }; delete plain.baseDecorations; delete plain.rubyDecorations; return [plain]; }); }

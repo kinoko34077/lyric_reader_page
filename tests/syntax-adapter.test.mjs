@@ -117,6 +117,14 @@ test("semantic text replacement preserves surrounding Ruby and Presentation node
   const edited = replaceText(document, { start: 0, end: 1 }, "先");
   assert.equal(serializeSource(edited), "先[如何《どう》:c=2]後");
   assert.equal(toPortableText(edited), "先如何《どう》後");
+
+  const presentation = replaceText(parseSource("[AB:c=2]"), { start: 0, end: 2 }, "置換");
+  assert.equal(serializeSource(presentation), "[置換:c=2]");
+  assert.deepEqual(parseSource(serializeSource(presentation)), presentation);
+
+  const multiline = replaceText(parseSource("[AB:c=2]"), { start: 1, end: 1 }, "X\nY");
+  assert.equal(serializeSource(multiline), "[AX:c=2]\n[YB:c=2]");
+  assert.equal(serializeSource(parseSource(serializeSource(multiline))), serializeSource(multiline));
 });
 
 test("semantic node replacement can paste Portable Ruby without a DOM round trip", () => {
