@@ -268,7 +268,6 @@ function selectionOffsets() {
   const rubyStart = rubyPosition(range.startContainer, range.startOffset); const rubyEnd = rubyPosition(range.endContainer, range.endOffset);
   if (rubyStart && rubyEnd && rubyStart.nodeIndex === rubyEnd.nodeIndex && rubyStart.part === rubyEnd.part) {
     const start = Math.min(rubyStart.start, rubyEnd.start); const end = Math.max(rubyStart.end, rubyEnd.end);
-    if (rubyStart.part === "base" && start === 0 && end === rubyStart.baseLength) { const owner = rubyOwner(range.startContainer); return { start: Number(owner?.dataset.sourceStart || 0), end: Number(owner?.dataset.sourceEnd || rubyStart.baseLength) }; }
     return { ruby: { nodeIndex: rubyStart.nodeIndex, part: rubyStart.part, start, end } };
   }
   const marker = container => (container.nodeType === Node.ELEMENT_NODE ? container : container.parentElement)?.closest("[data-source-start]");

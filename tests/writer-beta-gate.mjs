@@ -435,6 +435,26 @@ async function runGate(targetUrl) {
 
     await clickHeaderButton(page, "#source-mode-switch");
     await clickHeaderButton(page, "#mode-switch");
+    const smokeRubyBase = page.locator('#lyrics .source-ruby').filter({ hasText: "はれ〴〵バネ" }).last();
+    await selectTextIn(smokeRubyBase, "晴々撥条");
+    await page.locator("#style-name").fill("demo-chorus");
+    await page.locator("#style-button").click({ force: true });
+    await clickHeaderButton(page, "#source-mode-switch");
+    const rubyBaseSource = await page.locator("#source-editor").inputValue();
+    assert.match(rubyBaseSource, /base-range=0-4,base-style=demo-chorus|base-style=demo-chorus,base-range=0-4/, `Ruby Base presentation was not serialized: ${rubyBaseSource.slice(-400)}`);
+    await clickHeaderButton(page, "#source-mode-switch");
+    const styledRubyBaseParts = page.locator('.ruby-presentation-part[data-ruby-part="base"][data-style="demo-chorus"]');
+    await styledRubyBaseParts.first().waitFor({ state: "visible", timeout: 30_000 });
+    assert.equal(await styledRubyBaseParts.count(), 4, "Ruby Base presentation must cover each selected base grapheme");
+    await clickHeaderButton(page, "#mode-switch");
+    await selectTextIn(page.locator('#lyrics .source-ruby').filter({ hasText: "はれ〴〵バネ" }).last(), "晴々撥条");
+    await page.locator("#clear-presentation-button").click({ force: true });
+    await clickHeaderButton(page, "#source-mode-switch");
+    await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source, clearedAuthorSource, { timeout: 30_000 });
+    assert.equal(await page.locator("#source-editor").inputValue(), clearedAuthorSource, "Ruby Base presentation clear must restore the original Author Source");
+
+    await clickHeaderButton(page, "#source-mode-switch");
+    await clickHeaderButton(page, "#mode-switch");
     await selectLyricsText("Writer Gate");
     await page.keyboard.insertText("Writer Beta");
     await clickHeaderButton(page, "#source-mode-switch");
