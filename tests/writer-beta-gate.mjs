@@ -481,6 +481,49 @@ async function runWriterDocumentGate(targetUrl) {
   }
 }
 
+async function runWriterLoadRaceGate(targetUrl) {
+  const browser = await chromium.launch({ headless: true });
+  const context = await browser.newContext({ locale: "ja-JP", colorScheme: "light" });
+  const page = await context.newPage();
+  let releaseInitialLoad;
+  let initialRequestStarted;
+  const initialLoad = new Promise(resolve => { releaseInitialLoad = resolve; });
+  const requestStarted = new Promise(resolve => { initialRequestStarted = resolve; });
+  let firstDemoRequest = true;
+  const pageErrors = [];
+  page.on("pageerror", error => pageErrors.push(String(error)));
+  await page.route("**/data/demo/reader.json", async route => {
+    if (firstDemoRequest) {
+      firstDemoRequest = false;
+      initialRequestStarted();
+      await initialLoad;
+    }
+    await route.continue();
+  });
+  try {
+    await page.goto(targetUrl, { waitUntil: "domcontentloaded", timeout: 30_000 });
+    await requestStarted;
+    await page.locator("#source-editor").waitFor({ state: "visible", timeout: 30_000 });
+
+    const localSource = "読込競合ローカル文書\n初期レスポンスに上書きされてはいけない本文";
+    await page.locator("#source-file").setInputFiles({ name: "load-race.txt", mimeType: "text/plain", buffer: Buffer.from(localSource) });
+    await page.waitForFunction(title => document.querySelector("#source-editor")?.value.includes(title), "読込競合ローカル文書", { timeout: 30_000 });
+
+    releaseInitialLoad();
+    await page.waitForTimeout(300);
+    const source = await page.locator("#source-editor").inputValue();
+    assert.match(source, /読込競合ローカル文書/, "a user file opened during startup must remain current");
+    assert.doesNotMatch(source, /晴々撥条|如何《どう》/, "the stale startup response must not replace the user-selected document");
+    assert.deepEqual(pageErrors, []);
+    return { status: "PASS", targetUrl };
+  } finally {
+    releaseInitialLoad();
+    await page.unroute("**/data/demo/reader.json").catch(() => {});
+    await context.close();
+    await browser.close();
+  }
+}
+
 async function runWriterWysiwygGate(targetUrl) {
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({ locale: "ja-JP", colorScheme: "light" });
@@ -1130,6 +1173,7 @@ try {
     ["writerViewState", runWriterViewStateGate],
     ["writerSource", runWriterSourceGate],
     ["writerDocument", runWriterDocumentGate],
+    ["writerLoadRace", runWriterLoadRaceGate],
     ["writerWysiwyg", runWriterWysiwygGate],
     ["writerRuby", runWriterRubyGate],
     ["writerBoundary", runWriterBoundaryGate],

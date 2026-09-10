@@ -28,6 +28,9 @@ function resolveTabId() { try { if (!window.opener) { const stored = sessionStor
 const TAB_ID = resolveTabId();
 let historyTimer;
 let fontRequestToken = 0;
+let documentLoadToken = 0;
+function beginDocumentLoad() { documentLoadToken += 1; return documentLoadToken; }
+function isCurrentDocumentLoad(token) { return token === documentLoadToken; }
 
 const FONT_STACKS = {
   serif: '"Noto Serif JP", "Yu Mincho", YuMincho, serif', sans: '"Noto Sans JP", "Yu Gothic", YuGothic, sans-serif',
@@ -461,7 +464,7 @@ function handleWysiwygBeforeInput(event) { state.rubyEditActive = state.mode ===
 function writeBodyDocument(document, documentChanged = false) { if (!state.data) return false; const record = currentRecord(); const adapter = currentAdapter(); const serialized = serializeSource(document, adapter); const nextText = state.data.titleSource === "first-line" ? withFirstLineBody(record.source.text, serialized) : serialized; try { adapter.parse(nextText); } catch (error) { setStatus(error instanceof Error ? error.message : "本文を更新できませんでした"); return false; } state.selectionBookmark = null; state.data = replaceVariantSource(state.data, record.id, nextText); state.nodes = document.nodes; render(); markDirty({ source: true, document: documentChanged }); saveDraft(); pushHistory(); updateStatus(); return true; }
 async function hashText(text) { const bytes = new TextEncoder().encode(text); if (globalThis.crypto?.subtle) { try { const digest = await crypto.subtle.digest("SHA-256", bytes); return [...new Uint8Array(digest)].map(value => value.toString(16).padStart(2, "0")).join(""); } catch { /* fall through to a deterministic local fingerprint */ } } let hash = 2166136261; for (const byte of bytes) { hash ^= byte; hash = Math.imul(hash, 16777619); } return (hash >>> 0).toString(16); }
 function setLocalSource(text, name = "ローカル本文", sourceIdentity = "", format = "narou-text") { const raw = String(text); const title = resolveTitle({ source: raw, fallback: name.replace(/\.(txt|json)$/i, "") || "ローカル本文" }); const variants = [{ id: "variant-A", label: "Variant A", role: "", source: { text: raw, url: "local:" } }]; const manifest = validatedManifest({ title, description: "この本文はブラウザ内だけで読み込んでいます。", content: { format } }); validateLoadedVariants(manifest, variants); checkpointBeforeDocumentOpen(); state.loadedRegistryFonts = new Set(); state.data = { manifest, variants, activeVariantId: variants[0].id, links: [], variantOverrides: {}, titleSource: "first-line", sourceMetadata: {}, metadata: { title }, sourceUrl: "local:", sourceName: name, sourceIdentity: sourceIdentity || localSourceIdentity(name, new TextEncoder().encode(raw).byteLength, 0) }; clearReaderError(); state.activeVariantId = variants[0].id; clearDirty({ source: true, document: true }); applyManifest(state.data.manifest, true, true); applyAppearance(); render({ offset: 0, top: 0, left: 0 }); setCleanCheckpoint(); showDraftIfNeeded(); updateStatus(`「${title}」を表示中`); pushHistory(); }
-async function readLocalFile(file) { if (!file) return; if (!confirmReplaceCurrent()) { $("source-file").value = ""; return; } try { const likelyContainer = /\.lyric\.txt$/i.test(file.name); const likelyJson = !likelyContainer && /\.json$/i.test(file.name); const maximum = likelyContainer ? MAX_READER_DOCUMENT_JSON_BYTES + MAX_SOURCE_BYTES : likelyJson ? MAX_READER_DOCUMENT_JSON_BYTES : MAX_SOURCE_BYTES; if (Number.isFinite(file.size) && file.size > maximum) throw new Error(likelyContainer || likelyJson ? "Reader文書が大きすぎます。" : "本文が大きすぎます。"); const text = await file.text(); const fileIdentity = file.webkitRelativePath || file.name; const identity = localSourceIdentity(fileIdentity, file.size, file.lastModified, await hashText(text)); const loaded = parseLocalInput(text, file.name, file.type); if (loaded.kind === "reader-document") { setReaderDocument(loaded.document, file.name, identity); if (loaded.warnings?.length) setStatus("未知のContainer Versionを読み込みました。現行形式で保存してください"); } else setLocalSource(loaded.source, file.name, identity, loaded.format); } catch (error) { $("reader-error").hidden = false; $("reader-error").textContent = error instanceof Error ? error.message : "ファイルの形式を確認してください。既存の本文は保持されています。"; setStatus("読込失敗"); } finally { $("source-file").value = ""; } }
+async function readLocalFile(file) { if (!file) return; if (!confirmReplaceCurrent()) { $("source-file").value = ""; return; } const loadToken = beginDocumentLoad(); try { const likelyContainer = /\.lyric\.txt$/i.test(file.name); const likelyJson = !likelyContainer && /\.json$/i.test(file.name); const maximum = likelyContainer ? MAX_READER_DOCUMENT_JSON_BYTES + MAX_SOURCE_BYTES : likelyJson ? MAX_READER_DOCUMENT_JSON_BYTES : MAX_SOURCE_BYTES; if (Number.isFinite(file.size) && file.size > maximum) throw new Error(likelyContainer || likelyJson ? "Reader文書が大きすぎます。" : "本文が大きすぎます。"); const text = await file.text(); const fileIdentity = file.webkitRelativePath || file.name; const identity = localSourceIdentity(fileIdentity, file.size, file.lastModified, await hashText(text)); if (!isCurrentDocumentLoad(loadToken)) return; const loaded = parseLocalInput(text, file.name, file.type); if (loaded.kind === "reader-document") { setReaderDocument(loaded.document, file.name, identity, loadToken); if (loaded.warnings?.length) setStatus("未知のContainer Versionを読み込みました。現行形式で保存してください"); } else setLocalSource(loaded.source, file.name, identity, loaded.format); } catch (error) { if (!isCurrentDocumentLoad(loadToken)) return; $("reader-error").hidden = false; $("reader-error").textContent = error instanceof Error ? error.message : "ファイルの形式を確認してください。既存の本文は保持されています。"; setStatus("読込失敗"); } finally { if (isCurrentDocumentLoad(loadToken)) $("source-file").value = ""; } }
 function normalizeReaderDocumentCandidate(doc, name = "Reader文書", sourceIdentity = "", options = {}) {
   const value = migrateReaderDocument(doc);
   let migrationWarnings = Array.isArray(value.warnings) ? value.warnings : [];
@@ -487,13 +490,13 @@ function normalizeReaderDocumentCandidate(doc, name = "Reader文書", sourceIden
     warnings: migrationWarnings
   };
 }
-function setReaderDocument(doc, name = "Reader文書", sourceIdentity = "") {
+function setReaderDocument(doc, name = "Reader文書", sourceIdentity = "", loadToken = null) {
   let migrationWarnings = [];
   const previous = { data: state.data, activeVariantId: state.activeVariantId, loadedRegistryFonts: state.loadedRegistryFonts, history: state.history, historyIndex: state.historyIndex, historyDocumentId: state.historyDocumentId, savedCheckpoint: state.savedCheckpoint, sourceEditorRaw: state.sourceEditorRaw, sourceEditorDocumentHash: state.sourceEditorDocumentHash, sourceEditorRawByVariant: state.sourceEditorRawByVariant };
   const candidate = commitDocumentCandidate(previous.data, doc, value => { const normalized = normalizeReaderDocumentCandidate(value, name, sourceIdentity); migrationWarnings = normalized.warnings; return normalized.data; });
   if (!candidate.ok) throw candidate.error;
   try {
-    checkpointBeforeDocumentOpen(); state.loadedRegistryFonts = new Set(); state.data = candidate.value; state.sourceEditorRaw = null; state.sourceEditorDocumentHash = null; state.sourceEditorRawByVariant = new Map(); clearReaderError(); state.activeVariantId = state.data.activeVariantId; if (state.data.titleSource === "first-line") state.data.manifest.title = titleSourceText(activeVariant(state.data)); clearDirty({ source: true, document: true }); applyManifest(state.data.manifest, true, true); applyAppearance(); render(savedScroll() || { offset: 0, top: 0, left: 0 }); void loadConfiguredFont().then(() => render(captureScroll())).catch(error => { render(captureScroll()); setStatus(error instanceof Error ? error.message : "フォントを読み込めませんでした"); }); setCleanCheckpoint(); showDraftIfNeeded(); updateStatus(migrationWarnings.includes("unknown-version") ? `${name}を現行形式へ変換して読み込みました。保存時も現行形式になります` : migrationWarnings.length ? `${name}を読み込みました（一部のReader定義に警告があります）` : `${name}を読み込みました`); pushHistory();
+    checkpointBeforeDocumentOpen(); state.loadedRegistryFonts = new Set(); state.data = candidate.value; state.sourceEditorRaw = null; state.sourceEditorDocumentHash = null; state.sourceEditorRawByVariant = new Map(); clearReaderError(); state.activeVariantId = state.data.activeVariantId; if (state.data.titleSource === "first-line") state.data.manifest.title = titleSourceText(activeVariant(state.data)); clearDirty({ source: true, document: true }); applyManifest(state.data.manifest, true, true); applyAppearance(); render(savedScroll() || { offset: 0, top: 0, left: 0 }); void loadConfiguredFont().then(() => { if (loadToken !== null && !isCurrentDocumentLoad(loadToken)) return; render(captureScroll()); }).catch(error => { if (loadToken !== null && !isCurrentDocumentLoad(loadToken)) return; render(captureScroll()); setStatus(error instanceof Error ? error.message : "フォントを読み込めませんでした"); }); setCleanCheckpoint(); showDraftIfNeeded(); updateStatus(migrationWarnings.includes("unknown-version") ? `${name}を現行形式へ変換して読み込みました。保存時も現行形式になります` : migrationWarnings.length ? `${name}を読み込みました（一部のReader定義に警告があります）` : `${name}を読み込みました`); pushHistory();
   } catch (error) { Object.assign(state, previous); throw error; }
 }
 function buildReaderDocument() {
@@ -528,8 +531,10 @@ async function loadConfiguredFont() { const loaded = await loadRegistryFonts(); 
 async function reloadSource() {
   if (!state.data?.sourceUrl || state.data.sourceUrl === "local:" || state.data.sourceUrl === "reader:") { setStatus("現在の本文はローカル編集用です"); return; }
   if (isDirty() && !confirm("未保存の変更があります。外部本文を再読込しますか？")) return;
+  const loadToken = beginDocumentLoad();
   try {
     const loaded = await loadInput();
+    if (!isCurrentDocumentLoad(loadToken)) return;
     loaded.manifest = validatedManifest(loaded.manifest);
     const nextData = normalizeDocumentData(loaded);
     validateLoadedVariants(nextData.manifest, nextData.variants);
@@ -544,22 +549,26 @@ async function reloadSource() {
     applyManifest(state.data.manifest, true, true);
     applyAppearance();
     render({ offset: 0, top: 0, left: 0 });
-    void loadConfiguredFont().then(() => render(captureScroll())).catch(error => { render(captureScroll()); setStatus(error instanceof Error ? error.message : "フォントを読み込めませんでした"); });
+    void loadConfiguredFont().then(() => { if (!isCurrentDocumentLoad(loadToken)) return; render(captureScroll()); }).catch(error => { if (!isCurrentDocumentLoad(loadToken)) return; render(captureScroll()); setStatus(error instanceof Error ? error.message : "フォントを読み込めませんでした"); });
     setCleanCheckpoint();
     showDraftIfNeeded();
     updateStatus("再読込しました");
     pushHistory();
   } catch (error) {
+    if (!isCurrentDocumentLoad(loadToken)) return;
     showReaderError(error, "再読込に失敗しました。既存の本文は保持されています。", "再読込失敗");
   }
 }
 async function openUrlSource() {
   const value = $("source-url").value.trim();
+  let loadToken = null;
   try {
     const url = new URL(value);
     if (!["http:", "https:"].includes(url.protocol)) throw new Error("HTTP(S) URLのみ指定できます。");
     if (!confirmReplaceCurrent()) return;
+    loadToken = beginDocumentLoad();
     const loaded = await loadInput(`#src=${encodeURIComponent(url.href)}`);
+    if (!isCurrentDocumentLoad(loadToken)) return;
     loaded.manifest = validatedManifest(loaded.manifest);
     const nextData = normalizeDocumentData(loaded);
     validateLoadedVariants(nextData.manifest, nextData.variants);
@@ -574,7 +583,7 @@ async function openUrlSource() {
     applyManifest(state.data.manifest, true, true);
     applyAppearance();
     render({ offset: 0, top: 0, left: 0 });
-    void loadConfiguredFont().then(() => render(captureScroll())).catch(error => { render(captureScroll()); setStatus(error instanceof Error ? error.message : "フォントを読み込めませんでした"); });
+    void loadConfiguredFont().then(() => { if (!isCurrentDocumentLoad(loadToken)) return; render(captureScroll()); }).catch(error => { if (!isCurrentDocumentLoad(loadToken)) return; render(captureScroll()); setStatus(error instanceof Error ? error.message : "フォントを読み込めませんでした"); });
     setCleanCheckpoint();
     const pageUrl = new URL(location.href);
     pageUrl.hash = `src=${encodeURIComponent(url.href)}`;
@@ -583,6 +592,7 @@ async function openUrlSource() {
     updateStatus("URL本文を読み込みました");
     pushHistory();
   } catch (error) {
+    if (loadToken !== null && !isCurrentDocumentLoad(loadToken)) return;
     syncSourceInput();
     showReaderError(error, "URL本文を読み込めませんでした。既存の本文は保持されています。", "URL本文の読込失敗");
   }
@@ -822,5 +832,5 @@ function bind() {
   document.addEventListener("pointermove", event => { if (event.clientY < 56 || event.clientY > innerHeight - 56) revealChrome(); }, { passive: true });
   let dragDepth = 0; document.addEventListener("dragenter", e => { if (!e.dataTransfer?.types?.some(type => ["Files", "text/uri-list", "text/plain"].includes(type))) return; e.preventDefault(); dragDepth++; $("drop-overlay").hidden = false; }); document.addEventListener("dragover", e => { if (e.dataTransfer?.types?.some(type => ["Files", "text/uri-list", "text/plain"].includes(type))) e.preventDefault(); }); document.addEventListener("dragleave", e => { if (!e.dataTransfer?.types?.some(type => ["Files", "text/uri-list", "text/plain"].includes(type))) return; e.preventDefault(); if (!--dragDepth) $("drop-overlay").hidden = true; }); document.addEventListener("drop", e => { e.preventDefault(); dragDepth = 0; $("drop-overlay").hidden = true; if (e.dataTransfer?.files?.length) return readLocalFile(e.dataTransfer.files[0]); const droppedUrl = e.dataTransfer?.getData("text/uri-list") || e.dataTransfer?.getData("text/plain"); if (/^https?:\/\//i.test(droppedUrl?.trim() || "")) { $("source-url").value = droppedUrl.trim(); openUrlSource(); } });
 }
-async function start() { state.preferencesLoaded = restorePreferences(); applyMode(); bind(); try { const loaded = await loadInput(); loaded.manifest = validatedManifest(loaded.manifest); const nextData = normalizeDocumentData(loaded); validateLoadedVariants(nextData.manifest, nextData.variants); state.data = nextData; state.activeVariantId = normalizeActiveVariantId(normalizeVariants(state.data), state.data.activeVariantId); resetHistory(); const first = activeVariant(state.data); if (state.data.titleSource === "first-line") state.data.manifest.title = resolveTitle({ source: first.source.text }); applyManifest(state.data.manifest, state.preferencesLoaded); if (state.preferencesLoaded) { restorePreferences(); syncControls(); } let fontError = false; try { await loadConfiguredFont(); fontError = Boolean(registryFontName(state.font) && state.fontWarnings.includes(registryFontName(state.font))); } catch { fontError = true; } applyAppearance(); render(savedScroll() || { offset: 0, top: 0, left: 0 }); setCleanCheckpoint(); showDraftIfNeeded(); updateStatus(fontError ? "文書指定Fontを読み込めないため標準FontへFallbackしました" : loaded.manifest.warnings?.length ? "一部のReader定義に警告があります。本文は継続表示しています" : undefined); pushHistory(); } catch (error) { $("reader-error").hidden = false; $("reader-error").textContent = error instanceof Error ? error.message : "読み込みに失敗しました。"; setStatus("読込失敗"); } }
+async function start() { const loadToken = beginDocumentLoad(); state.preferencesLoaded = restorePreferences(); applyMode(); bind(); try { const loaded = await loadInput(); if (!isCurrentDocumentLoad(loadToken)) return; loaded.manifest = validatedManifest(loaded.manifest); const nextData = normalizeDocumentData(loaded); validateLoadedVariants(nextData.manifest, nextData.variants); state.data = nextData; state.activeVariantId = normalizeActiveVariantId(normalizeVariants(state.data), state.data.activeVariantId); resetHistory(); const first = activeVariant(state.data); if (state.data.titleSource === "first-line") state.data.manifest.title = resolveTitle({ source: first.source.text }); applyManifest(state.data.manifest, state.preferencesLoaded); if (state.preferencesLoaded) { restorePreferences(); syncControls(); } let fontError = false; try { await loadConfiguredFont(); fontError = Boolean(registryFontName(state.font) && state.fontWarnings.includes(registryFontName(state.font))); } catch { fontError = true; } if (!isCurrentDocumentLoad(loadToken)) return; applyAppearance(); render(savedScroll() || { offset: 0, top: 0, left: 0 }); setCleanCheckpoint(); showDraftIfNeeded(); updateStatus(fontError ? "文書指定Fontを読み込めないため標準FontへFallbackしました" : loaded.manifest.warnings?.length ? "一部のReader定義に警告があります。本文は継続表示しています" : undefined); pushHistory(); } catch (error) { if (!isCurrentDocumentLoad(loadToken)) return; $("reader-error").hidden = false; $("reader-error").textContent = error instanceof Error ? error.message : "読み込みに失敗しました。"; setStatus("読込失敗"); } }
 bindCompositionGuards(); start();
