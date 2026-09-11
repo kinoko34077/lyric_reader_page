@@ -4,12 +4,12 @@
 
 ## 基準
 
-- 自動検証HEAD: `3a3ab47` (`test: harden writer IME and Ruby copy boundaries`)
+- 自動検証HEAD: `b38af4d` (`test: cover unavailable document font fallback`)
 - Reader checkpoint: `stable` / `reader-v0.1.0` = `925cfc7`
 - 自動Mobile: Chromium Pixel 5相当、Playwright WebKit iPhone 13相当
-- 自動Gate結果: Reader / Shared / Writer Unit / Writer Mobile は上記HEADでPASS
+- 自動Gate結果: Reader / Shared / Writer Unit / Writer Mobile / Writer Presentation は上記HEADでPASS
 
-このチェックリストを追加した同期コミットは `7ffe308` です。同期コミットは実行コードを変更していないため、自動検証のコード基準は上記HEADのままです。
+このチェックリストを追加した同期コミットは `7ffe308` です。以後のWriter Source-backed移行と表示回帰は上記HEADで再検証済みです。
 
 ## iPhone Safari実機
 
