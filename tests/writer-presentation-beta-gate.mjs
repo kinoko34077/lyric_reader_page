@@ -159,6 +159,20 @@ async function runGate(targetUrl) {
     const nishikiPreset = await page.locator('#font-family option[value="nishiki-teki"]').evaluate(option => ({ disabled: option.disabled, title: option.title }));
     if (nishikiPreset.disabled) assert.match(nishikiPreset.title, /実Font URL未設定/, "Unavailable Nishiki-teki must explain why it cannot be selected");
     else assert.match(nishikiPreset.title, /端末または登録済みWeb Font/, "A selectable Nishiki-teki preset must identify its resolved source");
+    if (nishikiPreset.disabled) {
+      stage = "document Nishiki fallback";
+      const nishikiSource = withThemeFont(originalSource, { name: "nishiki-teki" });
+      await page.locator("#source-editor").fill(nishikiSource);
+      await page.waitForFunction(() => document.querySelector("#source-editor")?.value.includes("nishiki-teki"), null, { timeout: 30_000 });
+      await toWriter(page);
+      await ensureSettingsOpen(page);
+      await page.locator("#document-defaults-button").click({ force: true });
+      await page.waitForFunction(() => document.querySelector("#font-family")?.value === "serif" && /Nishiki-tekiは実Font/.test(document.querySelector("#source-status")?.textContent || ""), null, { timeout: 30_000 });
+      assert.equal(await page.locator("#font-family").inputValue(), "serif", "Document Nishiki-teki without a verified resource must fallback to the standard Font");
+      await toSource(page);
+      await page.locator("#source-editor").fill(originalSource);
+      await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source, originalSource, { timeout: 30_000 });
+    }
     const seedSource = `${originalSource}\nPresentation Gate Seed`;
     await page.locator("#source-editor").fill(seedSource);
     await page.waitForFunction(() => /Presentation Gate Seed/.test(document.querySelector("#source-editor")?.value || ""), null, { timeout: 30_000 });
