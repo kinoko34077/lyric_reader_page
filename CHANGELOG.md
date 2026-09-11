@@ -4,6 +4,7 @@
 
 ### Reader Kernel優先への方針転換
 
+- 実機iPhone Safari、Native Clipboard／IME、Nishiki-teki正式Web Font配信、stable branch保護を自動Gateと混同しない`docs/RELEASE-SMOKE.md`を追加した。公式Nishiki-teki配布でWeb Font URL／CORSを確認できないため、無断同梱や第三者CDN採用は行わず、外部確認待ちとして記録する。
 - ネイティブ選択Copyは`clipboardData`へ書き込める環境でのみPortable Textを上書きし、Clipboard APIが提供されない／拒否された環境では例外を出さずブラウザ既定のCopyへ戻すようにした。Title／本文の双方でClipboard失敗のfail-soft回帰を追加した。
 - 初期デモ・ローカルファイル・URLの非同期読込へ最新リクエスト判定を追加し、読込中に開始した新しい文書を古いレスポンスやFont完了処理が上書きしないようにした。競合時は古いエラー表示もCurrent Documentへ反映しない。
 - WriterのComposition Gateへ、本文末尾のRuby＋Presentation直後で確定するIME回帰を追加し、Source offsetが0へ戻らず確定文字を末尾へ一度だけ追加することをChromium / WebKit双方で固定した。Rubyの親文字・読み仮名だけを選択したCopyも、空文字ではなく完全なPortable Rubyへ投影されることをWriter Gateで確認する。

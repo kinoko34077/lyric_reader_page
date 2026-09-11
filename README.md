@@ -2,7 +2,7 @@
 
 外部のTXT / Reader JSON / `.lyric.txt`をブラウザから読み込み、歌詞・ルビ・各種Presentationを表示する静的Readerです。Writerでは本文を直接編集できます。ローカル本文はサーバーへ送信・保存しません。
 
-Reader優先の現在ロードマップは[`docs/READER-KERNEL-ROADMAP.md`](docs/READER-KERNEL-ROADMAP.md)、最新の確定要件は[`docs/LYRIC_READER_REQUIREMENTS.md`](docs/LYRIC_READER_REQUIREMENTS.md)、実装と検証の対応表は[`docs/REQUIREMENTS-MATRIX.md`](docs/REQUIREMENTS-MATRIX.md)、現在のQuality Gate証跡は[`docs/QUALITY-GATES.md`](docs/QUALITY-GATES.md)を参照してください。Reader読込時の一部不正Presentationは原文表示へFallbackし、Warningを残して文書全体の表示を継続します。Desktop Chromeと自動Mobile Gate（Chromium Pixel 5 / WebKit iPhone 13 emulation）でViewerを確認済みです。実機iPhone Safari / Android ChromeはRelease Smokeとして別扱いです。
+Reader優先の現在ロードマップは[`docs/READER-KERNEL-ROADMAP.md`](docs/READER-KERNEL-ROADMAP.md)、最新の確定要件は[`docs/LYRIC_READER_REQUIREMENTS.md`](docs/LYRIC_READER_REQUIREMENTS.md)、実装と検証の対応表は[`docs/REQUIREMENTS-MATRIX.md`](docs/REQUIREMENTS-MATRIX.md)、現在のQuality Gate証跡は[`docs/QUALITY-GATES.md`](docs/QUALITY-GATES.md)を参照してください。Reader読込時の一部不正Presentationは原文表示へFallbackし、Warningを残して文書全体の表示を継続します。Desktop Chromeと自動Mobile Gate（Chromium Pixel 5 / WebKit iPhone 13 emulation）でViewerを確認済みです。実機iPhone Safari / Android Chrome、Native Clipboard、実IME、外部Font配信、stable保護は[`docs/RELEASE-SMOKE.md`](docs/RELEASE-SMOKE.md)で別管理します。
 
 ## 使い方
 

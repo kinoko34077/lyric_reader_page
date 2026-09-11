@@ -80,7 +80,7 @@ Reader Kernelは`stable` / `reader-v0.1.0`の`925cfc7`で凍結し、`main`はWr
 
 Writer Stateでは、全Variant・Registry・Metadata・Theme・Source routingを含むDraft、`K6`（Tab単位Draft分離と片側破棄保護）、`K1`（文書を開く操作自体のUndo）を実装済み。Presentation AuthoringはPalette、Style、Ruby Base/Reading、Glyph、Combine、Outline、Fontまで、WYSIWYGは本文置換・Caret入力・削除・Plain Text paste・Title編集・Variant isolation・Application Undo/RedoまでBrowser Gateで確認済み。`npm run test:writer`はReaderとの最小Source往復・Current保護をCore smokeとして実行し、Source Editor、Document、WYSIWYG、独立Tab、Storage故障、不正文Draftの詳細は同じランナーの独立下位Gateとして継続実行する。`npm run test:writer-presentation`はPresentation Authoringだけを独立Chromium Gateとして再実行し、`npm run test:writer-mobile`はWriterの表示面をPixel 5相当Chromium / iPhone 13相当WebKitから確認する。両者ともReader Mobile Gate・Writer Core Gateとは独立したadvisory checkとして扱う。
 
-次のWriter作業は、Core smokeと独立下位Gateの成功を同じHEADで維持しながら、WYSIWYGの通常編集整合性を必要な範囲で改善すること。Writer Mobileの自動Gateは表示・レイアウト境界までを対象とし、Caret、IME、Touch selection、soft keyboard、Style rename UI、Gradient最終仕様、HOLD群はReaderの再設計理由にせず、Writer Betaの後段へ残す。
+`3a3ab47`で、本文末尾のRuby＋Presentation直後のIME確定、Ruby親文字／読み仮名選択CopyをWriter／Mobile Gateへ追加し、Reader 41件・Shared 60件・Writer Unit 23件とChromium／WebKit MobileをPASSさせた。次のWriter作業は、Core smokeと独立下位Gateの成功を同じHEADで維持しながら、WYSIWYGの通常編集整合性を必要な範囲で改善すること。Writer Mobileの自動Gateは表示・レイアウト境界までを対象とし、Caret、IME、Touch selection、soft keyboard、Style rename UI、Gradient最終仕様、HOLD群はReaderの再設計理由にせず、Writer Betaの後段へ残す。実機iPhone Safari、Native Clipboard、実IME、Nishiki-tekiの正式Web Font配信、stable保護は[`RELEASE-SMOKE.md`](RELEASE-SMOKE.md)へ分離している。
 
 ## Severity
 

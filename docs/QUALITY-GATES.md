@@ -96,6 +96,7 @@ git diff --check
 - 現在の`stable`はReader安定点`925cfc7`、`reader-v0.1.0`は同じReader checkpointを指す。Writer変更は`main`だけへ積み、Reader tagへ逆流させない。
 - `stable`のBranch Ruleset（direct push・force push・branch deletion禁止）は、現在のローカル実行環境からは設定済みと確認できていない。Reader checkpoint自体はtagでも固定されているが、GitHub側の保護は外部設定として未確認のまま扱う。
 - Branch protectionはリポジトリのリモート設定であり、ローカルのworkflowやテストだけでは有効化・観測できない。GitHub管理権限でRulesetを設定した後、Branch Ruleset画面または管理APIで`stable`のpush制限・force push禁止・削除禁止を確認する。
+- 実機・外部配信に依存する確認項目は[`RELEASE-SMOKE.md`](RELEASE-SMOKE.md)へ集約する。自動GateのPASSをiPhone Safari、Native Clipboard、実IME、FontFace/CORS、stable保護のPASSへ読み替えない。
 
 ## Stage A — Baseline / semantic model
 
