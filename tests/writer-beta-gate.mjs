@@ -888,6 +888,15 @@ async function runWriterRubyGate(targetUrl) {
     source = await readSource();
     assert.match(source, /前｜読確認《よみかくにん》｜読確認《よみかくにん》後/, `Portable Ruby paste at a normal text caret must use an IR transaction: ${source}`);
 
+    stage = "dynamic explicit Ruby input";
+    const dynamicRubySource = containerWithActiveSource(originalSource, "Dynamic Ruby\n本文");
+    await resetWriterSource(dynamicRubySource);
+    assert.equal(await placeCaretInRoot(page.locator("#lyrics"), "本文", 2), true, "dynamic Ruby gate must place the caret at the body end");
+    for (const unit of Array.from("｜3ペウコ《ピョコ》")) await page.keyboard.insertText(unit);
+    await page.waitForFunction(() => /3ペウコピョコ/.test(document.querySelector("#lyrics")?.innerText || "") && document.querySelectorAll("#lyrics .source-ruby").length === 1, null, { timeout: 30_000 });
+    source = await readSource();
+    assert.match(source, /本文｜3ペウコ《ピョコ》$/, `Writer typing must parse explicit non-kanji Ruby through the shared Parser: ${source}`);
+
     assert.deepEqual({ consoleErrors, pageErrors }, { consoleErrors: [], pageErrors: [] });
     return { status: "PASS", targetUrl };
   } catch (error) {

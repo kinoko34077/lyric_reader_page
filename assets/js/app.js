@@ -228,11 +228,12 @@ function setMode(mode) { state.mode = mode; applyMode(); applyAppearance(); upda
 function sourceGraphemeOffset(value) { return graphemes(String(value || "")).length; }
 function writerBodySourceOffset(record = currentRecord()) { const info = sourceInfo(record); return sourceGraphemeOffset(record.source.text.slice(0, info.bodyStart)); }
 function writerRenderOptions() { return { ...state, mode: "writer", kanji: "original", registry: state.data?.manifest?.registry, loadedRegistryFonts: state.loadedRegistryFonts, adapter: currentAdapter() }; }
+function writerProjectionFlags(range, record = currentRecord()) { const bodyStart = writerBodySourceOffset(record); const start = Number(range?.start) || 0; const end = Number(range?.end) || start; return { title: start < bodyStart, body: end >= bodyStart }; }
 function renderWriterProjection({ title = true, body = true, caret = null } = {}) {
   const options = writerRenderOptions(); const record = currentRecord(); const bodyOffset = writerBodySourceOffset(record);
   if (title) state.titleNodes = renderLyrics($("song-title"), titleSourceText(record), { ...options, sourceOffset: 0, sourceRawOffset: 0 });
   if (body) state.nodes = renderLyrics($("lyrics"), currentBody(), { ...options, sourceOffset: 0, sourceRawOffset: bodyOffset });
-  applyMode(); syncSourceEditor(); if (caret != null) restoreCaret(caret, $("writer-surface"), { raw: true });
+  applyMode(); syncSourceEditor(); if (caret != null) restoreCaret(caret, $("writer-surface"), { raw: true, immediate: true });
 }
 function render(anchor = captureScroll()) { const renderOptions = state.mode === "writer" ? { ...state, kanji: "original", registry: state.data?.manifest?.registry, loadedRegistryFonts: state.loadedRegistryFonts, adapter: currentAdapter() } : { ...state, registry: state.data?.manifest?.registry, loadedRegistryFonts: state.loadedRegistryFonts, adapter: currentAdapter() }; const record = currentRecord(); const bodyOffset = state.mode === "writer" ? writerBodySourceOffset(record) : 0; state.nodes = renderLyrics($("lyrics"), currentBody(), { ...renderOptions, sourceOffset: 0, sourceRawOffset: bodyOffset }); state.titleNodes = renderLyrics($("song-title"), titleSourceText(), { ...renderOptions, sourceOffset: 0, sourceRawOffset: 0 }); applyMode(); syncSourceEditor(); restoreScroll(anchor); }
 function snapshot() { return documentPayload(state.data, titleSourceText(), state.activeVariantId); }
@@ -487,7 +488,7 @@ function commitWriterBodyDocument(document, localCaret = null) {
   try { adapter.parse(nextText); } catch (error) { setStatus(error instanceof Error ? error.message : "本文を更新できませんでした"); return false; }
   state.data = replaceVariantSource(state.data, record.id, nextText); state.nodes = document.nodes; markDirty({ source: true }); saveDraft(); scheduleHistory();
   const caret = localCaret == null ? null : writerBodySourceOffset(currentRecord()) + Number(localCaret);
-  renderWriterProjection({ caret }); updateStatus(); return true;
+  renderWriterProjection({ ...writerProjectionFlags({ start: writerBodySourceOffset(record), end: writerBodySourceOffset(record) }, record), caret }); updateStatus(); return true;
 }
 function commitWriterSourceEdit(range, insertedText, { status = true } = {}) {
   if (!state.data) return false;
@@ -499,7 +500,7 @@ function commitWriterSourceEdit(range, insertedText, { status = true } = {}) {
   try { currentAdapter().parse(nextText); } catch (error) { setStatus(error instanceof Error ? error.message : "本文を更新できませんでした"); return false; }
   const record = currentRecord(); state.data = replaceVariantSource(state.data, record.id, nextText); state.selectionBookmark = null; markDirty({ source: true }); saveDraft(); scheduleHistory();
   const nextCaret = normalized.start + graphemes(value.replace(/\r\n?/g, "\n")).length;
-  renderWriterProjection({ caret: nextCaret });
+  renderWriterProjection({ ...writerProjectionFlags(normalized, record), caret: nextCaret });
   if (status) updateStatus();
   return true;
 }
@@ -728,12 +729,12 @@ async function openUrlSource() {
 }
 
 function caretOffset(root = $("lyrics")) { const selection = window.getSelection(); if (!selection || !selection.rangeCount || (!root?.contains(selection.getRangeAt(0).startContainer) && root !== selection.getRangeAt(0).startContainer)) return null; const range = selection.getRangeAt(0); const owner = (range.startContainer.nodeType === Node.ELEMENT_NODE ? range.startContainer : range.startContainer.parentElement)?.closest("[data-source-start]"); if (!owner) return sourceOffsetAtPoint(root, range.startContainer, range.startOffset); const prefix = document.createRange(); prefix.selectNodeContents(owner); try { prefix.setEnd(range.startContainer, range.startOffset); return Math.min(Number(owner.dataset.sourceEnd), Number(owner.dataset.sourceStart) + graphemes(prefix.toString()).length); } catch { return Number(owner.dataset.sourceStart); } }
-function restoreCaret(offset, root = $("lyrics"), { raw = false } = {}) {
+function restoreCaret(offset, root = $("lyrics"), { raw = false, immediate = false } = {}) {
   if (offset == null) return;
-  requestAnimationFrame(() => {
+  const restore = () => {
     const lyrics = root || $("lyrics");
-    const startKey = raw ? "sourceRawStart" : "sourceStart"; const endKey = raw ? "sourceRawEnd" : "sourceEnd";
-    const candidates = [...lyrics.querySelectorAll(`[data-${startKey}][data-${endKey}]`)]
+    const startKey = raw ? "sourceRawStart" : "sourceStart"; const endKey = raw ? "sourceRawEnd" : "sourceEnd"; const startAttribute = raw ? "data-source-raw-start" : "data-source-start"; const endAttribute = raw ? "data-source-raw-end" : "data-source-end";
+    const candidates = [...lyrics.querySelectorAll(`[${startAttribute}][${endAttribute}]`)]
       .filter(node => Number(node.dataset[startKey]) <= offset && offset <= Number(node.dataset[endKey]) && node.textContent)
       .sort((a, b) => (Number(a.dataset[endKey]) - Number(a.dataset[startKey])) - (Number(b.dataset[endKey]) - Number(b.dataset[startKey])));
     const owner = candidates[0];
@@ -752,7 +753,8 @@ function restoreCaret(offset, root = $("lyrics"), { raw = false } = {}) {
       }
       remaining -= length;
     }
-  });
+  };
+  if (immediate) restore(); else requestAnimationFrame(restore);
 }
 function selectionOffsets(root = $("lyrics")) {
   const selection = window.getSelection(); if (!selection || selection.isCollapsed || !selection.rangeCount || !root) return null;
