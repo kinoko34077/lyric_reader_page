@@ -34,11 +34,11 @@
 **Interfaces:**
 - Documents the existing `replaceText`, `replaceDocumentRange`, `serializeSource`, and `renderLyrics` contracts without changing their signatures.
 
-- [ ] **Step 1: Add the design and ADR documents**
-- [ ] **Step 2: Add explicit Source-backed Writer, single surface, dynamic Parser, plain Source paste, and no per-input scroll restoration requirements to the requirements matrix**
-- [ ] **Step 3: Mark the Writer roadmap as structural migration in progress and keep Reader frozen**
-- [ ] **Step 4: Run `git diff --check` and documentation/unit checks**
-- [ ] **Step 5: Commit and push `docs: define source-backed writer editing contract`**
+- [x] **Step 1: Add the design and ADR documents**
+- [x] **Step 2: Add explicit Source-backed Writer, single surface, dynamic Parser, plain Source paste, and no per-input scroll restoration requirements to the requirements matrix**
+- [x] **Step 3: Mark the Writer roadmap as structural migration in progress and keep Reader frozen**
+- [x] **Step 4: Run `git diff --check` and documentation/unit checks**
+- [x] **Step 5: Commit and push `docs: define source-backed writer editing contract`**
 
 ### Task 2: Add pure semantic Source transaction helpers
 
@@ -54,11 +54,11 @@
 - `deleteSourceForward(source, caret) -> string`
 - `sourceLineBoundary(source) -> { titleEnd, bodyStart }`
 
-- [ ] **Step 1: Write failing tests for insertion, backward/forward deletion, grapheme-safe boundaries, and Title/body newline boundaries**
-- [ ] **Step 2: Run `node --test tests/writer-source.test.mjs` and verify the new tests fail because the module is absent**
-- [ ] **Step 3: Implement the smallest grapheme-safe Source helpers using the existing `graphemes` utility**
-- [ ] **Step 4: Re-run the focused tests and `npm run test:writer-unit`**
-- [ ] **Step 5: Commit and push `feat: add source transaction primitives`**
+- [x] **Step 1: Write failing tests for insertion, backward/forward deletion, grapheme-safe boundaries, and Title/body newline boundaries**
+- [x] **Step 2: Run `node --test tests/writer-source.test.mjs` and verify the new tests fail because the module is absent**
+- [x] **Step 3: Implement the smallest grapheme-safe Source helpers using the existing `graphemes` utility**
+- [x] **Step 4: Re-run the focused tests and `npm run test:writer-unit`**
+- [x] **Step 5: Commit and push `feat: add source transaction primitives`**
 
 ### Task 3: Introduce one Writer editing host without changing Viewer layout
 

@@ -5,7 +5,7 @@
     "test": "npm run test:reader && npm run test:shared && npm run test:writer-unit",
     "test:reader": "node --test tests/build-id.test.mjs tests/content-boundary.test.mjs tests/data-loader.test.mjs tests/demo-smoke.test.mjs tests/large-source.test.mjs tests/lyric-container.test.mjs tests/reader-kernel-golden.test.mjs tests/registry.test.mjs",
     "test:shared": "node --test tests/document-model.test.mjs tests/document-state.test.mjs tests/dom-reader-json.test.mjs tests/gate-separation.test.mjs tests/runtime-integrity.test.mjs tests/syntax-adapter.test.mjs",
-    "test:writer-unit": "node --test tests/writer-state.test.mjs tests/editor-source.test.mjs tests/source-editor.test.mjs tests/writer-gate-runner.test.mjs",
+    "test:writer-unit": "node --test tests/writer-state.test.mjs tests/editor-source.test.mjs tests/source-editor.test.mjs tests/writer-source.test.mjs tests/writer-gate-runner.test.mjs",
     "test:mobile": "node tests/mobile-viewer-gate.mjs",
     "test:writer": "node tests/writer-beta-gate.mjs",
     "test:writer-presentation": "node tests/writer-presentation-beta-gate.mjs",

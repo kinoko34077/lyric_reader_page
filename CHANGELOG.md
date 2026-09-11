@@ -1,5 +1,7 @@
 # Changelog
 
+- Writer構造是正の設計・ADRと、Grapheme安全なSource range transaction primitiveのテストを追加。次段階で単一Writer Surfaceと通常入力のSource transaction化へ接続する。
+
 ## [Unreleased] — 2026-09-11
 
 ### Reader Kernel優先への方針転換
