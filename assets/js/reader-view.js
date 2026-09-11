@@ -146,14 +146,15 @@ export function renderLyrics(element, source, options = {}) {
   }
   const nodes = transformNodes(sourceNodes, options.kanji);
   element.replaceChildren();
-  const fragment = document.createDocumentFragment(); let offset = 0;
+  const fragment = document.createDocumentFragment(); let offset = Number(options.sourceOffset || 0); let rawOffset = Number(options.sourceRawOffset ?? options.sourceOffset ?? 0);
   let rubyIndex = 0;
   const renderNodes = (displayNodes, originalNodes, parent) => displayNodes.forEach((node, index) => {
     const sourceNode = originalNodes[index] || node;
     if (node.type === "span") {
-      const start = offset; const wrapper = document.createElement("span"); wrapper.className = "source-presentation"; wrapper.dataset.sourceStart = String(start);
+      const start = offset; const rawStart = rawOffset; const wrapper = document.createElement("span"); wrapper.className = "source-presentation"; wrapper.dataset.sourceStart = String(start); wrapper.dataset.sourceRawStart = String(rawStart);
       if (preserveSource) wrapper.dataset.sourceRaw = serializeSource({ type: "document", nodes: [sourceNode] }, adapter);
       const resolved = resolvePresentation(node.presentation, options.registry || {}); setPresentationData(wrapper, node.presentation, resolved);
+      rawOffset = rawStart + 1;
       renderNodes(node.children || [], sourceNode.children || [], wrapper);
       if (["parallel", "z"].includes(resolved.combine?.mode)) splitCombineTextRuns(wrapper);
       if (resolved.glyph) {
@@ -170,16 +171,16 @@ export function renderLyrics(element, source, options = {}) {
         }
       }
       const fontWarnings = resolved.fontName && options.loadedRegistryFonts instanceof Set && !options.loadedRegistryFonts.has(resolved.fontName) ? [`Font ${resolved.fontName}を読み込めないため標準FontへFallbackしています。`] : [];
-      wrapper.dataset.sourceEnd = String(offset); appendWarningMark(wrapper, [...(resolved.warnings || []), ...fontWarnings]); if (resolved.conflicts?.length) wrapper.append(conflictMark(resolved.conflicts.length)); parent.append(wrapper); return;
+      wrapper.dataset.sourceEnd = String(offset); wrapper.dataset.sourceRawEnd = String(rawStart + graphemes(wrapper.dataset.sourceRaw || "").length); rawOffset = Number(wrapper.dataset.sourceRawEnd); appendWarningMark(wrapper, [...(resolved.warnings || []), ...fontWarnings]); if (resolved.conflicts?.length) wrapper.append(conflictMark(resolved.conflicts.length)); parent.append(wrapper); return;
     }
     if (node.type === "text") {
-      const sourceValue = sourceNode.value || node.value; const start = offset; const end = start + graphemes(sourceValue).length; const span = document.createElement("span"); span.className = "source-text"; span.dataset.sourceStart = String(start); span.dataset.sourceEnd = String(end); appendTextRun(span, node.value, start, options.writingMode); parent.append(span); offset = end; return;
+      const sourceValue = sourceNode.value || node.value; const start = offset; const end = start + graphemes(sourceValue).length; const rawStart = rawOffset; const rawEnd = rawStart + graphemes(sourceValue).length; const span = document.createElement("span"); span.className = "source-text"; span.dataset.sourceStart = String(start); span.dataset.sourceEnd = String(end); span.dataset.sourceRawStart = String(rawStart); span.dataset.sourceRawEnd = String(rawEnd); appendTextRun(span, node.value, start, options.writingMode); parent.append(span); offset = end; rawOffset = rawEnd; return;
     }
-    const start = offset; const end = offset + nodeLength(sourceNode); const currentRubyIndex = rubyIndex++; const wrapper = document.createElement("span"); wrapper.className = "source-ruby"; wrapper.dataset.sourceStart = String(start); wrapper.dataset.sourceEnd = String(end); if (preserveSource) wrapper.dataset.sourceRaw = serializeSource({ type: "document", nodes: [sourceNode] }, adapter); wrapper.dataset.sourceBase = sourceNode.base; wrapper.dataset.sourceRuby = sourceNode.ruby; wrapper.dataset.sourceExplicit = String(sourceNode.explicit); wrapper.dataset.rubyIndex = String(currentRubyIndex);
+    const start = offset; const end = offset + nodeLength(sourceNode); const rawStart = rawOffset; const currentRubyIndex = rubyIndex++; const wrapper = document.createElement("span"); wrapper.className = "source-ruby"; wrapper.dataset.sourceStart = String(start); wrapper.dataset.sourceEnd = String(end); wrapper.dataset.sourceRawStart = String(rawStart); if (preserveSource) wrapper.dataset.sourceRaw = serializeSource({ type: "document", nodes: [sourceNode] }, adapter); wrapper.dataset.sourceBase = sourceNode.base; wrapper.dataset.sourceRuby = sourceNode.ruby; wrapper.dataset.sourceExplicit = String(sourceNode.explicit); wrapper.dataset.rubyIndex = String(currentRubyIndex);
     if (options.ruby !== false) {
-      const ruby = document.createElement("ruby"); ruby.append(rubyBasePart(node.base, sourceNode.baseDecorations, start, currentRubyIndex, options.registry || {}, options.writingMode)); const rt = document.createElement("rt"); rt.dataset.rubyPart = "ruby"; rt.dataset.rubyIndex = String(currentRubyIndex); rt.dataset.rubyStart = "0"; rt.dataset.rubyEnd = String(graphemes(node.ruby).length); rt.append(decoratedRubyPart(node.ruby, sourceNode.rubyDecorations, "ruby", start, currentRubyIndex, options.registry || {}, options.writingMode)); ruby.append(rt); wrapper.append(ruby);
+      const rawUnits = graphemes(wrapper.dataset.sourceRaw || ""); const openIndex = rawUnits.indexOf("《"); const baseRawStart = rawStart + (rawUnits[0] === "｜" ? 1 : 0); const baseRawEnd = openIndex >= 0 ? rawStart + openIndex : baseRawStart + graphemes(node.base).length; const rubyRawStart = openIndex >= 0 ? rawStart + openIndex + 1 : baseRawEnd; const rubyRawEnd = rawUnits.lastIndexOf("》") >= 0 ? rawStart + rawUnits.lastIndexOf("》") : rubyRawStart + graphemes(node.ruby).length; const base = rubyBasePart(node.base, sourceNode.baseDecorations, start, currentRubyIndex, options.registry || {}, options.writingMode); base.dataset.sourceRawStart = String(baseRawStart); base.dataset.sourceRawEnd = String(baseRawEnd); const ruby = document.createElement("ruby"); ruby.append(base); const rt = document.createElement("rt"); rt.dataset.rubyPart = "ruby"; rt.dataset.rubyIndex = String(currentRubyIndex); rt.dataset.rubyStart = "0"; rt.dataset.rubyEnd = String(graphemes(node.ruby).length); rt.dataset.sourceRawStart = String(rubyRawStart); rt.dataset.sourceRawEnd = String(rubyRawEnd); rt.append(decoratedRubyPart(node.ruby, sourceNode.rubyDecorations, "ruby", start, currentRubyIndex, options.registry || {}, options.writingMode)); ruby.append(rt); wrapper.append(ruby);
     } else wrapper.append(rubyBasePart(node.base, sourceNode.baseDecorations, start, currentRubyIndex, options.registry || {}, options.writingMode));
-    parent.append(wrapper); offset = end;
+    wrapper.dataset.sourceRawEnd = String(rawStart + graphemes(wrapper.dataset.sourceRaw || "").length); parent.append(wrapper); offset = end; rawOffset = Number(wrapper.dataset.sourceRawEnd);
   });
   renderNodes(nodes, sourceNodes, fragment); element.append(fragment); if (parseWarnings.length) element.append(warningMark(parseWarnings)); element.classList.toggle("is-vertical", options.writingMode === "vertical"); return sourceNodes;
 }

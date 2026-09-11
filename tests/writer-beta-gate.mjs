@@ -169,6 +169,9 @@ async function runWriterCoreGate(targetUrl) {
     assert.doesNotMatch(await page.locator("#lyrics").innerText(), /base-range=0-3/, "valid Writer Source must not expose parser markup in the Viewer");
     await clickHeaderButton(page, "#mode-switch");
     await page.waitForFunction(() => document.body.dataset.mode === "writer", null, { timeout: 30_000 });
+    assert.equal(await page.locator("#writer-surface").getAttribute("contenteditable"), "true", "Writer must expose one editable host for Title and body");
+    assert.notEqual(await page.locator("#song-title").getAttribute("contenteditable"), "true", "Title must not be an independent contenteditable host");
+    assert.notEqual(await page.locator("#lyrics").getAttribute("contenteditable"), "true", "Body must not be an independent contenteditable host");
     await clickHeaderButton(page, "#source-mode-switch");
     await page.locator("#source-editor").waitFor({ state: "visible", timeout: 30_000 });
     await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source, validSource, { timeout: 30_000 });
@@ -932,15 +935,15 @@ async function runWriterBoundaryGate(targetUrl) {
     await resetWriterSource();
     await placeCaretAtRootBoundary(page.locator("#song-title"), true);
     await page.keyboard.press("Enter");
-    await page.waitForFunction(() => document.activeElement?.id === "lyrics", null, { timeout: 30_000 });
-    assert.equal(await readSource(), fixture, "Title-boundary Enter must preserve the canonical Source while moving focus to Body");
+    await page.waitForFunction(() => document.activeElement?.id === "writer-surface" && document.querySelector("#source-editor")?.value.includes("Boundary Title\n\n本文一行目"), null, { timeout: 30_000 });
+    assert.equal(await readSource(), fixture.replace("Boundary Title\n", "Boundary Title\n\n"), "Title-boundary Enter must insert a Source newline on the single editing surface");
 
     stage = "body start Backspace moves to title";
     await resetWriterSource();
     await placeCaretAtRootBoundary(page.locator("#lyrics"), false);
     await page.keyboard.press("Backspace");
-    await page.waitForFunction(() => document.activeElement?.id === "song-title", null, { timeout: 30_000 });
-    assert.equal(await readSource(), fixture, "Body-boundary Backspace must preserve the canonical Source while moving focus to Title");
+    await page.waitForFunction(() => document.activeElement?.id === "writer-surface" && document.querySelector("#source-editor")?.value.includes("Boundary Title本文一行目"), null, { timeout: 30_000 });
+    assert.equal(await readSource(), fixture.replace("Boundary Title\n", "Boundary Title"), "Body-boundary Backspace must delete the separating Source newline on the single editing surface");
 
     assert.deepEqual({ consoleErrors, pageErrors }, { consoleErrors: [], pageErrors: [] });
     return { status: "PASS", targetUrl };
@@ -1011,6 +1014,7 @@ async function runWriterCompositionGate(targetUrl) {
 
     stage = "body composition commits without trailing input";
     await resetWriterSource();
+    await placeCaretAtRootBoundary(page.locator("#lyrics"), true);
     await dispatchCompositionWithoutFinalInput(page.locator("#lyrics"), "かな");
     await page.waitForFunction(() => /本文かな/.test(document.querySelector("#source-editor")?.value || ""), null, { timeout: 30_000 });
     assert.equal(await readSource(), fixture.replace("本文", "本文かな"), "Body compositionend must commit the final text even without a trailing input event");

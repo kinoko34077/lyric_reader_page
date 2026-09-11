@@ -21,6 +21,7 @@ body.chrome-hidden .site-footer { transform: translateY(105%); }
 .reader-shell::-webkit-scrollbar { width: .45rem; height: .45rem; }
 .reader-shell::-webkit-scrollbar-track { background: transparent; }
 .reader-shell::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--accent) 48%, transparent); border-radius: 99px; }
+.writer-surface { flex: 1 0 auto; min-block-size: calc(100dvh - 4.1rem); display: flex; flex-direction: column; max-width: 100%; outline: none; }
 .reader-heading { flex: 0 0 auto; max-width: 100%; margin: 0 0 .15rem; padding: 0 0 .15rem; border-bottom: 1px solid var(--rule); }
 .reader-shell.is-vertical { writing-mode: vertical-rl; }
 .reader-shell.is-vertical .reader-heading { max-width: none; min-height: 0; margin: 0 0 .3rem; padding: 0 0 .2rem; border-bottom: 0; border-left: 1px solid var(--rule); }
@@ -39,9 +40,8 @@ h1 { margin: .1rem 0; font-size: clamp(1.35rem, 3vw, 2.3rem); font-weight: 500; 
 .lyrics::-webkit-scrollbar-track, .settings-panel::-webkit-scrollbar-track { background: transparent; }
 .lyrics::-webkit-scrollbar-thumb, .settings-panel::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--accent) 48%, transparent); border-radius: 99px; }
 .lyrics:focus-visible { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent); }
-.lyrics[contenteditable="true"] { outline: 1px dashed color-mix(in srgb, var(--accent) 45%, transparent); outline-offset: .35rem; }
-.lyrics[contenteditable="true"]:focus { outline-color: var(--accent); }
-h1[contenteditable="true"] { outline: 1px dashed color-mix(in srgb, var(--accent) 45%, transparent); outline-offset: .2rem; }
+.writer-surface[contenteditable="true"] { outline: 1px dashed color-mix(in srgb, var(--accent) 45%, transparent); outline-offset: .35rem; }
+.writer-surface[contenteditable="true"]:focus { outline-color: var(--accent); }
 .lyrics p { margin: 0 0 var(--reader-paragraph-spacing); }
 .lyrics ruby { ruby-position: over; }
 .lyrics rt { color: inherit; font-size: .48em; letter-spacing: 0; line-height: 1; }

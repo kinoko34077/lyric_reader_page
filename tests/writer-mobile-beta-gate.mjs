@@ -120,6 +120,7 @@ async function checkScenario(scenario, targetUrl) {
       mode: document.body.dataset.mode || "",
       title: document.querySelector("#song-title")?.textContent || "",
       body: document.querySelector("#lyrics")?.textContent || "",
+      writerEditable: document.querySelector("#writer-surface")?.contentEditable || "",
       titleEditable: document.querySelector("#song-title")?.contentEditable || "",
       bodyEditable: document.querySelector("#lyrics")?.contentEditable || "",
       sourceHidden: document.querySelector("#source-editor")?.hidden ?? true,
@@ -128,8 +129,9 @@ async function checkScenario(scenario, targetUrl) {
     }));
     assert.equal(initial.mode, "writer", `${scenario.id}: URL must enter Writer mode`);
     assert.ok(initial.title && initial.body, `${scenario.id}: Writer title/body must render`);
-    assert.equal(initial.titleEditable, "true", `${scenario.id}: title must be contenteditable in Writer`);
-    assert.equal(initial.bodyEditable, "true", `${scenario.id}: body must be contenteditable in Writer`);
+    assert.equal(initial.writerEditable, "true", `${scenario.id}: Writer must expose one editable surface`);
+    assert.notEqual(initial.titleEditable, "true", `${scenario.id}: title must not be an independent contenteditable host`);
+    assert.notEqual(initial.bodyEditable, "true", `${scenario.id}: body must not be an independent contenteditable host`);
     assert.equal(initial.sourceHidden, true, `${scenario.id}: Source Editor must stay hidden in Writer mode`);
     assert.ok(initial.rubyCount > 0, `${scenario.id}: Ruby must render in Writer`);
     assert.equal(initial.rootOverflow, false, `${scenario.id}: Writer must not create document overflow`);
@@ -171,9 +173,9 @@ async function checkScenario(scenario, targetUrl) {
     assert.ok((await page.locator("#source-editor").inputValue()).length > 0, `${scenario.id}: Source mode must retain Author Source`);
     await clickHeaderButton(page, "#source-mode-switch");
     await page.locator("#lyrics").waitFor({ state: "visible", timeout: 30_000 });
-    await page.waitForFunction(() => document.body.dataset.mode === "viewer" && document.querySelector("#lyrics")?.contentEditable === "false", null, { timeout: 30_000 });
+    await page.waitForFunction(() => document.body.dataset.mode === "viewer" && document.querySelector("#writer-surface")?.contentEditable === "false", null, { timeout: 30_000 });
     await clickHeaderButton(page, "#mode-switch");
-    await page.waitForFunction(() => document.body.dataset.mode === "writer" && document.querySelector("#lyrics")?.contentEditable === "true", null, { timeout: 30_000 });
+    await page.waitForFunction(() => document.body.dataset.mode === "writer" && document.querySelector("#writer-surface")?.contentEditable === "true", null, { timeout: 30_000 });
 
     stage = "Title/body boundary on mobile Writer";
     await clickHeaderButton(page, "#source-mode-switch");
@@ -219,6 +221,7 @@ async function checkScenario(scenario, targetUrl) {
     await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source && document.querySelector("#source-editor")?.getAttribute("aria-invalid") !== "true", compositionFixture, { timeout: 30_000 });
     await clickHeaderButton(page, "#source-mode-switch");
     await clickHeaderButton(page, "#mode-switch");
+    await placeCaretAtRootBoundary(page.locator("#lyrics"), true);
     await dispatchCompositionWithoutFinalInput(page.locator("#lyrics"), "かな");
     await page.waitForFunction(() => /本文かな/.test(document.querySelector("#source-editor")?.value || ""), null, { timeout: 30_000 });
     assert.equal(await readMobileSource(), "Mobile IME\n本文かな", `${scenario.id}: WebKit compositionend must commit body text without a trailing input event`);
@@ -261,10 +264,10 @@ async function checkScenario(scenario, targetUrl) {
     await clickHeaderButton(page, "#mode-switch");
     await placeCaretAtRootBoundary(page.locator("#song-title"), true);
     await page.keyboard.press("Enter");
-    await page.waitForFunction(() => document.activeElement?.id === "lyrics", null, { timeout: 30_000 });
+    await page.waitForFunction(() => document.activeElement?.id === "writer-surface" && document.body.dataset.mode === "writer", null, { timeout: 30_000 });
     await clickHeaderButton(page, "#source-mode-switch");
     await page.locator("#source-editor").waitFor({ state: "visible", timeout: 30_000 });
-    assert.equal(parseLyricContainer(await page.locator("#source-editor").inputValue()).source, "Mobile Boundary\n本文", `${scenario.id}: Title Enter must keep the canonical Source on mobile`);
+    assert.equal(parseLyricContainer(await page.locator("#source-editor").inputValue()).source, "Mobile Boundary\n\n本文", `${scenario.id}: Title Enter must insert a Source newline on mobile`);
     await clickHeaderButton(page, "#source-mode-switch");
     await clickHeaderButton(page, "#mode-switch");
     await clickHeaderButton(page, "#source-mode-switch");
@@ -274,10 +277,10 @@ async function checkScenario(scenario, targetUrl) {
     await clickHeaderButton(page, "#mode-switch");
     await placeCaretAtRootBoundary(page.locator("#lyrics"), false);
     await page.keyboard.press("Backspace");
-    await page.waitForFunction(() => document.activeElement?.id === "song-title", null, { timeout: 30_000 });
+    await page.waitForFunction(() => document.activeElement?.id === "writer-surface" && document.body.dataset.mode === "writer", null, { timeout: 30_000 });
     await clickHeaderButton(page, "#source-mode-switch");
     await page.locator("#source-editor").waitFor({ state: "visible", timeout: 30_000 });
-    assert.equal(parseLyricContainer(await page.locator("#source-editor").inputValue()).source, "Mobile Boundary\n本文", `${scenario.id}: Body Backspace must keep the canonical Source on mobile`);
+    assert.equal(parseLyricContainer(await page.locator("#source-editor").inputValue()).source, "Mobile Boundary本文", `${scenario.id}: Body Backspace must remove the Source boundary on mobile`);
     await clickHeaderButton(page, "#source-mode-switch");
     await clickHeaderButton(page, "#mode-switch");
 
