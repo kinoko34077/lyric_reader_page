@@ -929,6 +929,16 @@ async function runWriterRubyGate(targetUrl) {
     source = await readSource();
     assert.match(source, /本文｜3ペウコ《ピョコ》$/, `Writer typing must parse explicit non-kanji Ruby through the shared Parser: ${source}`);
 
+    stage = "incomplete explicit Ruby remains literal";
+    await resetWriterSource(dynamicRubySource);
+    assert.equal(await placeCaretInRoot(page.locator("#lyrics"), "本文", 2), true, "incomplete Ruby gate must place the caret at the body end");
+    for (const unit of Array.from("｜ABC《エービ")) await page.keyboard.insertText(unit);
+    await page.waitForFunction(() => document.querySelectorAll("#lyrics .source-ruby").length === 0 && /｜ABC《エービ/.test(document.querySelector("#lyrics")?.innerText || ""), null, { timeout: 30_000 });
+    for (const unit of Array.from("ーシー》")) await page.keyboard.insertText(unit);
+    await page.waitForFunction(() => document.querySelector("#lyrics .source-ruby")?.querySelector("rt")?.textContent === "エービーシー", null, { timeout: 30_000 });
+    source = await readSource();
+    assert.equal(parseLyricContainer(source).source, "Dynamic Ruby\n本文｜ABC《エービーシー》", "completing an initially literal Ruby must use the same Source Parser path");
+
     stage = "dynamic explicit Ruby fixture set";
     for (const [base, reading] of [["3ペウコ", "ピョコ"], ["ABC", "エービーシー"], ["123", "ひゃくにじゅうさん"], ["ペウコ", "ピョコ"]]) {
       const markup = `｜${base}《${reading}》`;
