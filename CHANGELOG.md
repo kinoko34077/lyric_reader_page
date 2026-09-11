@@ -9,7 +9,7 @@
 - 縦書きの`〳〵`／`〴〵`をSource上の2文字のまま表示専用ペアとして扱い、inline advanceを2em確保する回帰を追加した。DOM／Chromium／WebKit Mobile GateでSource範囲2文字、前後文字との非重なり、約2セルのadvanceを検証する。
 - 本文Baseの文字サイズを`--reader-size`へ統一し、Ruby Baseも同じサイズ、Readingだけ相対`.48em`とするTypography回帰をWriter Gateへ追加した。
 - 組み込みNishiki-tekiは検証済みHTTPS Web Font URLがない限り選択不可とし、端末に実Fontがある場合だけ利用可能と表示する。文書がNishiki-tekiを要求した場合は標準FontへFallbackしたことをStatusへ明示し、公式配布物の無断同梱や未検証CDN採用は行わない。
-- Writerの本文Source transactionは安全性優先の既存Projection経路を維持し、本文だけの部分再描画はWYSIWYG Gateで待ち状態を作ったため採用しなかった。入力DOMをSourceの正本に戻さず、部分更新は別途Selection/Caret証拠を作ってから再評価する。
+- Writerの本文Source transactionではTitleを再描画せず本文Projectionだけを更新する経路を追加した。長いWYSIWYG Browser Gateで動的入力・改行・Paste・削除・Title境界・Ruby Copyを完走させ、入力DOMをSourceの正本に戻さないことを確認した。
 - 実機iPhone Safari、Native Clipboard／IME、Nishiki-teki正式Web Font配信、stable branch保護を自動Gateと混同しない`docs/RELEASE-SMOKE.md`を追加した。公式Nishiki-teki配布でWeb Font URL／CORSを確認できないため、無断同梱や第三者CDN採用は行わず、外部確認待ちとして記録する。
 - ネイティブ選択Copyは`clipboardData`へ書き込める環境でのみPortable Textを上書きし、Clipboard APIが提供されない／拒否された環境では例外を出さずブラウザ既定のCopyへ戻すようにした。Title／本文の双方でClipboard失敗のfail-soft回帰を追加した。
 - 初期デモ・ローカルファイル・URLの非同期読込へ最新リクエスト判定を追加し、読込中に開始した新しい文書を古いレスポンスやFont完了処理が上書きしないようにした。競合時は古いエラー表示もCurrent Documentへ反映しない。

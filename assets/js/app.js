@@ -489,7 +489,7 @@ function commitWriterBodyDocument(document, localCaret = null) {
   try { adapter.parse(nextText); } catch (error) { setStatus(error instanceof Error ? error.message : "本文を更新できませんでした"); return false; }
   state.data = replaceVariantSource(state.data, record.id, nextText); state.nodes = document.nodes; markDirty({ source: true }); saveDraft(); scheduleHistory();
   const caret = localCaret == null ? null : writerBodySourceOffset(currentRecord()) + Number(localCaret);
-  renderWriterProjection({ caret }); updateStatus(); return true;
+  renderWriterProjection({ title: false, body: true, caret }); updateStatus(); return true;
 }
 function commitWriterSourceEdit(range, insertedText, { status = true } = {}) {
   if (!state.data) return false;
