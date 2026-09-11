@@ -919,6 +919,20 @@ async function runWriterRubyGate(targetUrl) {
     source = await readSource();
     assert.match(source, /本文｜3ペウコ《ピョコ》$/, `Writer typing must parse explicit non-kanji Ruby through the shared Parser: ${source}`);
 
+    stage = "dynamic explicit Ruby fixture set";
+    for (const [base, reading] of [["3ペウコ", "ピョコ"], ["ABC", "エービーシー"], ["123", "ひゃくにじゅうさん"], ["ペウコ", "ピョコ"]]) {
+      const markup = `｜${base}《${reading}》`;
+      await resetWriterSource(dynamicRubySource);
+      assert.equal(await placeCaretInRoot(page.locator("#lyrics"), "本文", 2), true, `dynamic Ruby fixture must place the caret for ${markup}`);
+      for (const unit of Array.from(markup)) await page.keyboard.insertText(unit);
+      await page.waitForFunction(({ expectedBase, expectedRuby }) => {
+        const ruby = document.querySelector("#lyrics .source-ruby");
+        return ruby?.querySelector(".ruby-base-part")?.textContent === expectedBase && ruby?.querySelector("rt")?.textContent === expectedRuby;
+      }, { expectedBase: base, expectedRuby: reading }, { timeout: 30_000 });
+      source = await readSource();
+      assert.equal(parseLyricContainer(source).source, `Dynamic Ruby\n本文${markup}`, `Writer typing must preserve the exact explicit Ruby Source for ${markup}`);
+    }
+
     assert.deepEqual({ consoleErrors, pageErrors }, { consoleErrors: [], pageErrors: [] });
     return { status: "PASS", targetUrl };
   } catch (error) {

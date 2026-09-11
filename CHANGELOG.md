@@ -3,6 +3,7 @@
 ## [Unreleased] — 2026-09-11
 
 - Writer通常編集のSource-backed経路を整理し、旧Title/Body focus bridge、DOM全体からAuthor Sourceを再構築する通常入力・削除・Paste経路、Ruby専用DOM Paste、未使用のRendered DOM Copy fallbackを`app.js`から撤去した。Title/本文は`#writer-surface`一つの編集hostで同じSource range transactionを通り、DOM再構築は構造が変わるProjection更新に限定する。Reader/Shared/Writer Unit/WYSIWYG/Presentation/Mobileの回帰Gateで確認済み。
+- Writerの動的明示Ruby回帰を`｜3ペウコ《ピョコ》`だけでなく、英字・数字・非漢字文字列を含む`｜ABC《エービーシー》`、`｜123《ひゃくにじゅうさん》`、`｜ペウコ《ピョコ》`まで拡張し、入力文字列がそのままAuthor Sourceへ残り、共通ParserがRubyへ投影することを確認した。
 
 ### Reader Kernel優先への方針転換
 
