@@ -9,6 +9,8 @@
 - 自動Mobile: Chromium Pixel 5相当、Playwright WebKit iPhone 13相当
 - 自動Gate結果: Reader / Shared / Writer Unit / Writer Mobile は上記HEADでPASS
 
+このチェックリストを追加した同期コミットは `7ffe308` です。同期コミットは実行コードを変更していないため、自動検証のコード基準は上記HEADのままです。
+
 ## iPhone Safari実機
 
 新しいSafari Private Browsingまたはサイトデータ消去後、公開Pagesで次を確認し、結果・iOS／Safari版本・公開URLを記録する。
@@ -40,6 +42,8 @@
 
 ## stable保護
 
+現時点の観測では、ローカルGitだけからstableのGitHub保護状態は判定できません。未認証API確認ではbranch protectionの取得が401、rulesets一覧は空で返ったため、`stable`保護は未確認として扱います。
+
 GitHub管理環境で、`stable`について次を設定・確認する。
 
 - direct push禁止
@@ -48,4 +52,3 @@ GitHub管理環境で、`stable`について次を設定・確認する。
 - 更新は明示的なrelease操作またはPull Request経由
 
 設定後はGitHub Branch Ruleset画面または認証済みAPIで確認し、この表へ観測結果を追記する。ローカルworkflowのPASSやtag固定だけでは、branch protection PASSとは判定しない。
-
