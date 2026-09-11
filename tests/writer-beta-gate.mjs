@@ -172,6 +172,8 @@ async function runWriterCoreGate(targetUrl) {
     assert.equal(await page.locator("#writer-surface").getAttribute("contenteditable"), "true", "Writer must expose one editable host for Title and body");
     assert.notEqual(await page.locator("#song-title").getAttribute("contenteditable"), "true", "Title must not be an independent contenteditable host");
     assert.notEqual(await page.locator("#lyrics").getAttribute("contenteditable"), "true", "Body must not be an independent contenteditable host");
+    assert.equal(await page.locator("#song-artist").getAttribute("contenteditable"), "false", "Artist projection must not become an untracked editable DOM source");
+    assert.equal(await page.locator("#song-description").getAttribute("contenteditable"), "false", "Description projection must not become an untracked editable DOM source");
     await clickHeaderButton(page, "#source-mode-switch");
     await page.locator("#source-editor").waitFor({ state: "visible", timeout: 30_000 });
     await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source, validSource, { timeout: 30_000 });

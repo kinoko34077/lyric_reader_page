@@ -7,6 +7,7 @@
 - Title内のPresentation範囲も本文と同じsemantic IR transactionへ通し、表示文字のraw置換でTitle側の`[...:style=...]`を壊さない回帰を追加した。
 - Writerの単一編集host上でTitle末尾から本文先頭へ跨る選択Rangeを一度のSource spliceへ通すBrowser回帰を追加し、表示要素境界がAuthor Sourceの改行境界を分断しないことを確認した。
 - Writer入力途中の不完全な明示RubyをLiteral Sourceとして表示し、閉じ記号まで入力した時点で同じParser経路からRuby Projectionへ遷移する回帰を追加した。
+- 単一Writer host内のArtist／Description projectionを`contenteditable=false`へ固定し、Author Sourceに対応しないMetadata DOMがブラウザ編集で未追跡変更されないようにした。
 
 ### Reader Kernel優先への方針転換
 
