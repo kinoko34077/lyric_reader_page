@@ -2,11 +2,10 @@ import { loadInput, parseJsonText, parseLocalInput, validateSourceText } from ".
 import { MAX_READER_DOCUMENT_JSON_BYTES, MAX_SOURCE_BYTES } from "./config.js";
 import { firstLineInfo, withFirstLineBody } from "./content-boundary.js";
 import { boundedHistory, clone, documentFingerprint, documentIdentity, documentPayload, draftDiffers, draftPayload, draftStorageKey, localSourceIdentity, migrateReaderDocument, normalizeDraft, readerDocumentExtensions } from "./document-state.js";
-import { applyPresentation, applyRubyPresentation, assertCapabilities, clearPresentation, clearRubyPresentation, getSyntaxAdapter, graphemes, isSafePresentationName, nodeLength, parseSource, replaceDocumentRange, replaceText, serializeSource, toPortableText, toPortableTextSafe } from "./syntax-adapter.js";
+import { applyPresentation, applyRubyPresentation, assertCapabilities, clearPresentation, clearRubyPresentation, getSyntaxAdapter, graphemes, isSafePresentationName, replaceText, serializeSource, toPortableTextSafe } from "./syntax-adapter.js";
 import { renderLyrics, rawText } from "./reader-view.js";
 import { containerToReaderDocument, isLyricContainerText, parseLyricContainer, serializeLyricContainer } from "./lyric-container.js";
 import { normalizeRegistry, paletteValue, validateRegistry } from "./registry.js";
-import { renderedBodySource as serializeRenderedBodySource } from "./editor-source.js";
 import { sourceErrorContext, sourceErrorLocation } from "./source-editor.js";
 import { activeVariant, normalizeActiveVariantId, normalizeDocumentData, normalizeVariants, replaceVariantSource, resolveMetadata, resolveTitle } from "./document-model.js";
 import { captureScrollPosition, commitDocumentCandidate, restoreScrollPosition, scrollStorageKey } from "./runtime-integrity.js";
@@ -19,7 +18,7 @@ const initialMode = requestedMode === "writer" || requestedMode === "source" ? r
 const state = {
   activeVariantId: "variant-A", kanji: "original", ruby: true, writingMode: "horizontal", size: 20, lineHeight: null, letterSpacing: null, paragraphSpacing: null,
   font: "serif", fontUrl: "", fontWarnings: [], background: "#f5f0e6", color: "#272522", paletteBank: "default",
-  remoteFontsAllowed: true, loadedRegistryFonts: new Set(), data: null, nodes: [], titleNodes: [], selectionBookmark: null, compositionActive: false, compositionCommitPending: false, compositionTarget: null, compositionTransaction: null, compositionFinalData: null, compositionGeneration: 0, rubyEditActive: false, sourceEditorRaw: null, sourceEditorDocumentHash: null, sourceEditorRawByVariant: new Map(), mode: initialMode,
+  remoteFontsAllowed: true, loadedRegistryFonts: new Set(), data: null, nodes: [], titleNodes: [], selectionBookmark: null, compositionActive: false, compositionCommitPending: false, compositionTarget: null, compositionTransaction: null, compositionFinalData: null, compositionGeneration: 0, sourceEditorRaw: null, sourceEditorDocumentHash: null, sourceEditorRawByVariant: new Map(), mode: initialMode,
   preferencesLoaded: false, sourceDirty: false, documentDirty: false, dirty: false, draft: null, history: [], historyIndex: -1, historyDocumentId: null, savedCheckpoint: null, storageAvailable: true
 };
 const PREFS_KEY = "lyric-reader:preferences:v1";
@@ -327,114 +326,6 @@ function applyDraft() {
     setStatus(`Draftを復元できません: ${message} 現在の本文は保持されています`);
   }
 }
-function titleInput() { const title = renderedBodySource($("song-title")).replace(/[\r\n]/g, "").trim() || "無題"; const record = currentRecord(); if (state.data.titleSource === "first-line") { const raw = record.source.text; const info = sourceInfo(record); const bom = raw.startsWith("\uFEFF") ? "\uFEFF" : ""; const nextText = `${bom}${title}${info.newline}${raw.slice(info.bodyStart)}`; try { currentAdapter().parse(nextText); } catch (error) { setStatus(error instanceof Error ? error.message : "タイトルを更新できませんでした"); render(captureScroll()); return; } state.data = replaceVariantSource(state.data, record.id, nextText); } else { state.data.sourceMetadata = { ...(state.data.sourceMetadata || {}), title }; } markDirty({ source: state.data.titleSource === "first-line", document: state.data.titleSource !== "first-line" }); saveDraft(); scheduleHistory(); render(captureScroll()); updateStatus(); }
-function writeTitleDocument(document, documentChanged = false) {
-  if (!state.data) return false;
-  const record = currentRecord(); const adapter = currentAdapter(); const title = serializeSource(document, adapter).replace(/[\r\n]/g, "") || "無題";
-  if (state.data.titleSource === "first-line") {
-    const raw = record.source.text; const info = sourceInfo(record); const bom = raw.startsWith("\uFEFF") ? "\uFEFF" : ""; const nextText = `${bom}${title}${info.newline}${raw.slice(info.bodyStart)}`;
-    try { adapter.parse(nextText); } catch (error) { setStatus(error instanceof Error ? error.message : "タイトルを更新できませんでした"); render(captureScroll()); return false; }
-    state.data = replaceVariantSource(state.data, record.id, nextText);
-  } else {
-    state.data.sourceMetadata = { ...(state.data.sourceMetadata || {}), title };
-  }
-  state.titleNodes = document.nodes;
-  render(captureScroll()); markDirty({ source: state.data.titleSource === "first-line", document: documentChanged || state.data.titleSource !== "first-line" }); saveDraft(); scheduleHistory(); updateStatus();
-  return true;
-}
-function commitSemanticTitleEdit(range, value) {
-  const document = replaceText({ type: "document", nodes: state.titleNodes }, range, value);
-  return writeTitleDocument(document);
-}
-function preserveWysiwygTitleDeletion(event) {
-  if (state.mode !== "writer" || state.compositionActive || event.isComposing || !["deleteContentBackward", "deleteContentForward"].includes(event.inputType)) return false;
-  const root = $("song-title"); const selection = window.getSelection();
-  if (!selection || !selection.rangeCount || !root?.contains(selection.getRangeAt(0).commonAncestorContainer)) return false;
-  const selected = semanticSelectionRange(root);
-  if (!selected) return false;
-  if (!selection.isCollapsed) { event.preventDefault(); commitSemanticTitleEdit(selected, ""); return true; }
-  const length = (state.titleNodes || []).reduce((sum, node) => sum + nodeLength(node), 0); const offset = Number(selected.start);
-  const range = event.inputType === "deleteContentBackward"
-    ? (offset > 0 ? { start: offset - 1, end: offset } : null)
-    : (offset < length ? { start: offset, end: offset + 1 } : null);
-  if (!range) return false;
-  event.preventDefault(); commitSemanticTitleEdit(range, ""); return true;
-}
-function commitPortableTitlePaste(range, text) {
-  const value = String(text || "").replace(/\r\n?/g, "").replace(/\n/g, "");
-  if (!value && range.start === range.end) return false;
-  const replacement = portablePasteNodes(value);
-  const document = replaceDocumentRange({ type: "document", nodes: state.titleNodes }, range, replacement);
-  if (!writeTitleDocument(document)) return false;
-  restoreCaret(Number(range.start) + replacement.reduce((sum, node) => sum + nodeLength(node), 0), $("song-title"));
-  return true;
-}
-function preserveWysiwygTitlePaste(event) {
-  if (state.mode !== "writer" || state.compositionActive || event.defaultPrevented) return false;
-  const root = $("song-title"); const selection = window.getSelection();
-  if (!selection || !selection.rangeCount || !root?.contains(selection.getRangeAt(0).commonAncestorContainer)) return false;
-  const range = semanticSelectionRange(root); if (!range) return false;
-  const text = event.clipboardData?.getData("text/plain") || "";
-  if (!text && range.start === range.end) return false;
-  event.preventDefault(); return commitPortableTitlePaste(range, text);
-}
-function preserveWysiwygTitleTextInput(event) {
-  if (state.mode !== "writer" || state.compositionActive || event.isComposing || !["insertText", "insertReplacementText"].includes(event.inputType) || typeof event.data !== "string" || !event.data) return false;
-  const root = $("song-title"); const selection = window.getSelection();
-  if (!selection || !selection.rangeCount || !root?.contains(selection.getRangeAt(0).commonAncestorContainer)) return false;
-  const range = semanticSelectionRange(root);
-  if (!range) return false;
-  event.preventDefault(); commitSemanticTitleEdit(range, event.data); return true;
-}
-function selectionAtEditorBoundary(root, end) {
-  const selection = window.getSelection();
-  if (!selection || selection.rangeCount !== 1 || !selection.isCollapsed || !root?.contains(selection.getRangeAt(0).startContainer)) return false;
-  const edge = document.createRange(); edge.selectNodeContents(root); edge.collapse(!Boolean(end));
-  const range = selection.getRangeAt(0);
-  return range.compareBoundaryPoints(Range.START_TO_START, edge) === 0 && range.compareBoundaryPoints(Range.END_TO_END, edge) === 0;
-}
-function focusEditorBoundary(root, end) {
-  if (!root) return;
-  root.focus({ preventScroll: true });
-  const range = document.createRange(); range.selectNodeContents(root); range.collapse(!Boolean(end));
-  const selection = window.getSelection(); selection?.removeAllRanges(); selection?.addRange(range);
-  document.dispatchEvent(new Event("selectionchange"));
-}
-function handleTitleBodyBoundary(event) {
-  if (state.mode !== "writer" || state.compositionActive || event.isComposing) return false;
-  if ($("writer-surface")?.contains(event.target)) return false;
-  const title = $("song-title"); const lyrics = $("lyrics");
-  const target = event.target?.nodeType === Node.ELEMENT_NODE ? event.target : event.target?.parentElement;
-  const inTitle = target === title || title?.contains(target);
-  const inLyrics = target === lyrics || lyrics?.contains(target);
-  const isKeydown = event.type === "keydown";
-  const titleEnter = inTitle && (isKeydown ? event.key === "Enter" && !event.shiftKey && !event.altKey && !event.ctrlKey && !event.metaKey : ["insertParagraph", "insertLineBreak"].includes(event.inputType));
-  const bodyBackspace = inLyrics && (isKeydown ? event.key === "Backspace" && !event.altKey && !event.ctrlKey && !event.metaKey : event.inputType === "deleteContentBackward");
-  if (titleEnter && selectionAtEditorBoundary(title, true)) { event.preventDefault(); event.stopPropagation(); focusEditorBoundary(lyrics, false); return true; }
-  if (bodyBackspace && selectionAtEditorBoundary(lyrics, false)) { event.preventDefault(); event.stopPropagation(); focusEditorBoundary(title, true); return true; }
-  return false;
-}
-function selectionTouchesRuby(root = $("lyrics")) {
-  const selection = window.getSelection(); const lyrics = root || $("lyrics");
-  if (!selection || !selection.rangeCount || !lyrics?.contains(selection.getRangeAt(0).commonAncestorContainer)) return false;
-  const range = selection.getRangeAt(0);
-  const owner = container => (container?.nodeType === Node.ELEMENT_NODE ? container : container?.parentElement)?.closest(".source-ruby");
-  if (range.collapsed) {
-    const ruby = owner(range.startContainer)?.querySelector("ruby");
-    return Boolean(ruby?.contains(range.startContainer));
-  }
-  if (owner(range.startContainer) || owner(range.endContainer)) return true;
-  for (const ruby of lyrics.querySelectorAll(".source-ruby")) {
-    try { if (range.intersectsNode(ruby)) return true; } catch { /* Safari may reject a detached selection endpoint. */ }
-  }
-  return false;
-}
-function renderedBodySource(container = $("lyrics"), options = {}) {
-  const editRuby = options.editRuby ?? state.rubyEditActive;
-  return serializeRenderedBodySource(container, currentAdapter(), { ...options, editRuby, preserveRuby: options.preserveRuby ?? !editRuby });
-}
-function bodyInput(options = {}) { const caret = caretOffset(); const editRuby = options.editRuby ?? (state.rubyEditActive || selectionTouchesRuby()); const rawBody = renderedBodySource($("lyrics"), { editRuby }); const record = currentRecord(); const nextText = state.data.titleSource === "first-line" ? withFirstLineBody(record.source.text, rawBody) : rawBody; let parsed; try { parsed = currentAdapter().parse(nextText); } catch (error) { setStatus(error instanceof Error ? error.message : "本文を更新できませんでした"); render(captureScroll()); return; } finally { state.rubyEditActive = false; } state.selectionBookmark = null; state.data = replaceVariantSource(state.data, record.id, nextText); state.nodes = parsed.nodes; markDirty({ source: true }); saveDraft(); scheduleHistory(); render(captureScroll()); restoreCaret(caret); updateStatus(); }
-function commitSemanticTextEdit(range, value) { const document = replaceText({ type: "document", nodes: state.nodes }, range, value); writeBodyDocument(document); restoreCaret(Number(range.start) + graphemes(value).length); }
 function domPathFromRoot(root, node) {
   const path = [];
   let current = node;
@@ -595,6 +486,21 @@ function handleWriterCopy(event) {
   if (setNativeSelectionClipboard(event, text)) { event.preventDefault(); return true; }
   return false;
 }
+function selectionTouchesRuby(root = $("lyrics")) {
+  const selection = window.getSelection(); const lyrics = root || $("lyrics");
+  if (!selection || !selection.rangeCount || !lyrics?.contains(selection.getRangeAt(0).commonAncestorContainer)) return false;
+  const range = selection.getRangeAt(0);
+  const owner = container => (container?.nodeType === Node.ELEMENT_NODE ? container : container?.parentElement)?.closest(".source-ruby");
+  if (range.collapsed) {
+    const ruby = owner(range.startContainer)?.querySelector("ruby");
+    return Boolean(ruby?.contains(range.startContainer));
+  }
+  if (owner(range.startContainer) || owner(range.endContainer)) return true;
+  for (const ruby of lyrics.querySelectorAll(".source-ruby")) {
+    try { if (range.intersectsNode(ruby)) return true; } catch { /* Safari may reject a detached selection endpoint. */ }
+  }
+  return false;
+}
 function semanticSelectionRange(root = $("lyrics")) {
   const selection = window.getSelection();
   if (!selection || !selection.rangeCount) return null;
@@ -604,45 +510,6 @@ function semanticSelectionRange(root = $("lyrics")) {
   const offset = caretOffset(root);
   return offset == null ? null : { start: offset, end: offset };
 }
-function preserveWysiwygDeletion(event) {
-  if (state.mode !== "writer" || state.compositionActive || event.isComposing || !["deleteContentBackward", "deleteContentForward"].includes(event.inputType)) return false;
-  const selection = window.getSelection(); const lyrics = $("lyrics");
-  if (!selection || !selection.rangeCount || !lyrics?.contains(selection.getRangeAt(0).commonAncestorContainer)) return false;
-  const selected = selectionOffsets();
-  if (selected?.ruby) return false;
-  if (!selection.isCollapsed && selected) {
-    event.preventDefault(); commitSemanticTextEdit(selected, ""); return true;
-  }
-  if (!selection.isCollapsed || selectionTouchesRuby()) return false;
-  const offset = caretOffset(); if (offset == null) return false;
-  const length = (state.nodes || []).reduce((sum, node) => sum + nodeLength(node), 0);
-  const range = event.inputType === "deleteContentBackward"
-    ? (offset > 0 ? { start: offset - 1, end: offset } : null)
-    : (offset < length ? { start: offset, end: offset + 1 } : null);
-  if (!range) return false;
-  event.preventDefault(); commitSemanticTextEdit(range, ""); return true;
-}
-function preserveWysiwygParagraph(event) {
-  if (state.mode !== "writer" || state.compositionActive || event.isComposing || !["insertParagraph", "insertLineBreak"].includes(event.inputType)) return false;
-  const selection = window.getSelection(); const lyrics = $("lyrics");
-  if (!selection || !selection.rangeCount || !lyrics?.contains(selection.getRangeAt(0).commonAncestorContainer)) return false;
-  const range = semanticSelectionRange();
-  if (!range) return false;
-  event.preventDefault(); commitSemanticTextEdit(range, "\n"); return true;
-}
-function preserveWysiwygTextInput(event) {
-  if (state.mode !== "writer" || state.compositionActive || event.isComposing || !["insertText", "insertReplacementText"].includes(event.inputType) || typeof event.data !== "string" || !event.data) return false;
-  state.rubyEditActive = selectionTouchesRuby();
-  const selection = window.getSelection(); const lyrics = $("lyrics");
-  if (!selection || !selection.rangeCount || !lyrics?.contains(selection.getRangeAt(0).commonAncestorContainer)) return false;
-  const sourceRange = semanticSelectionRange();
-  if (sourceRange && (!selection.isCollapsed || !state.rubyEditActive)) {
-    event.preventDefault(); commitSemanticTextEdit(sourceRange, event.data); state.rubyEditActive = false; return true;
-  }
-  if (selection.isCollapsed) return false;
-  const range = selection.getRangeAt(0); event.preventDefault(); range.deleteContents(); const node = document.createTextNode(event.data); range.insertNode(node); range.setStartAfter(node); range.collapse(true); selection.removeAllRanges(); selection.addRange(range); bodyInput({ editRuby: state.rubyEditActive }); return true;
-}
-function handleWysiwygBeforeInput(event) { state.rubyEditActive = state.mode === "writer" && selectionTouchesRuby(); if (preserveWysiwygParagraph(event)) return; if (preserveWysiwygDeletion(event)) return; preserveWysiwygTextInput(event); }
 function writeBodyDocument(document, documentChanged = false) { if (!state.data) return false; const record = currentRecord(); const adapter = currentAdapter(); const serialized = serializeSource(document, adapter); const nextText = state.data.titleSource === "first-line" ? withFirstLineBody(record.source.text, serialized) : serialized; try { adapter.parse(nextText); } catch (error) { setStatus(error instanceof Error ? error.message : "本文を更新できませんでした"); return false; } state.selectionBookmark = null; state.data = replaceVariantSource(state.data, record.id, nextText); state.nodes = document.nodes; render(); markDirty({ source: true, document: documentChanged }); saveDraft(); pushHistory(); updateStatus(); return true; }
 async function hashText(text) { const bytes = new TextEncoder().encode(text); if (globalThis.crypto?.subtle) { try { const digest = await crypto.subtle.digest("SHA-256", bytes); return [...new Uint8Array(digest)].map(value => value.toString(16).padStart(2, "0")).join(""); } catch { /* fall through to a deterministic local fingerprint */ } } let hash = 2166136261; for (const byte of bytes) { hash ^= byte; hash = Math.imul(hash, 16777619); } return (hash >>> 0).toString(16); }
 function setLocalSource(text, name = "ローカル本文", sourceIdentity = "", format = "narou-text") { const raw = String(text); const title = resolveTitle({ source: raw, fallback: name.replace(/\.(txt|json)$/i, "") || "ローカル本文" }); const variants = [{ id: "variant-A", label: "Variant A", role: "", source: { text: raw, url: "local:" } }]; const manifest = validatedManifest({ title, description: "この本文はブラウザ内だけで読み込んでいます。", content: { format } }); validateLoadedVariants(manifest, variants); checkpointBeforeDocumentOpen(); state.loadedRegistryFonts = new Set(); state.data = { manifest, variants, activeVariantId: variants[0].id, links: [], variantOverrides: {}, titleSource: "first-line", sourceMetadata: {}, metadata: { title }, sourceUrl: "local:", sourceName: name, sourceIdentity: sourceIdentity || localSourceIdentity(name, new TextEncoder().encode(raw).byteLength, 0) }; clearReaderError(); state.activeVariantId = variants[0].id; clearDirty({ source: true, document: true }); applyManifest(state.data.manifest, true, true); applyAppearance(); render({ offset: 0, top: 0, left: 0 }); setCleanCheckpoint(); showDraftIfNeeded(); updateStatus(`「${title}」を表示中`); pushHistory(); }
@@ -830,49 +697,6 @@ function selectionOffsets(root = $("lyrics")) {
   const position = (container, point) => { const owner = marker(container); if (!owner) return null; const start = Number(owner.dataset.sourceStart); if (container.nodeType !== Node.TEXT_NODE) return start; const prefix = document.createRange(); prefix.selectNodeContents(owner); try { prefix.setEnd(container, point); return Math.min(Number(owner.dataset.sourceEnd), start + graphemes(prefix.toString()).length); } catch { return start; } };
   const start = position(range.startContainer, range.startOffset); const end = position(range.endContainer, range.endOffset); if (start == null || end == null) return null; return { start: Math.min(start, end), end: Math.max(start, end) };
 }
-function containsRubyNode(nodes = []) { return nodes.some(node => node.type === "ruby" || (node.type === "span" && containsRubyNode(node.children || []))); }
-function insertPastedText(range, text) {
-  const value = String(text || "");
-  if (!value) return null;
-  let inserted = [];
-  try {
-    const parsed = currentAdapter().parse(value);
-    if (containsRubyNode(parsed.nodes || [])) {
-      const staging = document.createElement("span");
-      renderLyrics(staging, value, { ...state, mode: "writer", preserveSource: true, adapter: currentAdapter(), registry: state.data?.manifest?.registry, loadedRegistryFonts: state.loadedRegistryFonts });
-      inserted = [...staging.childNodes];
-      if (inserted.length) {
-        const fragment = document.createDocumentFragment();
-        inserted.forEach(node => fragment.append(node));
-        range.deleteContents();
-        range.insertNode(fragment);
-      }
-    }
-  } catch { inserted = []; }
-  if (!inserted.length) {
-    const node = document.createTextNode(value);
-    range.deleteContents();
-    range.insertNode(node);
-    inserted = [node];
-  }
-  const last = inserted.at(-1);
-  if (last) { range.setStartAfter(last); range.collapse(true); }
-  const selection = window.getSelection(); selection?.removeAllRanges(); selection?.addRange(range);
-  return inserted;
-}
-function stripPastedPresentation(nodes = []) {
-  return nodes.flatMap(node => {
-    if (node.type === "span") return stripPastedPresentation(node.children || []);
-    if (node.type === "ruby") { const copy = { ...node }; delete copy.baseDecorations; delete copy.rubyDecorations; return [copy]; }
-    return [{ ...node }];
-  });
-}
-function portablePasteNodes(value) {
-  const text = String(value || "");
-  if (!text) return [];
-  try { return stripPastedPresentation(currentAdapter().parse(text).nodes); }
-  catch { return [{ type: "text", value: text }]; }
-}
 function selectionTouchesPresentation() {
   const selection = window.getSelection(); const lyrics = $("lyrics");
   if (!selection || !selection.rangeCount || !lyrics?.contains(selection.getRangeAt(0).commonAncestorContainer)) return false;
@@ -885,18 +709,11 @@ function selectionTouchesPresentation() {
   }
   return false;
 }
-function commitPortablePaste(range, text) {
-  const replacement = portablePasteNodes(text);
-  const document = replaceDocumentRange({ type: "document", nodes: state.nodes }, range, replacement);
-  writeBodyDocument(document);
-  restoreCaret(Number(range.start) + replacement.reduce((sum, node) => sum + nodeLength(node), 0));
-}
 function rememberSelection() {
   const selection = window.getSelection(); const lyrics = $("lyrics");
   if (!selection || selection.isCollapsed || !selection.rangeCount || !lyrics?.contains(selection.getRangeAt(0).commonAncestorContainer)) return;
   const range = selectionOffsets(); if (range) state.selectionBookmark = structuredClone(range);
 }
-function selectedEditedSource() { const selection = window.getSelection(); if (!selection || selection.isCollapsed || !selection.rangeCount) return ""; const source = renderedBodySource(selection.getRangeAt(0).cloneContents(), { preserveRuby: true }); try { const adapter = currentAdapter(); return toPortableText(parseSource(source, adapter), adapter); } catch { return source; } }
 function bindCompositionGuards() {
   const editables = [$("writer-surface")];
   const editableFor = node => editables.find(editable => editable === node || editable?.contains(node)) || null;
@@ -926,7 +743,6 @@ function bindCompositionGuards() {
       state.compositionFinalData = null;
       if (state.mode !== "writer") return;
       if (transaction?.editable === editable && transaction.range && finalData) commitWriterSourceEdit(transaction.range, finalData);
-      state.rubyEditActive = false;
     });
   }, true);
   document.addEventListener("input", event => {
@@ -976,7 +792,7 @@ function saveDocumentTypography() {
 function bind() {
   window.addEventListener("beforeunload", event => { if (isDirty()) { event.preventDefault(); event.returnValue = ""; } });
   $("settings-toggle").addEventListener("click", () => { const open = $("settings-panel").hidden; $("settings-panel").hidden = !open; $("settings-toggle").setAttribute("aria-expanded", String(open)); revealChrome(); }); $("document-defaults-button").addEventListener("click", applyDocumentDefaults);
-  document.addEventListener("keydown", event => { if (handleTitleBodyBoundary(event)) return; if (event.key === "Escape" && !$("settings-panel").hidden) { $("settings-panel").hidden = true; $("settings-toggle").setAttribute("aria-expanded", "false"); $("settings-toggle").focus(); } if (state.mode === "writer" && (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z") { if (event.isComposing || event.target.closest?.("input,textarea,select") || !event.target.closest?.("#writer-surface")) return; event.preventDefault(); const redo = event.shiftKey; const next = state.historyIndex + (redo ? 1 : -1); if (next >= 0 && next < state.history.length) { state.historyIndex = next; restoreSnapshot(state.history[next]); updateHistoryButtons(); } } });
+  document.addEventListener("keydown", event => { if (event.key === "Escape" && !$("settings-panel").hidden) { $("settings-panel").hidden = true; $("settings-toggle").setAttribute("aria-expanded", "false"); $("settings-toggle").focus(); } if (state.mode === "writer" && (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z") { if (event.isComposing || event.target.closest?.("input,textarea,select") || !event.target.closest?.("#writer-surface")) return; event.preventDefault(); const redo = event.shiftKey; const next = state.historyIndex + (redo ? 1 : -1); if (next >= 0 && next < state.history.length) { state.historyIndex = next; restoreSnapshot(state.history[next]); updateHistoryButtons(); } } });
   document.addEventListener("pointerdown", event => { revealChrome(); if (!$("settings").contains(event.target) && !$("settings-panel").hidden) { $("settings-panel").hidden = true; $("settings-toggle").setAttribute("aria-expanded", "false"); } }); document.addEventListener("touchstart", revealChrome, { passive: true });
   $("mode-switch").addEventListener("click", () => setMode(state.mode === "writer" ? "viewer" : "writer")); $("source-mode-switch").addEventListener("click", () => setMode(state.mode === "source" ? "viewer" : "source")); $("source-editor").addEventListener("input", sourceInput);
   $("open-file-button").addEventListener("click", () => $("source-file").click()); $("source-file").addEventListener("change", () => readLocalFile($("source-file").files?.[0])); $("reload-button").addEventListener("click", reloadSource); $("reload-source-button").addEventListener("click", reloadSource); $("url-open-button").addEventListener("click", openUrlSource);

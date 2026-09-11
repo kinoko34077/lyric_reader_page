@@ -74,12 +74,12 @@
 - Existing `#song-title` and `#lyrics` remain child projections with stable selectors.
 - `renderLyrics(element, source, { sourceOffset })` offsets projection marker ranges without changing serialized Source.
 
-- [ ] **Step 1: Add a failing Browser assertion that Writer has one editable host and Title/body children are not independent editable hosts**
-- [ ] **Step 2: Run the focused Browser gate and confirm the current two-host structure fails**
-- [ ] **Step 3: Add `#writer-surface` around the existing Title/body projections and make it the only Writer contenteditable host**
-- [ ] **Step 4: Preserve Viewer and Source Mode visibility, labels, scroll containers, and vertical writing behavior**
-- [ ] **Step 5: Run Writer Chromium/WebKit mobile smoke and DOM projection regression tests**
-- [ ] **Step 6: Commit and push `feat: add unified writer editing surface`**
+- [x] **Step 1: Add a failing Browser assertion that Writer has one editable host and Title/body children are not independent editable hosts**
+- [x] **Step 2: Run the focused Browser gate and confirm the current two-host structure fails**
+- [x] **Step 3: Add `#writer-surface` around the existing Title/body projections and make it the only Writer contenteditable host**
+- [x] **Step 4: Preserve Viewer and Source Mode visibility, labels, scroll containers, and vertical writing behavior**
+- [x] **Step 5: Run Writer Chromium/WebKit mobile smoke and DOM projection regression tests**
+- [x] **Step 6: Commit and push `feat: add unified writer editing surface`**
 
 ### Task 4: Route ordinary Writer input through Source/IR transactions
 
@@ -94,13 +94,13 @@
 - `commitWriterDeletion(range) -> boolean`
 - `commitWriterPaste(range, text) -> boolean`
 
-- [ ] **Step 1: Add failing Browser cases for ordinary text input, delete, paragraph, plain paste, and composition that assert Source changes without invoking rendered DOM serialization**
-- [ ] **Step 2: Run the focused gate and observe the instrumentation/failure on the current DOM fallback path**
-- [ ] **Step 3: Map Title/body child projection positions into one logical Source range, including the first newline**
-- [ ] **Step 4: Commit insert/delete/paragraph/paste/composition through one Source/IR transaction and reproject only after successful parse**
-- [ ] **Step 5: Keep DOM reconstruction only for explicit Ruby-internal or unsupported-operation fallback and make that boundary observable in tests**
-- [ ] **Step 6: Run all Writer Browser sub-gates plus Reader/Shared regressions**
-- [ ] **Step 7: Commit and push `feat: route writer input through source transactions`**
+- [x] **Step 1: Add failing Browser cases for ordinary text input, delete, paragraph, plain paste, and composition that assert Source changes without invoking rendered DOM serialization**
+- [x] **Step 2: Run the focused gate and observe the instrumentation/failure on the current DOM fallback path**
+- [x] **Step 3: Map Title/body child projection positions into one logical Source range, including the first newline**
+- [x] **Step 4: Commit insert/delete/paragraph/paste/composition through one Source/IR transaction and reproject only after successful parse**
+- [x] **Step 5: Keep DOM reconstruction only for explicit Ruby-internal or unsupported-operation fallback and make that boundary observable in tests**
+- [x] **Step 6: Run all Writer Browser sub-gates plus Reader/Shared regressions**
+- [x] **Step 7: Commit and push `feat: route writer input through source transactions`**
 
 ### Task 5: Stabilize selection, caret, and mobile viewport behavior
 
@@ -113,12 +113,12 @@
 - Selection is represented as Source `{ start, end }`; DOM Range is only a projection lookup.
 - Ordinary Writer transactions do not call `restoreScroll()` or saved-scroll persistence.
 
-- [ ] **Step 1: Add boundary fixtures for Title end, body start/end, Ruby before/after/base/reading, and Presentation before/after**
-- [ ] **Step 2: Add a failing assertion that ordinary input does not restore saved shell scroll or replace the editing host during composition**
-- [ ] **Step 3: Remove per-input scroll restoration and broad caret restoration from the Source-backed path**
-- [ ] **Step 4: Restore only the logical Source caret after a successful projection, without changing focus during selection**
-- [ ] **Step 5: Run Chromium and WebKit Writer gates, including vertical layout and non-collapsed selection**
-- [ ] **Step 6: Commit and push `fix: preserve writer source selection and viewport`**
+- [x] **Step 1: Add boundary fixtures for Title end, body start/end, Ruby before/after/base/reading, and Presentation before/after**
+- [x] **Step 2: Add a failing assertion that ordinary input does not restore saved shell scroll or replace the editing host during composition**
+- [x] **Step 3: Remove per-input scroll restoration and broad caret restoration from the Source-backed path**
+- [x] **Step 4: Restore only the logical Source caret after a successful projection, without changing focus during selection**
+- [x] **Step 5: Run Chromium and WebKit Writer gates, including vertical layout and non-collapsed selection**
+- [x] **Step 6: Commit and push `fix: preserve writer source selection and viewport`**
 
 ### Task 6: Correct repeat-mark advance and typography inheritance
 

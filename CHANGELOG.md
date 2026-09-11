@@ -1,8 +1,8 @@
 # Changelog
 
-- Writer構造是正の設計・ADRと、Grapheme安全なSource range transaction primitiveのテストを追加。次段階で単一Writer Surfaceと通常入力のSource transaction化へ接続する。
-
 ## [Unreleased] — 2026-09-11
+
+- Writer通常編集のSource-backed経路を整理し、旧Title/Body focus bridge、DOM全体からAuthor Sourceを再構築する通常入力・削除・Paste経路、Ruby専用DOM Paste、未使用のRendered DOM Copy fallbackを`app.js`から撤去した。Title/本文は`#writer-surface`一つの編集hostで同じSource range transactionを通り、DOM再構築は構造が変わるProjection更新に限定する。Reader/Shared/Writer Unit/WYSIWYG/Presentation/Mobileの回帰Gateで確認済み。
 
 ### Reader Kernel優先への方針転換
 
