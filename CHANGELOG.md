@@ -6,6 +6,7 @@
 
 ### Reader Kernel優先への方針転換
 
+- WriterのSource transaction後のProjection更新を、要素骨格が変わらない通常入力では既存の本文DOMへテキスト・属性だけ同期する経路へ変更した。Ruby成立、Presentation境界、Glyph状態など表示骨格が変わる場合だけ安全に再構築し、欠損AssetのFallback状態を無関係な通常入力で失わない。WYSIWYG Gateで本文Subtreeの不要な`replaceChildren()`が発生しないことを確認する。
 - 縦書きの`〳〵`／`〴〵`をSource上の2文字のまま表示専用ペアとして扱い、inline advanceを2em確保する回帰を追加した。DOM／Chromium／WebKit Mobile GateでSource範囲2文字、前後文字との非重なり、約2セルのadvanceを検証する。
 - 本文Baseの文字サイズを`--reader-size`へ統一し、Ruby Baseも同じサイズ、Readingだけ相対`.48em`とするTypography回帰をWriter Gateへ追加した。
 - 組み込みNishiki-tekiは検証済みHTTPS Web Font URLがない限り選択不可とし、端末に実Fontがある場合だけ利用可能と表示する。文書がNishiki-tekiを要求した場合は標準FontへFallbackしたことをStatusへ明示し、公式配布物の無断同梱や未検証CDN採用は行わない。

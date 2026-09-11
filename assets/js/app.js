@@ -230,10 +230,61 @@ function sourceGraphemeOffset(value) { return graphemes(String(value || "")).len
 function writerBodySourceOffset(record = currentRecord()) { const info = sourceInfo(record); return sourceGraphemeOffset(record.source.text.slice(0, info.bodyStart)); }
 function writerRenderOptions() { return { ...state, mode: "writer", kanji: "original", registry: state.data?.manifest?.registry, loadedRegistryFonts: state.loadedRegistryFonts, adapter: currentAdapter() }; }
 function writerProjectionFlags(range, record = currentRecord()) { const bodyStart = writerBodySourceOffset(record); const start = Number(range?.start) || 0; const end = Number(range?.end) || start; return { title: start < bodyStart, body: end >= bodyStart }; }
+function elementChildren(node) { return [...(node?.childNodes || [])].filter(child => child.nodeType === Node.ELEMENT_NODE); }
+function isAssetProjection(node) { return node?.nodeType === Node.ELEMENT_NODE && node.classList?.contains("source-presentation") && Boolean(node.dataset?.glyphType || node.dataset?.glyphFallback || node.querySelector?.("img.source-glyph")); }
+function isSameAssetProjection(current, next) { return isAssetProjection(current) && isAssetProjection(next) && current.dataset.sourceRaw === next.dataset.sourceRaw && current.dataset.glyphType === next.dataset.glyphType; }
+function projectionShapeMatches(current, next) {
+  if (!current || !next || current.nodeType !== next.nodeType) return false;
+  if (current.nodeType === Node.TEXT_NODE) return true;
+  if (current.nodeType !== Node.ELEMENT_NODE || current.nodeName !== next.nodeName) return false;
+  if (isSameAssetProjection(current, next)) return true;
+  const currentElements = elementChildren(current); const nextElements = elementChildren(next);
+  return currentElements.length === nextElements.length && currentElements.every((child, index) => projectionShapeMatches(child, nextElements[index]));
+}
+function directTextSegments(parent) {
+  const segments = []; let textNodes = [];
+  for (const child of parent.childNodes) {
+    if (child.nodeType === Node.TEXT_NODE) textNodes.push(child);
+    else if (child.nodeType === Node.ELEMENT_NODE) { segments.push({ textNodes, element: child }); textNodes = []; }
+  }
+  segments.push({ textNodes, element: null }); return segments;
+}
+function syncTextSegment(parent, segment, value, before = null) {
+  const textNodes = segment.textNodes;
+  if (!textNodes.length) { if (value) parent.insertBefore(document.createTextNode(value), before); return; }
+  textNodes[0].nodeValue = value;
+  for (const extra of textNodes.slice(1)) extra.remove();
+}
+function syncProjectionNode(current, next) {
+  if (!projectionShapeMatches(current, next)) return false;
+  if (current.nodeType === Node.TEXT_NODE) { if (current.nodeValue !== next.nodeValue) current.nodeValue = next.nodeValue; return true; }
+  const currentAttributes = new Set([...current.attributes].map(attribute => attribute.name));
+  for (const attribute of [...next.attributes]) { current.setAttribute(attribute.name, attribute.value); currentAttributes.delete(attribute.name); }
+  for (const name of currentAttributes) current.removeAttribute(name);
+  if (isSameAssetProjection(current, next)) return true;
+  const currentSegments = directTextSegments(current); const nextSegments = directTextSegments(next); const nextElements = elementChildren(next);
+  nextSegments.forEach((segment, index) => {
+    const nextText = segment.textNodes.map(node => node.nodeValue || "").join("");
+    const currentSegment = currentSegments[index];
+    syncTextSegment(current, currentSegment, nextText, currentSegment?.element || null);
+    if (segment.element) syncProjectionNode(currentSegment.element, nextElements[index]);
+  });
+  return true;
+}
+function renderWriterSection(element, source, options) {
+  const staging = document.createElement(element.tagName.toLowerCase());
+  const nodes = renderLyrics(staging, source, options);
+  const canPatch = element.childNodes.length === staging.childNodes.length
+    && [...element.childNodes].every((child, index) => projectionShapeMatches(child, staging.childNodes[index]));
+  if (canPatch) [...element.childNodes].forEach((child, index) => syncProjectionNode(child, staging.childNodes[index]));
+  else renderLyrics(element, source, options);
+  element.classList.toggle("is-vertical", options.writingMode === "vertical");
+  return nodes;
+}
 function renderWriterProjection({ title = true, body = true, caret = null } = {}) {
   const options = writerRenderOptions(); const record = currentRecord(); const bodyOffset = writerBodySourceOffset(record);
-  if (title) state.titleNodes = renderLyrics($("song-title"), titleSourceText(record), { ...options, sourceOffset: 0, sourceRawOffset: 0 });
-  if (body) state.nodes = renderLyrics($("lyrics"), currentBody(), { ...options, sourceOffset: 0, sourceRawOffset: bodyOffset });
+  if (title) state.titleNodes = renderWriterSection($("song-title"), titleSourceText(record), { ...options, sourceOffset: 0, sourceRawOffset: 0 });
+  if (body) state.nodes = renderWriterSection($("lyrics"), currentBody(), { ...options, sourceOffset: 0, sourceRawOffset: bodyOffset });
   applyMode(); syncSourceEditor(); if (caret != null) restoreCaret(caret, $("writer-surface"), { raw: true, immediate: true });
 }
 function render(anchor = captureScroll()) { const renderOptions = state.mode === "writer" ? { ...state, kanji: "original", registry: state.data?.manifest?.registry, loadedRegistryFonts: state.loadedRegistryFonts, adapter: currentAdapter() } : { ...state, registry: state.data?.manifest?.registry, loadedRegistryFonts: state.loadedRegistryFonts, adapter: currentAdapter() }; const record = currentRecord(); const bodyOffset = state.mode === "writer" ? writerBodySourceOffset(record) : 0; state.nodes = renderLyrics($("lyrics"), currentBody(), { ...renderOptions, sourceOffset: 0, sourceRawOffset: bodyOffset }); state.titleNodes = renderLyrics($("song-title"), titleSourceText(), { ...renderOptions, sourceOffset: 0, sourceRawOffset: 0 }); applyMode(); syncSourceEditor(); restoreScroll(anchor); }

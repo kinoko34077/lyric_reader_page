@@ -596,8 +596,15 @@ async function runWriterWysiwygGate(targetUrl) {
     stage = "contenteditable collapsed caret input";
     await resetWriterSource(wysiwygSeedSource);
     assert.equal(await placeCaretInRoot(page.locator("#lyrics"), "Writer Gate", 7), true, "WYSIWYG gate must place a collapsed caret inside its editable presentation text");
+    await page.locator("#lyrics").evaluate(element => {
+      let replacements = 0;
+      const replace = element.replaceChildren.bind(element);
+      element.replaceChildren = (...nodes) => { replacements += 1; return replace(...nodes); };
+      element.getWriterProjectionReplacements = () => replacements;
+    });
     await page.keyboard.insertText("X");
     await page.waitForFunction(() => /Writer XGate/.test(document.querySelector("#lyrics")?.innerText || ""), null, { timeout: 30_000 });
+    assert.equal(await page.locator("#lyrics").evaluate(element => element.getWriterProjectionReplacements?.() ?? -1), 0, "plain Source-backed input must patch the existing Writer projection without replacing the body subtree");
     await clickHeaderButton(page, "#source-mode-switch");
     const caretSource = await page.locator("#source-editor").inputValue();
     assert.match(caretSource, /\[Writer XGate:style=demo-chorus\]/, `collapsed caret input must retain the existing Presentation: ${caretSource.slice(-500)}`);
