@@ -1000,6 +1000,18 @@ async function runWriterBoundaryGate(targetUrl) {
     await page.waitForFunction(() => document.activeElement?.id === "writer-surface" && document.querySelector("#source-editor")?.value.includes("Boundary Title本文一行目"), null, { timeout: 30_000 });
     assert.equal(await readSource(), fixture.replace("Boundary Title\n", "Boundary Title"), "Body-boundary Backspace must delete the separating Source newline on the single editing surface");
 
+    stage = "title body cross-range replacement";
+    await resetWriterSource();
+    await page.locator("#writer-surface").evaluate(root => {
+      const title = root.querySelector("#song-title"); const body = root.querySelector("#lyrics");
+      const range = document.createRange(); range.selectNodeContents(title); range.collapse(false);
+      const bodyStart = document.createRange(); bodyStart.selectNodeContents(body); bodyStart.collapse(true); range.setEnd(bodyStart.startContainer, bodyStart.startOffset);
+      const selection = window.getSelection(); selection?.removeAllRanges(); selection?.addRange(range); document.dispatchEvent(new Event("selectionchange"));
+    });
+    await page.keyboard.insertText("Merged");
+    await page.waitForFunction(() => /Boundary TitleMerged本文一行目/.test(document.querySelector("#lyrics")?.innerText || "") || /Boundary TitleMerged/.test(document.querySelector("#song-title")?.innerText || ""), null, { timeout: 30_000 });
+    assert.equal(await readSource(), fixture.replace("Boundary Title\n", "Boundary TitleMerged"), "Title/body cross-range replacement must splice the single Author Source range");
+
     assert.deepEqual({ consoleErrors, pageErrors }, { consoleErrors: [], pageErrors: [] });
     return { status: "PASS", targetUrl };
   } catch (error) {
