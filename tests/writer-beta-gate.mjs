@@ -678,6 +678,16 @@ async function runWriterWysiwygGate(targetUrl) {
     await page.waitForFunction(expected => document.querySelector("#source-editor")?.value.includes(expected), `${titleBefore}!`, { timeout: 30_000 });
     assert.equal(parseLyricContainer(await page.locator("#source-editor").inputValue()).source.split(/\r?\n/, 1)[0], `${titleBefore}!`, "Title Source transaction must commit the inserted text");
 
+    stage = "semantic title Presentation input";
+    const presentationTitleSource = containerWithActiveSource(wysiwygSeedSource, "[Decorated Title:style=demo-chorus]\n本文");
+    await resetWriterSource(presentationTitleSource);
+    assert.equal(await selectTextInRoot(page.locator("#song-title"), "Decorated Title"), true, "Title Presentation gate must select the visible title text");
+    await page.keyboard.insertText("Styled Title");
+    await page.waitForFunction(() => /Styled Title/.test(document.querySelector("#song-title")?.innerText || ""), null, { timeout: 30_000 });
+    await clickHeaderButton(page, "#source-mode-switch");
+    const presentationTitleResult = parseLyricContainer(await page.locator("#source-editor").inputValue()).source;
+    assert.match(presentationTitleResult, /^\[Styled Title:style=demo-chorus\]/, `Title Presentation editing must preserve its Source decoration: ${presentationTitleResult.slice(0, 200)}`);
+
     const semanticTitleSource = containerWithActiveSource(wysiwygSeedSource, "Semantic Title\n本文");
     stage = "semantic title deletion";
     await resetWriterSource(semanticTitleSource);

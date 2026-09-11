@@ -433,11 +433,21 @@ function commitWriterBodyDocument(document, localCaret = null) {
   const caret = localCaret == null ? null : writerBodySourceOffset(currentRecord()) + Number(localCaret);
   renderWriterProjection({ title: false, body: true, caret }); updateStatus(); return true;
 }
+function commitWriterTitleDocument(document, localCaret = null) {
+  if (!state.data || state.data.titleSource !== "first-line") return false;
+  const record = currentRecord(); const adapter = currentAdapter(); const serialized = serializeSource(document, adapter).replace(/[\r\n]/g, ""); const info = sourceInfo(record); const bom = record.source.text.startsWith("\uFEFF") ? "\uFEFF" : ""; const nextText = info.newline ? `${bom}${serialized}${info.newline}${info.body}` : `${bom}${serialized}`;
+  try { adapter.parse(nextText); } catch (error) { setStatus(error instanceof Error ? error.message : "タイトルを更新できませんでした"); return false; }
+  state.data = replaceVariantSource(state.data, record.id, nextText); state.titleNodes = document.nodes; markDirty({ source: true }); saveDraft(); scheduleHistory();
+  renderWriterProjection({ title: true, body: false, caret: localCaret }); updateStatus(); return true;
+}
 function commitWriterSourceEdit(range, insertedText, { status = true } = {}) {
   if (!state.data) return false;
-  const selection = window.getSelection(); const body = $("lyrics"); const inBody = Boolean(selection?.rangeCount && body?.contains(selection.getRangeAt(0).commonAncestorContainer)); const semantic = inBody ? semanticSelectionRange(body) : null;
+  const selection = window.getSelection(); const body = $("lyrics"); const title = $("song-title"); const container = selection?.rangeCount ? selection.getRangeAt(0).commonAncestorContainer : null; const inBody = Boolean(container && body?.contains(container)); const inTitle = Boolean(container && title?.contains(container)); const section = inBody ? body : inTitle ? title : null; const semantic = section ? semanticSelectionRange(section) : null;
   const value = String(insertedText ?? "");
-  if (semantic && selectionTouchesPresentation(body) && !/[｜《》]/u.test(value)) return commitWriterBodyDocument(replaceText({ type: "document", nodes: state.nodes }, semantic, value), semantic.start + graphemes(value).length);
+  if (semantic && selectionTouchesPresentation(section) && !/[｜《》]/u.test(value)) {
+    const document = replaceText({ type: "document", nodes: section === title ? state.titleNodes : state.nodes }, semantic, value);
+    return section === title ? commitWriterTitleDocument(document, semantic.start + graphemes(value).length) : commitWriterBodyDocument(document, semantic.start + graphemes(value).length);
+  }
   const normalized = { start: Number(range?.start) || 0, end: Number(range?.end) || Number(range?.start) || 0 };
   const nextText = replaceSourceRange(currentRaw(), normalized, value);
   try { currentAdapter().parse(nextText); } catch (error) { setStatus(error instanceof Error ? error.message : "本文を更新できませんでした"); return false; }
@@ -697,8 +707,8 @@ function selectionOffsets(root = $("lyrics")) {
   const position = (container, point) => { const owner = marker(container); if (!owner) return null; const start = Number(owner.dataset.sourceStart); if (container.nodeType !== Node.TEXT_NODE) return start; const prefix = document.createRange(); prefix.selectNodeContents(owner); try { prefix.setEnd(container, point); return Math.min(Number(owner.dataset.sourceEnd), start + graphemes(prefix.toString()).length); } catch { return start; } };
   const start = position(range.startContainer, range.startOffset); const end = position(range.endContainer, range.endOffset); if (start == null || end == null) return null; return { start: Math.min(start, end), end: Math.max(start, end) };
 }
-function selectionTouchesPresentation() {
-  const selection = window.getSelection(); const lyrics = $("lyrics");
+function selectionTouchesPresentation(root = $("lyrics")) {
+  const selection = window.getSelection(); const lyrics = root || $("lyrics");
   if (!selection || !selection.rangeCount || !lyrics?.contains(selection.getRangeAt(0).commonAncestorContainer)) return false;
   const range = selection.getRangeAt(0);
   const owner = container => (container?.nodeType === Node.ELEMENT_NODE ? container : container?.parentElement)?.closest(".source-presentation");
