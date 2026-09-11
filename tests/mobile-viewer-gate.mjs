@@ -163,7 +163,8 @@ async function checkScenario(scenario, targetUrl) {
           }
         }
       }
-      return { rootOverflow: document.documentElement.scrollWidth > document.documentElement.clientWidth + 2, titleMode: getComputedStyle(document.querySelector("#song-title")).writingMode, bodyMode: getComputedStyle(root).writingMode, bodyHeight: root.getBoundingClientRect().height, repeatMarks };
+      const repeatAdvance = [...root.querySelectorAll(".repeat-mark-pair")].map(mark => ({ advance: mark.getBoundingClientRect().height, fontSize: parseFloat(getComputedStyle(mark).fontSize) || 0 }));
+      return { rootOverflow: document.documentElement.scrollWidth > document.documentElement.clientWidth + 2, titleMode: getComputedStyle(document.querySelector("#song-title")).writingMode, bodyMode: getComputedStyle(root).writingMode, bodyHeight: root.getBoundingClientRect().height, repeatMarks, repeatAdvance };
     });
     assert.equal(vertical.rootOverflow, false, `${scenario.id}: vertical mode must not create document overflow`);
     assert.equal(vertical.titleMode, "vertical-rl", `${scenario.id}: title writing mode must follow body`);
@@ -171,6 +172,7 @@ async function checkScenario(scenario, targetUrl) {
     assert.ok(vertical.bodyHeight > 0, `${scenario.id}: vertical body must remain visible`);
     assert.ok(vertical.repeatMarks.length > 0, `${scenario.id}: vertical fixture must exercise repeat marks`);
     assert.equal(vertical.repeatMarks.some(sample => sample.overlapBefore > 0.25 || sample.overlapAfter > 0.25), false, `${scenario.id}: vertical repeat marks must not overlap adjacent glyphs: ${JSON.stringify(vertical.repeatMarks.filter(sample => sample.overlapBefore > 0.25 || sample.overlapAfter > 0.25).slice(0, 4))}`);
+    assert.equal(vertical.repeatAdvance.some(sample => sample.advance < sample.fontSize * 1.5), false, `${scenario.id}: vertical repeat marks must retain roughly two inline cells: ${JSON.stringify(vertical.repeatAdvance)}`);
     await page.screenshot({ path: `${screenshotBase}-vertical.png`, fullPage: false });
 
     await page.locator("#copy-all-button").click();

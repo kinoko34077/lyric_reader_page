@@ -6,6 +6,10 @@
 
 ### Reader Kernel優先への方針転換
 
+- 縦書きの`〳〵`／`〴〵`をSource上の2文字のまま表示専用ペアとして扱い、inline advanceを2em確保する回帰を追加した。DOM／Chromium／WebKit Mobile GateでSource範囲2文字、前後文字との非重なり、約2セルのadvanceを検証する。
+- 本文Baseの文字サイズを`--reader-size`へ統一し、Ruby Baseも同じサイズ、Readingだけ相対`.48em`とするTypography回帰をWriter Gateへ追加した。
+- 組み込みNishiki-tekiは検証済みHTTPS Web Font URLがない限り選択不可とし、端末に実Fontがある場合だけ利用可能と表示する。文書がNishiki-tekiを要求した場合は標準FontへFallbackしたことをStatusへ明示し、公式配布物の無断同梱や未検証CDN採用は行わない。
+- Writerの本文Source transactionは安全性優先の既存Projection経路を維持し、本文だけの部分再描画はWYSIWYG Gateで待ち状態を作ったため採用しなかった。入力DOMをSourceの正本に戻さず、部分更新は別途Selection/Caret証拠を作ってから再評価する。
 - 実機iPhone Safari、Native Clipboard／IME、Nishiki-teki正式Web Font配信、stable branch保護を自動Gateと混同しない`docs/RELEASE-SMOKE.md`を追加した。公式Nishiki-teki配布でWeb Font URL／CORSを確認できないため、無断同梱や第三者CDN採用は行わず、外部確認待ちとして記録する。
 - ネイティブ選択Copyは`clipboardData`へ書き込める環境でのみPortable Textを上書きし、Clipboard APIが提供されない／拒否された環境では例外を出さずブラウザ既定のCopyへ戻すようにした。Title／本文の双方でClipboard失敗のfail-soft回帰を追加した。
 - 初期デモ・ローカルファイル・URLの非同期読込へ最新リクエスト判定を追加し、読込中に開始した新しい文書を古いレスポンスやFont完了処理が上書きしないようにした。競合時は古いエラー表示もCurrent Documentへ反映しない。
@@ -24,7 +28,7 @@
 - Writer Mobile Gateへ、compositionend後に末尾inputが届かないIMEイベント順序の回帰を追加した。Chromium／WebKit iPhone相当の双方でTitle／本文の確定文字をCanonical Sourceへ反映し、実機IME固有の検証は引き続きRelease Smokeとして分離する。
 - 通常本文のWriter PasteをIRの範囲置換へ寄せ、Portable RubyをDOM全体の再シリアライズなしでAuthor Sourceへ挿入できるようにした。Presentation内・Ruby内部のPasteは既存の編集保護経路へFallbackし、通常CaretのPortable Ruby貼り付けをWriter Browser Gateで再parse・再表示まで確認する。
 - Writer Mobile GateでもPortable Ruby pasteをRoot boundaryと通常テキストcaretの両方から実行し、Chromium mobile / WebKit iPhone相当でIR経路のAuthor Source保持を確認する。
-- Registry FontをDocument Themeの`font`（`registry:name` / `{type:"registry",name}`）から解決し、読み込めた場合はReader全体へ`ReaderFont-name`として適用するようにした。未読込・CORS・Asset失敗時は標準FontへFallbackし、元本文を継続表示する。Nishiki-tekiの選択肢を端末インストール有無で無効化せず、文書Fontの失敗も表示専用Warning/Statusで扱う。Writer Presentation GateでTheme→作品既定適用→Fallbackを確認する。
+- Registry FontをDocument Themeの`font`（`registry:name` / `{type:"registry",name}`）から解決し、読み込めた場合はReader全体へ`ReaderFont-name`として適用するようにした。未読込・CORS・Asset失敗時は標準FontへFallbackし、元本文を継続表示する。組み込みNishiki-tekiは実Font未確認時に選択不可として明示し、文書Fontの失敗も表示専用Warning/Statusで扱う。Writer Presentation GateでTheme→作品既定適用→Fallbackを確認する。
 - 組版設定へ行間・字間・段落間隔を追加し、ViewerではUser View Overrideとして保存する一方、作品既定Themeへの反映はWriterの明示ボタンへ分離した。CSS固定値をTheme由来の変数へ置き換え、Mobile既定の行間も維持する。
 - Viewerの文字サイズ設定へ14〜32pxのプリセットSelectを追加し、A±・Slider・Select・CSS変数を同じ更新経路へ接続した。Header/Footerを自動収納中でも本文のpointer/touch操作、設定開閉、スクロール、画面端操作でChromeを復帰できるようにし、Chromium/WebKit Mobile Viewer Gateで同期と復帰を確認する。
 - Source ModeをActive Variant本文だけの編集面からCanonical Container全体の編集面へ変更した。`LYRIC-READER/1`のJSON HeaderとAuthor Source Bodyをまとめて検証し、全Variant・Registry・Theme・Metadata・Extensionsをparse成功時だけDocumentへtransaction反映する。Source Modeの失敗時はCurrent Documentを保持し、Container本文内のParser位置をtextareaの行・列・Caretへ写像する。

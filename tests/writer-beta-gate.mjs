@@ -245,6 +245,21 @@ async function runWriterViewStateGate(targetUrl) {
     await page.locator("#paragraph-spacing-range").fill("0.5");
     await page.locator("#font-family").selectOption("serif");
     await page.waitForFunction(() => getComputedStyle(document.documentElement).getPropertyValue("--reader-size").trim() === "24px" && getComputedStyle(document.documentElement).getPropertyValue("--reader-line-height").trim() === "1.5" && getComputedStyle(document.documentElement).getPropertyValue("--reader-letter-spacing").trim() === "0.08em" && getComputedStyle(document.documentElement).getPropertyValue("--reader-paragraph-spacing").trim() === "0.5em", null, { timeout: 30_000 });
+    const fontMetrics = {};
+    for (const size of [14, 20, 32]) {
+      await page.locator("#size-select").selectOption(String(size));
+      await page.waitForFunction(expected => getComputedStyle(document.documentElement).getPropertyValue("--reader-size").trim() === `${expected}px`, String(size), { timeout: 30_000 });
+      fontMetrics[size] = await page.evaluate(() => ({
+        base: parseFloat(getComputedStyle(document.querySelector("#lyrics .source-text")).fontSize),
+        rubyBase: parseFloat(getComputedStyle(document.querySelector("#lyrics .source-ruby")).fontSize),
+        reading: parseFloat(getComputedStyle(document.querySelector("#lyrics rt")).fontSize)
+      }));
+    }
+    for (const size of [14, 20, 32]) {
+      assert.equal(fontMetrics[size].base, size, `Viewer size must apply to normal body Base text at ${size}px`);
+      assert.equal(fontMetrics[size].rubyBase, size, `Viewer size must apply to Ruby Base text at ${size}px`);
+      assert.ok(fontMetrics[size].reading > 0 && fontMetrics[size].reading < size, `Ruby Reading must remain relative below Base text at ${size}px`);
+    }
     const afterTypographyOverride = await page.evaluate(() => ({ dirty: document.body.dataset.dirty, draftHidden: document.querySelector("#draft-notice")?.hidden, draftKeys: Object.keys(localStorage).filter(key => key.startsWith("lyric-reader:draft:")), font: document.documentElement.style.getPropertyValue("--reader-font") }));
     assert.equal(afterTypographyOverride.dirty, "false", "Viewer typography/font overrides must not mark the Document dirty");
     assert.equal(afterTypographyOverride.draftHidden, true, "Viewer typography/font overrides must not show a Draft notice");

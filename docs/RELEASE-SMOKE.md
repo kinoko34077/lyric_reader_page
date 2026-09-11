@@ -24,6 +24,7 @@
 | Title / Body境界 | UNVERIFIED | Title末尾Enter、本文先頭Backspace、跨ぎ選択のSource保持 |
 | 日本語IME | UNVERIFIED | Title／本文末尾、Ruby直後、Presentation直後の確定文字位置 |
 | Nishiki-teki | UNVERIFIED | 未導入端末で実表示・`document.fonts`・Fallback／Warningを確認 |
+| Built-in Nishiki preset availability | AUTOMATED ONLY | 検証済みWeb Font URLがない環境ではSelectを無効化し、端末実Fontがある場合だけ利用可能と表示 |
 | 縦書き反復記号 | UNVERIFIED | `前〳〵後`、`前〴〵後`をNishiki／Noto／fallbackで目視 |
 | Chrome復帰 | AUTOMATED ONLY | tap復帰は自動Gate済み。Safariの実タップは未確認 |
 | Full Source Mode | AUTOMATED ONLY | Container全体のparse→commit→再表示は自動Gate済み |

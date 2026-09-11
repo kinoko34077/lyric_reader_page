@@ -131,10 +131,10 @@
 - Repeat-mark visual pair retains `data-source-start/end` length 2 and has two inline advances in vertical writing.
 - Base font size is `--reader-size`; Ruby `rt` derives its size from the Base value via relative scale.
 
-- [ ] **Step 1: Add failing geometry/style assertions for two-cell repeat marks and Base/Ruby font-size inheritance at 14/20/32px**
-- [ ] **Step 2: Implement the smallest CSS/renderer adjustment without changing Source or Parser grapheme semantics**
-- [ ] **Step 3: Run DOM, Reader, Presentation, and Mobile gates**
-- [ ] **Step 4: Commit and push `fix: preserve repeat mark advance and typography scale`**
+- [x] **Step 1: Add failing geometry/style assertions for two-cell repeat marks and Base/Ruby font-size inheritance at 14/20/32px**
+- [x] **Step 2: Implement the smallest CSS/renderer adjustment without changing Source or Parser grapheme semantics**
+- [x] **Step 3: Run DOM, Reader, Presentation, and Mobile gates**
+- [x] **Step 4: Commit and push `fix: preserve repeat mark advance and typography scale`**
 
 ### Task 7: Make unavailable Font presets explicit
 
@@ -147,11 +147,11 @@
 - A preset is selectable only when its resource can be resolved, or its option/status explicitly says it is local-only/unavailable.
 - Registry remote Font resolution and fallback remain unchanged.
 
-- [ ] **Step 1: Add a failing Browser assertion that local-only Nishiki does not report successful remote application**
-- [ ] **Step 2: Mark the preset as local-only/unavailable until an official HTTPS Web Font URL/CORS/license contract is verified**
-- [ ] **Step 3: Keep document Registry Fonts and fallback warnings functional**
-- [ ] **Step 4: Run presentation and mobile gates**
-- [ ] **Step 5: Commit and push `fix: make unavailable font presets explicit`**
+- [x] **Step 1: Add a failing Browser assertion that local-only Nishiki does not report successful remote application**
+- [x] **Step 2: Mark the preset as local-only/unavailable until an official HTTPS Web Font URL/CORS/license contract is verified**
+- [x] **Step 3: Keep document Registry Fonts and fallback warnings functional**
+- [x] **Step 4: Run presentation and mobile gates**
+- [x] **Step 5: Commit and push `fix: make unavailable font presets explicit`**
 
 ### Task 8: Final structural Gate and release checkpoint
 

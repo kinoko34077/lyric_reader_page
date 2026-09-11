@@ -70,7 +70,9 @@ test("vertical repeat marks use a display-only visual run without changing Autho
     const source = "前〳〵後\n前〴〵後";
     const vertical = new FakeNode("DIV");
     renderLyrics(vertical, source, { mode: "writer", writingMode: "vertical", preserveSource: true });
-    assert.equal(vertical.querySelectorAll(".repeat-mark-pair").length, 2);
+    const repeatMarks = vertical.querySelectorAll(".repeat-mark-pair");
+    assert.equal(repeatMarks.length, 2);
+    assert.deepEqual(repeatMarks.map(mark => [mark.dataset.sourceStart, mark.dataset.sourceEnd]), [["1", "3"], ["6", "8"]]);
     assert.equal(renderedBodySource(vertical), source);
     const horizontal = new FakeNode("DIV");
     renderLyrics(horizontal, source, { mode: "writer", writingMode: "horizontal", preserveSource: true });

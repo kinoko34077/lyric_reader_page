@@ -156,6 +156,9 @@ async function runGate(targetUrl) {
     await page.locator("#source-editor").waitFor({ state: "visible", timeout: 30_000 });
     await page.waitForFunction(() => /晴々撥条|如何《どう》/.test(document.querySelector("#source-editor")?.value || ""), null, { timeout: 30_000 });
     const originalSource = await page.locator("#source-editor").inputValue();
+    const nishikiPreset = await page.locator('#font-family option[value="nishiki-teki"]').evaluate(option => ({ disabled: option.disabled, title: option.title }));
+    if (nishikiPreset.disabled) assert.match(nishikiPreset.title, /実Font URL未設定/, "Unavailable Nishiki-teki must explain why it cannot be selected");
+    else assert.match(nishikiPreset.title, /端末または登録済みWeb Font/, "A selectable Nishiki-teki preset must identify its resolved source");
     const seedSource = `${originalSource}\nPresentation Gate Seed`;
     await page.locator("#source-editor").fill(seedSource);
     await page.waitForFunction(() => /Presentation Gate Seed/.test(document.querySelector("#source-editor")?.value || ""), null, { timeout: 30_000 });
