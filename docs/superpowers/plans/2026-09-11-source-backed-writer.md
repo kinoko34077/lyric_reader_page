@@ -159,8 +159,8 @@
 - Modify: `tests/writer-beta-gate.mjs`, `tests/writer-mobile-beta-gate.mjs`, `tests/writer-presentation-beta-gate.mjs`
 - Modify: `docs/QUALITY-GATES.md`, `docs/READER-KERNEL-ROADMAP.md`, `CHANGELOG.md`
 
-- [ ] **Step 1: Run all focused Writer gates and verify each new acceptance case**
-- [ ] **Step 2: Run `npm test`, all Playwright Reader/Writer gates, and every `assets/js` syntax check**
-- [ ] **Step 3: Inspect `git diff --check`, current branch, stable branch, and unchanged `reader-v0.1.0` tag**
-- [ ] **Step 4: Record real-device and GitHub-only blockers without converting automated PASS into external PASS**
-- [ ] **Step 5: Commit and push the final tested slice**
+- [x] **Step 1: Run all focused Writer gates and verify each new acceptance case**
+- [x] **Step 2: Run `npm test`, all Playwright Reader/Writer gates, and every `assets/js` syntax check**
+- [x] **Step 3: Inspect `git diff --check`, current branch, stable branch, and unchanged `reader-v0.1.0` tag**
+- [x] **Step 4: Record real-device and GitHub-only blockers without converting automated PASS into external PASS**
+- [x] **Step 5: Commit and push the final tested slice**
