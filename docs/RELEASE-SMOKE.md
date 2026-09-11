@@ -4,12 +4,12 @@
 
 ## 基準
 
-- 自動検証HEAD: `b38af4d` (`test: cover unavailable document font fallback`)
+- 自動検証HEAD: `1ee826a` (`test: cover dynamic explicit ruby forms`)
 - Reader checkpoint: `stable` / `reader-v0.1.0` = `925cfc7`
 - 自動Mobile: Chromium Pixel 5相当、Playwright WebKit iPhone 13相当
-- 自動Gate結果: Reader / Shared / Writer Unit / Writer Mobile / Writer Presentation は上記HEADでPASS
+- 自動Gate結果: Reader / Shared / Writer Unit / Writer Beta / Writer Mobile / Writer Presentation / Reader Mobile は上記HEADでPASS
 
-このチェックリストを追加した同期コミットは `7ffe308` です。以後のWriter Source-backed移行と表示回帰は上記HEADで再検証済みです。
+このチェックリスト以後のWriter Source-backed移行、旧DOM再構築経路撤去、動的Ruby回帰は上記HEADで再検証済みです。
 
 ## iPhone Safari実機
 
@@ -28,6 +28,10 @@
 | 縦書き反復記号 | UNVERIFIED | `前〳〵後`、`前〴〵後`をNishiki／Noto／fallbackで目視 |
 | Chrome復帰 | AUTOMATED ONLY | tap復帰は自動Gate済み。Safariの実タップは未確認 |
 | Full Source Mode | AUTOMATED ONLY | Container全体のparse→commit→再表示は自動Gate済み |
+
+## 自動Gateの現行確認
+
+`1ee826a`では、Reader Unit / Shared Contract / Writer Unit / Writer Core・Document・Source・WYSIWYG・Composition・Ruby・Boundary・Tab・Storage / Writer Presentation / Writer Mobile（Chromium Pixel 5相当・WebKit iPhone 13相当）/ Reader Mobile / syntax check を再実行してPASS。これはiPhone Safari本体、Native Clipboard、実IME、実機Font描画、GitHub Branch Rulesetの確認結果を含まない。
 
 ## Nishiki-teki配信判断
 
