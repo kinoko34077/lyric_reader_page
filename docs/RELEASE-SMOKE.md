@@ -4,7 +4,7 @@
 
 ## 基準
 
-- 自動検証HEAD: `1ee826a` (`test: cover dynamic explicit ruby forms`)
+- 自動検証HEAD: `859f71e` (`fix: keep metadata projections out of writer edits`)
 - Reader checkpoint: `stable` / `reader-v0.1.0` = `925cfc7`
 - 自動Mobile: Chromium Pixel 5相当、Playwright WebKit iPhone 13相当
 - 自動Gate結果: Reader / Shared / Writer Unit / Writer Beta / Writer Mobile / Writer Presentation / Reader Mobile は上記HEADでPASS
@@ -31,7 +31,7 @@
 
 ## 自動Gateの現行確認
 
-`1ee826a`では、Reader Unit / Shared Contract / Writer Unit / Writer Core・Document・Source・WYSIWYG・Composition・Ruby・Boundary・Tab・Storage / Writer Presentation / Writer Mobile（Chromium Pixel 5相当・WebKit iPhone 13相当）/ Reader Mobile / syntax check を再実行してPASS。これはiPhone Safari本体、Native Clipboard、実IME、実機Font描画、GitHub Branch Rulesetの確認結果を含まない。
+`859f71e`では、Reader Unit / Shared Contract / Writer Unit / Writer Core・Document・Source・WYSIWYG・Composition・Ruby・Boundary・Tab・Storage / Writer Presentation / Writer Mobile（Chromium Pixel 5相当・WebKit iPhone 13相当）/ Reader Mobile / syntax check を再実行してPASS。これはiPhone Safari本体、Native Clipboard、実IME、実機Font描画、GitHub Branch Rulesetの確認結果を含まない。
 
 ## Nishiki-teki配信判断
 
