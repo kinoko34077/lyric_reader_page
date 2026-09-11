@@ -13,6 +13,18 @@
 - 読み込みは現行Syntax、Legacy Syntax、旧Reader Document、理解可能な未知VersionをFail-softで受け付け、保存は現行Canonical形式へ統一する。未知指定・未知Fieldは黙って別の意味へ変換せず、警告または不活性保持とする。
 - 旧Range AnnotationはPresentationの入力経路として廃止する。旧フィールドが入力に残っていてもruntime state、History、Draft、Canonical payloadへ持ち込まない。
 
+### Writer Source-backed editing（確定）
+
+- Writerの編集正本はActive VariantのAuthor Source stringだけとする。Parser/IR/Rendered DOMはAuthor Sourceから導出する。
+- Writerは単一の編集Surfaceを持つ。Titleと本文は同一Author Source上の第1行／第2行以降として扱い、表示上のTitle／本文分割はProjectionに限定する。
+- 通常の文字入力、削除、改行、Paste、IME確定、Title/Body境界操作は、Sourceまたはsemantic IR rangeのEdit Transactionとして処理する。Rendered DOM全体からAuthor Sourceを再構築する経路を通常編集へ使わない。
+- Writerへ入力したRuby・Presentation記法はSourceへそのまま挿入し、既存Syntax Adapterで解釈する。Writer専用のRuby認識規則やPaste時のRuby DOM生成を追加しない。
+- 入力途中の不完全SyntaxはLiteralとして安全に表示し、Parserが成立した時点でRuby／PresentationへProjectionする。明示`｜`RubyのBaseは漢字に限定しない。
+- DOM marker、Source range、Caret／Selection bookmarkは導出情報であり、Title、Body、Ruby、DOM textの重複正本を作らない。
+- 通常Writer入力では保存済みScroll位置への復元、編集Surface全体の不要な交換、FocusのTitle／Body間bridgeを行わない。文書Open・Mode切替・明示JumpのみProgrammatic scrollを許可する。
+- Viewer CopyはPortable Text、Writer Copyは対応するAuthor Source、Source Mode CopyはTextareaのRaw Textとする。Clipboard失敗時にNative Copyを妨げない。
+- 〳〵／〴〵はSource上2文字・表示上2文字分のadvanceを持つ。Ruby Readingの文字サイズは本文Baseの相対値として扱う。
+
 ## 2. 文書・Title・Metadata
 
 - 標準TitleはAuthor Source第1行。BOM、CRLF、空行、1行のみを定義された境界規則で扱う。

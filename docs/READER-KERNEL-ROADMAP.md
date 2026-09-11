@@ -74,13 +74,13 @@ Palette、Style、Glyph、Combine、Font、Outlineを閲覧用途として維持
 
 ## Stage 4 — Editor改善
 
-### Writer Beta — current implementation and next boundary
+### Writer Beta — Source-backed structural migration
 
-Reader Kernelは`stable` / `reader-v0.1.0`の`925cfc7`で凍結し、`main`はWriter Betaを進める。Source Editorは`?mode=source`とヘッダーの`Source`切替からAuthor Sourceを直接編集し、parse成功時だけ現在のVariantへ反映する。無効なPresentationはCurrent Documentへcommitせず、行・列・失敗位置付近のcontextを表示する。初期reload完了前の置換操作はBrowser Gateで確定Sourceを待ってから実行し、不正文書・不正文DraftはCurrentを保持する。
+Reader Kernelは`stable` / `reader-v0.1.0`の`925cfc7`で凍結し、`main`はWriterのSource-backed structural migrationを進める。Source Editorは`?mode=source`とヘッダーの`Source`切替からCanonical Author Sourceを直接編集し、parse成功時だけ現在のVariantへ反映する。Writer本体は別Title/body contenteditableのbridgeを最終形とせず、単一Writer SurfaceからSource/IR transactionを通して入力・削除・改行・Paste・IMEを処理する。無効なPresentationはCurrent Documentへcommitせず、行・列・失敗位置付近のcontextを表示する。初期reload完了前の置換操作はBrowser Gateで確定Sourceを待ってから実行し、不正文書・不正文DraftはCurrentを保持する。
 
 Writer Stateでは、全Variant・Registry・Metadata・Theme・Source routingを含むDraft、`K6`（Tab単位Draft分離と片側破棄保護）、`K1`（文書を開く操作自体のUndo）を実装済み。Presentation AuthoringはPalette、Style、Ruby Base/Reading、Glyph、Combine、Outline、Fontまで、WYSIWYGは本文置換・Caret入力・削除・Plain Text paste・Title編集・Variant isolation・Application Undo/RedoまでBrowser Gateで確認済み。`npm run test:writer`はReaderとの最小Source往復・Current保護をCore smokeとして実行し、Source Editor、Document、WYSIWYG、独立Tab、Storage故障、不正文Draftの詳細は同じランナーの独立下位Gateとして継続実行する。`npm run test:writer-presentation`はPresentation Authoringだけを独立Chromium Gateとして再実行し、`npm run test:writer-mobile`はWriterの表示面をPixel 5相当Chromium / iPhone 13相当WebKitから確認する。両者ともReader Mobile Gate・Writer Core Gateとは独立したadvisory checkとして扱う。
 
-`3a3ab47`で、本文末尾のRuby＋Presentation直後のIME確定、Ruby親文字／読み仮名選択CopyをWriter／Mobile Gateへ追加し、Reader 41件・Shared 60件・Writer Unit 23件とChromium／WebKit MobileをPASSさせた。次のWriter作業は、Core smokeと独立下位Gateの成功を同じHEADで維持しながら、WYSIWYGの通常編集整合性を必要な範囲で改善すること。Writer Mobileの自動Gateは表示・レイアウト境界までを対象とし、Caret、IME、Touch selection、soft keyboard、Style rename UI、Gradient最終仕様、HOLD群はReaderの再設計理由にせず、Writer Betaの後段へ残す。実機iPhone Safari、Native Clipboard、実IME、Nishiki-tekiの正式Web Font配信、stable保護は[`RELEASE-SMOKE.md`](RELEASE-SMOKE.md)へ分離している。
+`3a3ab47`で、本文末尾のRuby＋Presentation直後のIME確定、Ruby親文字／読み仮名選択CopyをWriter／Mobile Gateへ追加し、Reader 41件・Shared 60件・Writer Unit 23件とChromium／WebKit MobileをPASSさせた。次のWriter作業は、`docs/superpowers/specs/2026-09-11-source-backed-writer-design.md`に従い、単一Writer Surface、Source range transaction、動的Syntax解釈、Selection/CaretのSource化、入力中のScroll復元撤去を順に実装すること。Writer Mobileの自動Gateは表示・レイアウト境界までを対象とし、実機iPhone Safari、Native Clipboard、実IME、Nishiki-tekiの正式Web Font配信、stable保護は[`RELEASE-SMOKE.md`](RELEASE-SMOKE.md)へ分離している。
 
 ## Severity
 
