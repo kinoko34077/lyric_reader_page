@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "packs": {
+    "web-app": {
+      "state": "OVERRIDE"
+    },
+    "ci-test": {
+      "state": "OVERRIDE"
+    }
+  }
+}

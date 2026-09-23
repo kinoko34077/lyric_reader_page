@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "project": {
+    "name": "lyric_reader_page",
+    "type": "web-reader",
+    "description": "Browser lyric reader and writer with shared document, mobile, and authoring quality gates."
+  },
+  "profile": "web-app",
+  "profiles": [
+    "web-app"
+  ],
+  "runtime": {
+    "modules": []
+  },
+  "surfaces": {
+    "cli": false,
+    "gui_windows": false,
+    "web": true,
+    "api": false,
+    "mcp": false,
+    "agent": false,
+    "library": false
+  },
+  "commands": {
+    "setup": {
+      "exec": "npm",
+      "args": ["ci"],
+      "cwd": ".",
+      "forward_args": false
+    },
+    "dev": "",
+    "test": {
+      "exec": "npm",
+      "args": ["test"],
+      "cwd": ".",
+      "forward_args": false
+    },
+    "build": "",
+    "verify": "",
+    "smoke": "",
+    "deploy": ""
+  },
+  "paths": {
+    "docs": "docs/",
+    "source": "src/",
+    "tests": "tests/",
+    "actions": "contracts/actions.json",
+    "surfaces": "contracts/surfaces.json",
+    "defaults": "defaults.json"
+  },
+  "notes": [
+    "This adoption adds the KiNoTch Base and Project Overlay without moving the existing reader, writer, or browser test files.",
+    "Reader, writer, mobile, deployment, and Pages policy remain Project-owned."
+  ]
+}
