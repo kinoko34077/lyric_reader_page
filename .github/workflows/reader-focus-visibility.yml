@@ -3,14 +3,18 @@ name: Reader focus visibility
 on:
   pull_request:
     paths:
+      - "assets/css/reader.css"
       - "assets/js/app.js"
+      - "project/docs/CURRENT_STATE.md"
       - "tests/reader-chrome-focus-gate.mjs"
       - ".github/workflows/reader-focus-visibility.yml"
   push:
     branches:
       - main
     paths:
+      - "assets/css/reader.css"
       - "assets/js/app.js"
+      - "project/docs/CURRENT_STATE.md"
       - "tests/reader-chrome-focus-gate.mjs"
       - ".github/workflows/reader-focus-visibility.yml"
 
