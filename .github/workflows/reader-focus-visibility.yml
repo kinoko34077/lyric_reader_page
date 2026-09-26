@@ -1,0 +1,34 @@
+name: Reader focus visibility
+
+on:
+  pull_request:
+    paths:
+      - "assets/js/app.js"
+      - "tests/reader-chrome-focus-gate.mjs"
+      - ".github/workflows/reader-focus-visibility.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "assets/js/app.js"
+      - "tests/reader-chrome-focus-gate.mjs"
+      - ".github/workflows/reader-focus-visibility.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Reader hidden-chrome keyboard focus regression
+        run: node tests/reader-chrome-focus-gate.mjs
+      - name: Existing project tests
+        run: npm test
