@@ -64,16 +64,21 @@ try {
   await page.waitForFunction(() => document.body.classList.contains("chrome-hidden"), null, { timeout: 3_000 });
 
   await page.locator("#settings-toggle").focus();
-  await page.waitForFunction(() => !document.body.classList.contains("chrome-hidden"), null, { timeout: 2_000 });
+  await page.waitForTimeout(350);
 
   const focused = await page.locator("#settings-toggle").evaluate((element) => {
     const rect = element.getBoundingClientRect();
     return {
       active: document.activeElement === element,
       visible: rect.bottom > 0 && rect.top < innerHeight && rect.right > 0 && rect.left < innerWidth,
+      chromeHidden: document.body.classList.contains("chrome-hidden"),
     };
   });
-  assert.deepEqual(focused, { active: true, visible: true }, "focused chrome control must be visible in the viewport");
+  assert.deepEqual(
+    focused,
+    { active: true, visible: true, chromeHidden: true },
+    "focused chrome control must be visible while the reader auto-hide state remains active",
+  );
 } finally {
   await page.close();
   await browser.close();
