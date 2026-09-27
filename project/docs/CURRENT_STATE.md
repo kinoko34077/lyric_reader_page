@@ -27,7 +27,7 @@ Last verified: 2026-09-27 — Real-browser audit replaces human browser verifica
 - `writerLateRender` Writer Browser sub-gate holds document Font requests to reproduce the three cases deterministically
 
 - `npm run audit:browser` audits IME (CDP), Selection, native Clipboard, typography, vertical repeat marks, Nishiki availability, accessibility tree, and 360px / desktop geometry with JSON evidence; `.github/workflows/browser-audit.yml` runs it with the Writer Beta / Writer Mobile gates on every Pull Request
-- Audit-found product defects repaired: Viewer late render dropped the user's Selection; Viewer selection Copy produced flattened DOM text instead of Portable Text; Chromium IME restarted after Ruby lost or misplaced the committed text; Nishiki-teki was selectable without a real Font because `FontFaceSet.check()` returns true for unknown families
+- Audit-found product defects repaired: Viewer late render dropped the user's Selection; Viewer selection Copy produced flattened DOM text instead of Portable Text; Chromium IME restarted after Ruby lost or misplaced the committed text; Nishiki-teki was selectable without a real Font because `FontFaceSet.check()` returns true for unknown families; re-rendering a Writer/Viewer projection rewrote identical text nodes and dropped text-offset Selections
 
 ## Default state
 

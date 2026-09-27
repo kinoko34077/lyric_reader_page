@@ -262,7 +262,8 @@ function directTextSegments(parent) {
 function syncTextSegment(parent, segment, value, before = null) {
   const textNodes = segment.textNodes;
   if (!textNodes.length) { if (value) parent.insertBefore(document.createTextNode(value), before); return; }
-  textNodes[0].nodeValue = value;
+  // Assigning an identical nodeValue still resets Range boundaries inside the node and drops the user's Selection.
+  if (textNodes[0].nodeValue !== value) textNodes[0].nodeValue = value;
   for (const extra of textNodes.slice(1)) extra.remove();
 }
 function syncProjectionNode(current, next) {

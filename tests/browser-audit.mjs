@@ -174,21 +174,35 @@ async function auditBoundary(page, baseContainer) {
   } catch (error) { record("writer.title-body-boundary", "FAIL", null, null, { error: String(error?.message || error) }); }
 }
 
+async function selectTextAndRerender(page, rootSelector, text) {
+  // Text-node offsets (as a user drag produces) across a real re-render (Palette bank change triggers render()).
+  const selected = await page.evaluate(({ rootSelector, text }) => {
+    const root = document.querySelector(rootSelector); const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    while (walker.nextNode()) { const node = walker.currentNode; const index = node.nodeValue.indexOf(text); if (index < 0) continue; const range = document.createRange(); range.setStart(node, index); range.setEnd(node, index + text.length); const selection = getSelection(); selection.removeAllRanges(); selection.addRange(range); return selection.toString(); }
+    return "";
+  }, { rootSelector, text });
+  const rerendered = await page.evaluate(() => { const bank = document.querySelector("#palette-bank"); const values = [...bank.options].map(option => option.value); const next = values.find(value => value !== bank.value); if (!next) return false; bank.value = next; bank.dispatchEvent(new Event("change", { bubbles: true })); return true; });
+  await page.waitForTimeout(300);
+  return { selected, retained: await page.evaluate(() => getSelection().toString()), rerendered };
+}
+
 async function auditSelectionAndClipboard(page, baseContainer) {
   // Selection must survive a routine late render, and native Ctrl+C must reach the OS clipboard as Portable / Author text.
   try {
     await loadFixture(page, baseContainer); await toViewer(page);
     const selected = await page.evaluate(() => { const ruby = document.querySelector("#lyrics .source-ruby"); if (!ruby) return ""; const range = document.createRange(); range.selectNode(ruby); const selection = getSelection(); selection.removeAllRanges(); selection.addRange(range); return selection.toString(); });
-    await page.evaluate(() => window.dispatchEvent(new Event("resize")));
     await page.waitForTimeout(600);
     const retained = await page.evaluate(() => getSelection().toString());
-    record("viewer.selection-retention", selected && retained === selected ? "PASS" : "FAIL", { selected, retained }, "selection text unchanged after resize/idle refresh");
+    const viewerRerender = await selectTextAndRerender(page, "#lyrics", "本文");
+    record("viewer.selection-retention", selected && retained === selected && viewerRerender.rerendered && viewerRerender.retained === viewerRerender.selected ? "PASS" : "FAIL", { lateRender: { selected, retained }, textOffsetRerender: viewerRerender }, "selection text unchanged across a late Font render and an explicit re-render");
     await page.evaluate(() => { const lyrics = document.querySelector("#lyrics"); const walker = document.createTreeWalker(lyrics, NodeFilter.SHOW_TEXT); let end = null; while (walker.nextNode()) if (walker.currentNode.nodeValue.includes("末尾")) { end = walker.currentNode; break; } const range = document.createRange(); range.setStart(lyrics, 0); range.setEnd(end, end.nodeValue.indexOf("末尾") + 2); const selection = getSelection(); selection.removeAllRanges(); selection.addRange(range); });
     await page.keyboard.press("Control+C"); await page.waitForTimeout(200);
     const viewerClipboard = await page.evaluate(() => navigator.clipboard.readText().catch(error => `ERROR ${error}`));
     record("viewer.native-copy", viewerClipboard === "前｜読確認《よみかくにん》後末尾" ? "PASS" : "FAIL", { clipboard: viewerClipboard, expected: "前｜読確認《よみかくにん》後末尾" }, "native copy of a line with Ruby and Presentation yields Portable Text (Ruby kept, Presentation removed)");
 
     await toWriter(page);
+    const writerRerender = await selectTextAndRerender(page, "#song-title", FIXTURE_TITLE);
+    record("writer.selection-retention", writerRerender.rerendered && writerRerender.selected && writerRerender.retained === writerRerender.selected ? "PASS" : "FAIL", writerRerender, "a Title text selection survives an unrelated re-render");
     await page.evaluate(() => { const ruby = document.querySelector("#lyrics .source-ruby"); const range = document.createRange(); range.selectNode(ruby); const selection = getSelection(); selection.removeAllRanges(); selection.addRange(range); document.querySelector("#writer-surface").focus({ preventScroll: true }); });
     await page.keyboard.press("Control+C"); await page.waitForTimeout(200);
     const writerClipboard = await page.evaluate(() => navigator.clipboard.readText().catch(error => `ERROR ${error}`));
