@@ -9,10 +9,9 @@ Last verified: 2026-09-27 — Real-browser audit replaces human browser verifica
 - Accepted main: `c1508cc2d3a8d36e19a0cdf51fd604cb4f5fdbfb` (#5 application repair and #6 gate-race repair merged)
 - main Deploy run `36296810578`: SUCCESS
 - Automated Reader / Shared / Writer / Mobile / Presentation gates: GREEN at the accepted main
-- Real iPhone Safari IME / Selection / Native Clipboard / real-Font checks: REAL-DEVICE ONLY / UNVERIFIED
+- IME / Selection / Native Clipboard / Font / typography / geometry: AUDITED by `npm run audit:browser`; iOS soft keyboard, touch selection handles, Safari-specific WebKit differences and screen-reader speech remain non-blocking BOUNDARY items (`docs/RELEASE-SMOKE.md`)
 
 ## Implemented
-
 
 - Repository-local KiNoTch Base v0.3.8 and Project Overlay
 - `web-app` Surface declaration
@@ -25,7 +24,6 @@ Last verified: 2026-09-27 — Real-browser audit replaces human browser verifica
 - Late renders in Writer patch the projection in place and keep the collapsed caret on its Source offset instead of dropping it to the body start
 - Switching mode commits a pending debounced History snapshot, so a Source edit and a following Writer edit remain separate Undo steps
 - `writerLateRender` Writer Browser sub-gate holds document Font requests to reproduce the three cases deterministically
-
 - `npm run audit:browser` audits IME (CDP), Selection, native Clipboard, typography, vertical repeat marks, Nishiki availability, accessibility tree, and 360px / desktop geometry with JSON evidence; `.github/workflows/browser-audit.yml` runs it with the Writer Beta / Writer Mobile gates on every Pull Request
 - Audit-found product defects repaired: Viewer late render dropped the user's Selection; Viewer selection Copy produced flattened DOM text instead of Portable Text; Chromium IME restarted after Ruby lost or misplaced the committed text; Nishiki-teki was selectable without a real Font because `FontFaceSet.check()` returns true for unknown families; re-rendering a Writer/Viewer projection rewrote identical text nodes and dropped text-offset Selections
 
@@ -45,7 +43,7 @@ Last verified: 2026-09-27 — Real-browser audit replaces human browser verifica
 
 - Reader Unit / Shared / Writer Unit / Reader Mobile / Writer Presentation: PASS
 - Writer Beta Gate (`writer`, `writerSource`, `writerWysiwyg`, `writerRuby`) and Writer Mobile Chromium Pixel 5: FAIL — reproducible, timing-dependent; root causes above, repaired
-- WebKit iPhone emulation: AUTOMATED ONLY (CI); real iPhone Safari items remain REAL-DEVICE ONLY per `docs/RELEASE-SMOKE.md`
+- WebKit iPhone emulation: AUTOMATED ONLY (CI); real iPhone Safari items remain REAL-DEVICE ONLY per `docs/RELEASE-SMOKE.md` (at that audit; now superseded by `npm run audit:browser` except the listed BOUNDARY items)
 
 ## Next work
 
