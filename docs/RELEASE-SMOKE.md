@@ -2,14 +2,23 @@
 
 この文書は、ローカルの自動Gateでは証明できないWriter／外部配信境界を、実機またはGitHub管理環境で確認するための記録票です。PlaywrightのPASSを実機PASSへ読み替えません。
 
-## 基準
+## Current acceptance baseline
+
+- Accepted main: `c1508cc2d3a8d36e19a0cdf51fd604cb4f5fdbfb`
+- Phase 0 application and gate-race repairs: #5 / #6
+- main Deploy run `36296810578`: SUCCESS
+- Automated Reader / Shared / Writer / Mobile / Presentation gates: GREEN at the accepted main
+- Real iPhone Safari IME / Selection / Native Clipboard / real-Font checks: REAL-DEVICE ONLY / UNVERIFIED
+- Playwright WebKit iPhone emulation remains automated evidence only.
+
+## Historical automated baseline
 
 - 自動検証HEAD: `859f71e` (`fix: keep metadata projections out of writer edits`)
 - Reader checkpoint: `stable` / `reader-v0.1.0` = `925cfc7`
 - 自動Mobile: Chromium Pixel 5相当、Playwright WebKit iPhone 13相当
 - 自動Gate結果: Reader / Shared / Writer Unit / Writer Beta / Writer Mobile / Writer Presentation / Reader Mobile は上記HEADでPASS
 
-このチェックリスト以後のWriter Source-backed移行、旧DOM再構築経路撤去、動的Ruby回帰は上記HEADで再検証済みです。
+This historical section preserves the earlier Source-backed migration and dynamic Ruby regression evidence; it is not the current acceptance authority.
 
 ## iPhone Safari実機
 
@@ -29,9 +38,13 @@
 | Chrome復帰 | AUTOMATED ONLY | tap復帰は自動Gate済み。Safariの実タップは未確認 |
 | Full Source Mode | AUTOMATED ONLY | Container全体のparse→commit→再表示は自動Gate済み |
 
-## 自動Gateの現行確認
+## 自動Gateの記録
 
-`859f71e`では、Reader Unit / Shared Contract / Writer Unit / Writer Core・Document・Source・WYSIWYG・Composition・Ruby・Boundary・Tab・Storage / Writer Presentation / Writer Mobile（Chromium Pixel 5相当・WebKit iPhone 13相当）/ Reader Mobile / syntax check を再実行してPASS。これはiPhone Safari本体、Native Clipboard、実IME、実機Font描画、GitHub Branch Rulesetの確認結果を含まない。
+現行 accepted main `c1508cc2d3a8d36e19a0cdf51fd604cb4f5fdbfb` では、main Deploy run `36296810578` が成功し、Reader / Shared / Writer Unit / Writer Beta（13 sub-gates）/ Writer Presentation / Writer Mobile（Chromium Pixel 5相当・WebKit iPhone 13相当）/ Reader Mobile がGREEN。これは iPhone Safari 本体、Native Clipboard、実IME、実機Font描画、GitHub Branch Ruleset の確認結果を含まない。
+
+### Historical run context
+
+`859f71e` では、Reader Unit / Shared Contract / Writer Unit / Writer Core・Document・Source・WYSIWYG・Composition・Ruby・Boundary・Tab・Storage / Writer Presentation / Writer Mobile（Chromium Pixel 5相当・WebKit iPhone 13相当）/ Reader Mobile / syntax check を再実行してPASS。これは旧検証記録であり、現行受入基準ではない。
 
 ## Nishiki-teki配信判断
 
