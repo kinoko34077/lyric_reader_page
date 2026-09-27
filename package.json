@@ -9,7 +9,8 @@
     "test:mobile": "node tests/mobile-viewer-gate.mjs",
     "test:writer": "node tests/writer-beta-gate.mjs",
     "test:writer-presentation": "node tests/writer-presentation-beta-gate.mjs",
-    "test:writer-mobile": "node tests/writer-mobile-beta-gate.mjs"
+    "test:writer-mobile": "node tests/writer-mobile-beta-gate.mjs",
+    "audit:browser": "node tests/browser-audit.mjs"
   },
   "devDependencies": {
     "playwright": "^1.63.0"
