@@ -155,10 +155,12 @@ function saveScroll() { try { storageSet(scrollStorageKey(scrollIdentity()), JSO
 function restoreScroll(anchor) { requestAnimationFrame(() => { const shell = $("reader-shell"); const lyrics = $("lyrics"); const target = anchor?.offset == null ? null : [...lyrics.querySelectorAll("[data-source-start]")].find(node => Number(node.dataset.sourceStart) >= anchor.offset); if (target) target.scrollIntoView({ block: "nearest", inline: "nearest" }); else { const restored = restoreScrollPosition(anchor || {}, { scrollHeight: shell.scrollHeight, scrollWidth: shell.scrollWidth, clientHeight: shell.clientHeight, clientWidth: shell.clientWidth }); shell.scrollTop = restored.top; shell.scrollLeft = restored.left; } saveScroll(); }); }
 function revealChrome() { document.body.classList.remove("chrome-hidden"); document.body.classList.remove("is-scrolling"); }
 function currentDocumentHash() { return state.data ? documentFingerprint(documentPayload(state.data, state.data.manifest?.title || titleSourceText(), null)) : null; }
-function syncSourceEditor() {
+function syncSourceEditor({ force = false } = {}) {
   const editor = $("source-editor");
   if (!editor || !state.data) return;
   const hash = currentDocumentHash();
+  // A render after async work (Font/Asset load) must not discard Source Editor input that has not been committed yet.
+  if (!force && state.mode === "source" && hash === state.sourceEditorDocumentHash && editor.value !== state.sourceEditorRaw) return;
   const cached = state.sourceEditorRawByVariant.get(state.activeVariantId);
   if (cached?.hash === hash) {
     state.sourceEditorRaw = cached.raw;
@@ -224,7 +226,7 @@ function sourceInput() {
   editor.setSelectionRange(Math.min(start, editor.value.length), Math.min(end, editor.value.length));
   updateStatus(warnings.length ? "Sourceを反映しました（一部のReader定義に警告があります）" : undefined);
 }
-function setMode(mode) { state.mode = mode; applyMode(); applyAppearance(); updateUrlMode(); if (state.data) { render(); syncSourceEditor(); } updateStatus(mode === "writer" ? "編集中" : mode === "source" ? "Source編集中" : undefined); savePreferences(); }
+function setMode(mode) { flushHistory(); state.mode = mode; applyMode(); applyAppearance(); updateUrlMode(); if (state.data) { render(); syncSourceEditor({ force: true }); } updateStatus(mode === "writer" ? "編集中" : mode === "source" ? "Source編集中" : undefined); savePreferences(); }
 function sourceGraphemeOffset(value) { return graphemes(String(value || "")).length; }
 function writerBodySourceOffset(record = currentRecord()) { const info = sourceInfo(record); return sourceGraphemeOffset(record.source.text.slice(0, info.bodyStart)); }
 function writerRenderOptions() { return { ...state, mode: "writer", kanji: "original", registry: state.data?.manifest?.registry, loadedRegistryFonts: state.loadedRegistryFonts, adapter: currentAdapter() }; }
@@ -286,15 +288,25 @@ function renderWriterProjection({ title = true, body = true, caret = null } = {}
   if (body) state.nodes = renderWriterSection($("lyrics"), currentBody(), { ...options, sourceOffset: 0, sourceRawOffset: bodyOffset });
   applyMode(); syncSourceEditor(); if (caret != null) restoreCaret(caret, $("writer-surface"), { raw: true, immediate: true });
 }
-function render(anchor = captureScroll()) { const renderOptions = state.mode === "writer" ? { ...state, kanji: "original", registry: state.data?.manifest?.registry, loadedRegistryFonts: state.loadedRegistryFonts, adapter: currentAdapter() } : { ...state, registry: state.data?.manifest?.registry, loadedRegistryFonts: state.loadedRegistryFonts, adapter: currentAdapter() }; const record = currentRecord(); const bodyOffset = state.mode === "writer" ? writerBodySourceOffset(record) : 0; state.nodes = renderLyrics($("lyrics"), currentBody(), { ...renderOptions, sourceOffset: 0, sourceRawOffset: bodyOffset }); state.titleNodes = renderLyrics($("song-title"), titleSourceText(), { ...renderOptions, sourceOffset: 0, sourceRawOffset: 0 }); applyMode(); syncSourceEditor(); restoreScroll(anchor); }
+function render(anchor = captureScroll()) {
+  if (state.mode === "writer" && state.data) {
+    // Late renders (Font/Asset load) patch the Writer projection in place and keep the caret on its Source offset.
+    const selection = writerSelectionRange(); const collapsed = window.getSelection()?.isCollapsed;
+    renderWriterProjection();
+    const after = writerSelectionRange();
+    if (selection && collapsed && (!after || after.start !== selection.start || after.end !== selection.end)) restoreCaret(selection.start, $("writer-surface"), { raw: true, immediate: true });
+    restoreScroll(anchor); return;
+  }
+  const renderOptions = state.mode === "writer" ? { ...state, kanji: "original", registry: state.data?.manifest?.registry, loadedRegistryFonts: state.loadedRegistryFonts, adapter: currentAdapter() } : { ...state, registry: state.data?.manifest?.registry, loadedRegistryFonts: state.loadedRegistryFonts, adapter: currentAdapter() }; const record = currentRecord(); const bodyOffset = state.mode === "writer" ? writerBodySourceOffset(record) : 0; state.nodes = renderLyrics($("lyrics"), currentBody(), { ...renderOptions, sourceOffset: 0, sourceRawOffset: bodyOffset }); state.titleNodes = renderLyrics($("song-title"), titleSourceText(), { ...renderOptions, sourceOffset: 0, sourceRawOffset: 0 }); applyMode(); syncSourceEditor(); restoreScroll(anchor); }
 function snapshot() { return documentPayload(state.data, titleSourceText(), state.activeVariantId); }
 function resetHistory() { state.history = []; state.historyIndex = -1; state.historyDocumentId = documentIdentity(state.data); }
 function pushHistory() { if (!state.data) return; const result = boundedHistory(state.history, state.historyIndex, snapshot()); state.history = result.history; state.historyIndex = result.index; state.historyDocumentId = documentIdentity(state.data); updateHistoryButtons(); }
-function checkpointBeforeDocumentOpen() { clearTimeout(historyTimer); if (state.data) pushHistory(); }
+function checkpointBeforeDocumentOpen() { clearTimeout(historyTimer); historyTimer = null; if (state.data) pushHistory(); }
 function restoreSnapshot(item) { if (!item || !Array.isArray(item.variants)) return; const nextManifest = validatedManifest(item.manifest || state.data.manifest); const nextVariants = normalizeVariants({ variants: clone(item.variants || state.data.variants) }); validateLoadedVariants(nextManifest, nextVariants); const nextData = { ...state.data, variants: nextVariants, links: clone(item.links || state.data.links || []), variantOverrides: clone(item.variantOverrides || state.data.variantOverrides || {}), metadata: clone(item.metadata || state.data.metadata || {}), sourceMetadata: clone(item.sourceMetadata || state.data.sourceMetadata || {}), titleSource: item.titleSource || state.data.titleSource, manifest: nextManifest, documentExtensions: clone(item.documentExtensions || state.data.documentExtensions || {}), sourceUrl: item.sourceUrl ?? state.data.sourceUrl, sourceName: item.sourceName ?? state.data.sourceName, sourceIdentity: item.sourceIdentity ?? state.data.sourceIdentity }; state.data = nextData; clearReaderError(); state.activeVariantId = normalizeActiveVariantId(nextVariants, item.activeVariantId); state.historyDocumentId = documentIdentity(nextData); state.draft = null; $("draft-notice").hidden = true; state.loadedRegistryFonts = new Set(); applyManifest(state.data.manifest, true, true); applyAppearance(); render(); void loadConfiguredFont().then(() => render(captureScroll())).catch(() => render(captureScroll())); updateDirtyFromCheckpoint(); saveDraft(); updateStatus(); }
 function updateHistoryButtons() { $("undo-button").disabled = state.historyIndex <= 0; $("redo-button").disabled = state.historyIndex >= state.history.length - 1; }
 function saveDraft() { if (!state.data) return; if (!isDirty()) { storageRemove(draftKey()); state.draft = null; $("draft-notice").hidden = true; return; } try { const current = documentPayload(state.data, titleSourceText(), state.activeVariantId); const base = state.savedCheckpoint || current; storageSet(draftKey(), JSON.stringify(draftPayload(state.data, titleSourceText(), state.activeVariantId, { baseDocumentHash: documentFingerprint(base), dirtyAtSave: true }))); } catch { state.storageAvailable = false; setStatus("自動復元用Storageを利用できません。編集は継続できます"); } }
-function scheduleHistory() { clearTimeout(historyTimer); historyTimer = setTimeout(pushHistory, 500); }
+function scheduleHistory() { clearTimeout(historyTimer); historyTimer = setTimeout(() => { historyTimer = null; pushHistory(); }, 500); }
+function flushHistory() { if (historyTimer == null) return; clearTimeout(historyTimer); historyTimer = null; pushHistory(); }
 function clearDraft() { storageRemove(draftKey()); state.draft = null; $("draft-notice").hidden = true; }
 function showDraftIfNeeded() { $("draft-notice").hidden = true; state.draft = null; try { const draft = normalizeDraft(JSON.parse(storageGet(draftKey()) || "null")); const current = documentPayload(state.data, titleSourceText(), state.activeVariantId); const identityMatches = !draft?.sourceIdentity || draft.sourceIdentity === current.sourceIdentity; const baseMatches = !draft?.baseDocumentHash || draft.baseDocumentHash === documentFingerprint(current); const isDirtyDraft = draft?.dirtyAtSave !== false; if (draft && identityMatches && baseMatches && isDirtyDraft && draftDiffers(draft, current)) { state.draft = draft; $("draft-notice").hidden = false; } } catch { storageRemove(draftKey()); } }
 function applyDraft() {
