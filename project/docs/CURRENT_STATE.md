@@ -2,7 +2,7 @@
 
 Base version: `0.3.8`
 
-Last verified: 2026-09-27 — accepted main `c1508cc2d3a8d36e19a0cdf51fd604cb4f5fdbfb`; Roadmap #4 Phase 0 audit and late-render Source/caret integrity repair
+Last verified: 2026-09-27 — Real-browser audit replaces human browser verification
 
 ## Current acceptance baseline
 
@@ -25,6 +25,9 @@ Last verified: 2026-09-27 — accepted main `c1508cc2d3a8d36e19a0cdf51fd604cb4f5
 - Late renders in Writer patch the projection in place and keep the collapsed caret on its Source offset instead of dropping it to the body start
 - Switching mode commits a pending debounced History snapshot, so a Source edit and a following Writer edit remain separate Undo steps
 - `writerLateRender` Writer Browser sub-gate holds document Font requests to reproduce the three cases deterministically
+
+- `npm run audit:browser` audits IME (CDP), Selection, native Clipboard, typography, vertical repeat marks, Nishiki availability, accessibility tree, and 360px / desktop geometry with JSON evidence; `.github/workflows/browser-audit.yml` runs it with the Writer Beta / Writer Mobile gates on every Pull Request
+- Audit-found product defects repaired: Viewer late render dropped the user's Selection; Viewer selection Copy produced flattened DOM text instead of Portable Text; Chromium IME restarted after Ruby lost or misplaced the committed text; Nishiki-teki was selectable without a real Font because `FontFaceSet.check()` returns true for unknown families
 
 ## Default state
 

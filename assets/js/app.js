@@ -39,7 +39,16 @@ const FONT_STACKS = {
   "nishiki-teki": '"Nishiki-teki", "Noto Serif JP", "Yu Mincho", serif'
 };
 const WEB_FONT_URLS = { "noto-serif": "https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;500;700&display=swap", "noto-sans": "https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" };
-function nishikiPresetAvailable() { return Boolean(WEB_FONT_URLS["nishiki-teki"]) || Boolean(document.fonts?.check?.('1em "Nishiki-teki"')); }
+// FontFaceSet.check() returns true for families it does not know, so it cannot prove a local font exists.
+// Measure instead: a real local face changes glyph advances against both generic fallbacks.
+function localFontInstalled(family) {
+  try {
+    const context = document.createElement("canvas").getContext("2d"); if (!context) return false;
+    const sample = "晴々撥条ベうーん〳〵永ABCmwil";
+    return ["serif", "monospace"].some(fallback => { context.font = `32px ${fallback}`; const base = context.measureText(sample).width; context.font = `32px "${family}", ${fallback}`; return Math.abs(context.measureText(sample).width - base) > 0.5; });
+  } catch { return false; }
+}
+function nishikiPresetAvailable() { return Boolean(WEB_FONT_URLS["nishiki-teki"]) || localFontInstalled("Nishiki-teki"); }
 
 function validColor(value, fallback) { return typeof value === "string" && /^#[0-9a-f]{6}$/i.test(value) ? value : fallback; }
 function registryFontName(value) {
@@ -272,7 +281,7 @@ function syncProjectionNode(current, next) {
   });
   return true;
 }
-function renderWriterSection(element, source, options) {
+function renderProjectionSection(element, source, options) {
   const staging = document.createElement(element.tagName.toLowerCase());
   const nodes = renderLyrics(staging, source, options);
   const canPatch = element.childNodes.length === staging.childNodes.length
@@ -284,8 +293,8 @@ function renderWriterSection(element, source, options) {
 }
 function renderWriterProjection({ title = true, body = true, caret = null } = {}) {
   const options = writerRenderOptions(); const record = currentRecord(); const bodyOffset = writerBodySourceOffset(record);
-  if (title) state.titleNodes = renderWriterSection($("song-title"), titleSourceText(record), { ...options, sourceOffset: 0, sourceRawOffset: 0 });
-  if (body) state.nodes = renderWriterSection($("lyrics"), currentBody(), { ...options, sourceOffset: 0, sourceRawOffset: bodyOffset });
+  if (title) state.titleNodes = renderProjectionSection($("song-title"), titleSourceText(record), { ...options, sourceOffset: 0, sourceRawOffset: 0 });
+  if (body) state.nodes = renderProjectionSection($("lyrics"), currentBody(), { ...options, sourceOffset: 0, sourceRawOffset: bodyOffset });
   applyMode(); syncSourceEditor(); if (caret != null) restoreCaret(caret, $("writer-surface"), { raw: true, immediate: true });
 }
 function render(anchor = captureScroll()) {
@@ -297,7 +306,7 @@ function render(anchor = captureScroll()) {
     if (selection && collapsed && (!after || after.start !== selection.start || after.end !== selection.end)) restoreCaret(selection.start, $("writer-surface"), { raw: true, immediate: true });
     restoreScroll(anchor); return;
   }
-  const renderOptions = state.mode === "writer" ? { ...state, kanji: "original", registry: state.data?.manifest?.registry, loadedRegistryFonts: state.loadedRegistryFonts, adapter: currentAdapter() } : { ...state, registry: state.data?.manifest?.registry, loadedRegistryFonts: state.loadedRegistryFonts, adapter: currentAdapter() }; const record = currentRecord(); const bodyOffset = state.mode === "writer" ? writerBodySourceOffset(record) : 0; state.nodes = renderLyrics($("lyrics"), currentBody(), { ...renderOptions, sourceOffset: 0, sourceRawOffset: bodyOffset }); state.titleNodes = renderLyrics($("song-title"), titleSourceText(), { ...renderOptions, sourceOffset: 0, sourceRawOffset: 0 }); applyMode(); syncSourceEditor(); restoreScroll(anchor); }
+  const renderOptions = state.mode === "writer" ? { ...state, kanji: "original", registry: state.data?.manifest?.registry, loadedRegistryFonts: state.loadedRegistryFonts, adapter: currentAdapter() } : { ...state, registry: state.data?.manifest?.registry, loadedRegistryFonts: state.loadedRegistryFonts, adapter: currentAdapter() }; const record = currentRecord(); const bodyOffset = state.mode === "writer" ? writerBodySourceOffset(record) : 0; state.nodes = renderProjectionSection($("lyrics"), currentBody(), { ...renderOptions, sourceOffset: 0, sourceRawOffset: bodyOffset }); state.titleNodes = renderProjectionSection($("song-title"), titleSourceText(), { ...renderOptions, sourceOffset: 0, sourceRawOffset: 0 }); applyMode(); syncSourceEditor(); restoreScroll(anchor); }
 function snapshot() { return documentPayload(state.data, titleSourceText(), state.activeVariantId); }
 function resetHistory() { state.history = []; state.historyIndex = -1; state.historyDocumentId = documentIdentity(state.data); }
 function pushHistory() { if (!state.data) return; const result = boundedHistory(state.history, state.historyIndex, snapshot()); state.history = result.history; state.historyIndex = result.index; state.historyDocumentId = documentIdentity(state.data); updateHistoryButtons(); }
@@ -469,7 +478,18 @@ function commitWriterSourceEdit(range, insertedText, { status = true } = {}) {
   if (status) updateStatus();
   return true;
 }
+function commitOrphanedComposition(event) {
+  // Chromium can end a composition started at a text start after Ruby with a plain insertText and no compositionend.
+  // Treat it as the commit at the Source offset captured on compositionstart instead of dropping the text.
+  const transaction = state.compositionTransaction;
+  state.compositionActive = false; state.compositionCommitPending = false; state.compositionTransaction = null; state.compositionFinalData = null; state.compositionGeneration += 1;
+  event.preventDefault();
+  if (transaction?.range && event.data) commitWriterSourceEdit(transaction.range, event.data);
+  else renderWriterProjection();
+  return true;
+}
 function handleWriterBeforeInput(event) {
+  if (state.mode === "writer" && state.compositionActive && !event.isComposing && event.inputType === "insertText" && typeof event.data === "string") return commitOrphanedComposition(event);
   if (state.mode !== "writer" || state.compositionActive || event.isComposing) return false;
   const root = $("writer-surface"); if (!root?.contains(event.target)) return false;
   const selection = window.getSelection(); if (!selection?.rangeCount) return false;
@@ -494,6 +514,33 @@ function handleWriterPaste(event) {
   const root = $("writer-surface"); if (!root?.contains(event.target)) return false;
   const range = writerSelectionRange(); if (!range) return false;
   event.preventDefault(); event.stopPropagation(); return commitWriterSourceEdit(range, event.clipboardData?.getData("text/plain") || "");
+}
+function handleViewerCopy(event) {
+  // Viewer Copy is Portable Text: Presentation markup is already absent from the projection, Ruby is re-emitted as
+  // Base《Reading》 from its Source-backed data attributes, and reading/warning decorations are not copied as text.
+  if (state.mode !== "viewer" || !state.data) return false;
+  const selection = window.getSelection(); if (!selection?.rangeCount || selection.isCollapsed) return false;
+  const range = selection.getRangeAt(0); const surface = $("writer-surface");
+  if (!surface?.contains(range.commonAncestorContainer)) return false;
+  const emitted = new Set(); let text = ""; let section = null;
+  const walker = document.createTreeWalker(surface, NodeFilter.SHOW_TEXT);
+  while (walker.nextNode()) {
+    const node = walker.currentNode; if (!range.intersectsNode(node)) continue;
+    const element = node.parentElement; if (!element || element.closest(".view-warning, #song-artist, #song-description")) continue;
+    const nextSection = element.closest("#song-title, #lyrics"); if (!nextSection) continue;
+    if (section && nextSection !== section && !text.endsWith("\n")) text += "\n"; section = nextSection;
+    const ruby = element.closest(".source-ruby[data-source-base]");
+    if (ruby) {
+      if (emitted.has(ruby)) continue; emitted.add(ruby);
+      const { sourceBase: base = "", sourceRuby: reading = "", sourceExplicit: explicit } = ruby.dataset;
+      text += `${explicit === "true" ? "｜" : ""}${base}《${reading}》`; continue;
+    }
+    if (element.closest("rt")) continue;
+    const value = node.nodeValue || ""; const start = node === range.startContainer ? range.startOffset : 0; const end = node === range.endContainer ? range.endOffset : value.length;
+    text += value.slice(start, end);
+  }
+  if (!text || !setNativeSelectionClipboard(event, text)) return false;
+  event.preventDefault(); return true;
 }
 function handleWriterCopy(event) {
   if (state.mode !== "writer") return false;
@@ -740,6 +787,8 @@ function bindCompositionGuards() {
   const editables = [$("writer-surface")];
   const editableFor = node => editables.find(editable => editable === node || editable?.contains(node)) || null;
   for (const editable of editables) editable.addEventListener("compositionstart", () => {
+    // A restarted composition without compositionend (Chromium after Ruby) keeps the original Source anchor.
+    if (state.compositionActive && state.compositionTransaction?.editable === editable) return;
     state.compositionActive = true;
     state.compositionCommitPending = false;
     state.compositionTarget = editable;
@@ -828,7 +877,7 @@ function bind() {
    document.addEventListener("selectionchange", rememberSelection);
    $("writer-surface").addEventListener("beforeinput", handleWriterBeforeInput);
    $("writer-surface").addEventListener("paste", handleWriterPaste);
-   $("writer-surface").addEventListener("copy", handleWriterCopy);
+   $("writer-surface").addEventListener("copy", handleWriterCopy); $("writer-surface").addEventListener("copy", handleViewerCopy);
   $("palette-bank").addEventListener("change", handlePaletteBankChange); $("palette-slot").addEventListener("change", syncPaletteControls); $("palette-save-button").addEventListener("click", savePaletteSlot); $("apply-palette-button").addEventListener("click", () => { const range = selectionOffsets() || state.selectionBookmark; if (!range) return setStatus("本文の範囲を選択してください"); const index = Number($("palette-slot").value); const presentation = { bank: { type: "palette-bank", name: state.paletteBank }, color: { type: "palette", index } }; const document = range.ruby ? applyRubyPresentation({ type: "document", nodes: state.nodes }, range.ruby, presentation) : applyPresentation({ type: "document", nodes: state.nodes }, range, presentation); writeBodyDocument(document, true); }); $("clear-presentation-button").addEventListener("click", () => { const range = selectionOffsets() || state.selectionBookmark; if (!range) return setStatus("本文の範囲を選択してください"); const document = range.ruby ? clearRubyPresentation({ type: "document", nodes: state.nodes }, range.ruby) : clearPresentation({ type: "document", nodes: state.nodes }, range); writeBodyDocument(document); });
   const applySelectedPresentation = presentation => { const range = selectionOffsets() || state.selectionBookmark; if (!range) return setStatus("本文の範囲を選択してください"); writeBodyDocument(range.ruby ? applyRubyPresentation({ type: "document", nodes: state.nodes }, range.ruby, presentation) : applyPresentation({ type: "document", nodes: state.nodes }, range, presentation)); };
   $("style-button").addEventListener("click", () => { const name = $("style-name").value.trim(); if (!isSafePresentationName(name)) return setStatus("Style名は予約語以外の英数字・ハイフン・アンダースコアで指定してください"); applySelectedPresentation({ style: { type: "style", name } }); });

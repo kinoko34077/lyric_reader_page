@@ -1,0 +1,48 @@
+name: Browser audit
+
+# Machine evidence for Reader / Writer behavior that used to be handed to a human:
+# CDP IME, Selection, native Clipboard, typography, 360px geometry, accessibility tree,
+# plus the Writer Beta / Writer Mobile gates, which otherwise only run after merge.
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      audit_url:
+        description: "Optional served URL to audit (e.g. the Pages site with ?mode=source)"
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium webkit
+      - name: Real-browser audit
+        env:
+          AUDIT_OUT: ${{ runner.temp }}/browser-audit
+          AUDIT_URL: ${{ github.event.inputs.audit_url }}
+        run: npm run audit:browser
+      - name: Writer Beta Gate
+        if: always()
+        run: npm run test:writer
+      - name: Writer Mobile Gate
+        if: always()
+        run: npm run test:writer-mobile
+      - name: Upload audit evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-audit-${{ github.sha }}
+          path: ${{ runner.temp }}/browser-audit
+          if-no-files-found: warn

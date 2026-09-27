@@ -91,6 +91,37 @@ git diff --check
 - このGateはWriter Browser GateとReader Mobile Gateの状態・Contextを共有せず、IME、Caret、soft keyboard、touch selection、Clipboard権限、実機Safari / Android Chromeは対象外とする。Playwright WebKitはSafari本体ではないため、実機確認は別Release Smokeとして記録する。
 - GitHub Actionsでは`writer-mobile-beta`の`continue-on-error: true`ジョブとして常時実行するが、Pages deployは`reader-quality`だけに依存し、Writer Mobileの失敗でReader公開を止めない。
 
+### Real-browser audit
+
+- `npm run audit:browser`（`tests/browser-audit.mjs`）は、従来「人がブラウザで確認する」扱いだった項目を、Chromium DevTools Protocol・DOM・Selection・Clipboard・Performance・Accessibility treeの実測値で判定する。人がF12を開いて値を読む手順は前提にしない。
+- 判定は`PASS / WARN / FAIL / INFO`。各checkは測定値と判定規則をJSON（既定: OS temp配下`lyric-reader-browser-audit/browser-audit.json`、`AUDIT_OUT`で変更）へ出力し、端末にも1行ずつ要約する。プロジェクトに予算が無い性能値（読込時間・入力遅延・long task・Layout回数・DOM/Heap差分）は閾値を発明せず`INFO`として生値を記録する。
+- 対象:
+  - CDP `Input.imeSetComposition` / `Input.insertText`によるIME確定位置（Title末尾、Ruby直後、Presentation直後、本文末尾）、確定文字の表示上の重複有無、入力中のscroll位置
+  - 連続入力の位置追跡、Title末尾Enter
+  - 遅延再描画を挟んだViewer Selection保持、Viewer / WriterのネイティブCopy（OS Clipboard読取）とネイティブPaste
+  - 14 / 20 / 32pxでの本文・Ruby Base・読みの計算済みfont-size比
+  - 縦書き`〳〵` / `〴〵`の2em advanceと前後文字との非重複
+  - Nishiki-tekiの選択可否と、実Fontによる描画幅変化の一致
+  - Accessibility treeの操作要素名とWriter / status semantics
+  - 360px（CDP device metrics）と1280pxでのViewer / Writer・横 / 縦の横overflowとHeader操作要素のはみ出し
+- 実行形態: 既定はローカル静的serverに対する決定論的実行。`AUDIT_URL`で配信済みURL（例: Pages）を監査し、`AUDIT_HEADED=1`で可視ブラウザでも同じ証跡を取る。
+- GitHub Actionsでは`.github/workflows/browser-audit.yml`がPull Requestとmain pushで監査とWriter Beta / Writer Mobile Gateを実行し、JSONとスクリーンショットをartifact `browser-audit-<sha>`としてアップロードする。これによりWriter系GateもPR段階で結果が出る。
+- CDPで確立できない残境界は、レポートの`boundaries`に明示する。対象は、iOS soft keyboardとSafari本体のcaret追跡、touch selection handleとiOS編集メニュー、Playwright WebKit emulationを超えるWebKit固有差、スクリーンリーダーの実読み上げの4つに限る。Accessibility treeの検証を読み上げ結果の検証とは称しない。
+
+#### Review response contract
+
+レビューや完了報告でブラウザ挙動に触れる場合は、人への確認依頼で代替せず、監査を実行して次を記載する。
+
+1. 監査したcommit SHA
+2. ブラウザと実行コマンド / モード
+3. `PASS / WARN / FAIL`の集計
+4. 主要な測定値（「問題なし」ではなく値）
+5. レポート / artifactの場所
+6. CDP・DOM・Performance・Accessibilityで確立できない残境界（ある場合のみ）
+7. 結論: `PASS`、`PASS WITH NON-BLOCKING BOUNDARY`、`FAIL — follow-up required`のいずれか
+
+監査が製品不具合を検出した場合は、監査を弱めず、再現証跡付きで修正またはIssue化する。
+
 ### Stable branch / release checkpoint policy
 
 - 現在の`stable`はReader安定点`925cfc7`、`reader-v0.1.0`は同じReader checkpointを指す。Writer変更は`main`だけへ積み、Reader tagへ逆流させない。

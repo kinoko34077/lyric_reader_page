@@ -8,7 +8,7 @@
 - Phase 0 application and gate-race repairs: #5 / #6
 - main Deploy run `36296810578`: SUCCESS
 - Automated Reader / Shared / Writer / Mobile / Presentation gates: GREEN at the accepted main
-- Real iPhone Safari IME / Selection / Native Clipboard / real-Font checks: REAL-DEVICE ONLY / UNVERIFIED
+- IME / Selection / Native Clipboard / Font / typography / geometry: AUDITED by `npm run audit:browser`; iOS-only behavior remains a non-blocking BOUNDARY
 - Playwright WebKit iPhone emulation remains automated evidence only.
 
 ## Historical automated baseline
@@ -20,23 +20,28 @@
 
 This historical section preserves the earlier Source-backed migration and dynamic Ruby regression evidence; it is not the current acceptance authority.
 
-## iPhone Safari実機
+## Machine-verified vs. boundary
 
-新しいSafari Private Browsingまたはサイトデータ消去後、公開Pagesで次を確認し、結果・iOS／Safari版本・公開URLを記録する。
+`npm run audit:browser`（[`QUALITY-GATES.md`](QUALITY-GATES.md#real-browser-audit)）が、以前はこの表で人手確認としていた項目のうち、ブラウザ実測で確立できるものを判定する。`AUDITED`は監査checkの結果で判定し、人の目視を完了条件にしない。`BOUNDARY`はCDP・DOM・Performance・Accessibility証跡では確立できない範囲であり、非blockingの残境界として記録する。
 
-| 項目 | 状態 | 確認内容 |
+| 項目 | 状態 | 根拠 |
 | --- | --- | --- |
-| 初回Draft | UNVERIFIED | 初回Viewerで復元通知なし、表示設定変更でもdirtyにならない |
-| Ruby編集 | UNVERIFIED | `｜読確認《よみかくにん》` の前後入力・削除・改行後もSourceを保持 |
-| Native Copy | UNVERIFIED | Ruby全体を選択してSafariのコピーを実行し、外部メモへPortable Rubyとして貼付 |
-| Portable Paste | AUTOMATED ONLY | アプリ内Pasteは自動Gateで確認済み。実機Clipboard権限は未確認 |
-| Title / Body境界 | UNVERIFIED | Title末尾Enter、本文先頭Backspace、跨ぎ選択のSource保持 |
-| 日本語IME | UNVERIFIED | Title／本文末尾、Ruby直後、Presentation直後の確定文字位置 |
-| Nishiki-teki | UNVERIFIED | 未導入端末で実表示・`document.fonts`・Fallback／Warningを確認 |
-| Built-in Nishiki preset availability | AUTOMATED ONLY | 検証済みWeb Font URLがない環境ではSelectを無効化し、端末実Fontがある場合だけ利用可能と表示 |
-| 縦書き反復記号 | UNVERIFIED | `前〳〵後`、`前〴〵後`をNishiki／Noto／fallbackで目視 |
-| Chrome復帰 | AUTOMATED ONLY | tap復帰は自動Gate済み。Safariの実タップは未確認 |
-| Full Source Mode | AUTOMATED ONLY | Container全体のparse→commit→再表示は自動Gate済み |
+| 初回Draft | AUTOMATED | Writer Beta Gate `writerViewState`（表示設定でdirtyにならない） |
+| Ruby編集 | AUDITED + AUTOMATED | `writerRuby`、audit `ime.after-ruby` |
+| Native Copy | AUDITED | audit `viewer.native-copy`（OS Clipboard読取でPortable Text）、`writer.native-copy` |
+| Portable Paste | AUDITED | audit `writer.native-paste`（ネイティブPaste→Source→共通Parser） |
+| Title / Body境界 | AUDITED + AUTOMATED | audit `writer.title-body-boundary`、`writerBoundary` |
+| 日本語IME | AUDITED | audit `ime.*`（CDP IMEでTitle末尾・Ruby直後・Presentation直後・本文末尾、確定の一意性、scroll不動） |
+| Nishiki-teki | AUDITED | audit `font.nishiki-availability`（選択可否＝実Fontの描画幅変化） |
+| 縦書き反復記号 | AUDITED | audit `vertical.repeat-mark-advance`（2em advance・非重複） |
+| 文字サイズ / Ruby比 | AUDITED | audit `typography.ruby-relative-size`（14 / 20 / 32px） |
+| 360px geometry | AUDITED | audit `geometry.phone-360.*` |
+| Chrome復帰 | AUTOMATED | Reader focus visibility gate、Reader Mobile Gate（tap復帰） |
+| Full Source Mode | AUTOMATED | Writer Beta Gate `writer` / `writerSource` |
+| iOS soft keyboard / Safariのcaret追跡 | BOUNDARY | CDPはChromiumのIME経路を駆動し、iOSキーボードは駆動しない |
+| touch selection handle / iOS編集メニュー | BOUNDARY | touch UIはCDPで観測できない |
+| Safari固有のWebKit差 | BOUNDARY | Playwright WebKit iPhone emulation（Writer Mobile Gate）を超える差 |
+| スクリーンリーダー読み上げ | BOUNDARY | Accessibility treeは検証済み。読み上げは未検証 |
 
 ## 自動Gateの記録
 
