@@ -544,6 +544,71 @@ async function runWriterLoadRaceGate(targetUrl) {
   }
 }
 
+async function runWriterLateRenderGate(targetUrl) {
+  const browser = await chromium.launch({ headless: true });
+  const context = await browser.newContext({ locale: "ja-JP", colorScheme: "light" });
+  const page = await context.newPage();
+  const pageErrors = [];
+  page.on("pageerror", error => pageErrors.push(String(error)));
+  // Hold document Font requests so the post-load render lands after the user's next edit.
+  let heldFonts = [];
+  let holdFonts = false;
+  await page.route(/invalid\.example/, route => { if (holdFonts) heldFonts.push(route); else route.abort(); });
+  const releaseFonts = async () => { holdFonts = false; const routes = heldFonts; heldFonts = []; for (const route of routes) await route.abort().catch(() => {}); };
+  const settleFonts = async () => { for (let index = 0; index < 20; index += 1) { await page.waitForTimeout(100); if (heldFonts.length) await releaseFonts(); } };
+  let stage = "initial";
+  try {
+    await page.goto(targetUrl, { waitUntil: "domcontentloaded", timeout: 30_000 });
+    await page.waitForFunction(() => /晴々撥条|如何《どう》/.test(document.querySelector("#source-editor")?.value || ""), null, { timeout: 30_000 });
+    await settleFonts();
+    const originalSource = await page.locator("#source-editor").inputValue();
+
+    stage = "late render keeps uncommitted Source Editor input";
+    holdFonts = true;
+    const validSource = containerWithActiveSource(originalSource, "Late Render\n前[欠損Font:font=missing-font]後末尾");
+    await page.locator("#source-editor").fill(validSource);
+    const invalidSource = `${validSource}\n[x:base-range=0-3]`;
+    await page.locator("#source-editor").fill(invalidSource);
+    await page.waitForFunction(() => document.querySelector("#source-editor")?.getAttribute("aria-invalid") === "true", null, { timeout: 30_000 });
+    await settleFonts();
+    assert.equal(await page.locator("#source-editor").inputValue(), invalidSource, "a late Font render must not discard uncommitted Source Editor input");
+    assert.equal(await page.locator("#source-editor").getAttribute("aria-invalid"), "true", "a late Font render must not clear the Source Editor error");
+
+    stage = "late render keeps the Writer caret";
+    holdFonts = true;
+    await page.locator("#source-editor").fill(validSource);
+    await page.waitForFunction(() => document.querySelector("#source-editor")?.getAttribute("aria-invalid") !== "true", null, { timeout: 30_000 });
+    await clickHeaderButton(page, "#source-mode-switch");
+    await clickHeaderButton(page, "#mode-switch");
+    await page.waitForFunction(() => document.body.dataset.mode === "writer", null, { timeout: 30_000 });
+    assert.equal(await placeCaretInRoot(page.locator("#lyrics"), "末尾", 2), true, "late render gate must place the caret at the body end");
+    await settleFonts();
+    await page.keyboard.insertText("X");
+    await page.waitForTimeout(750);
+    await clickHeaderButton(page, "#source-mode-switch");
+    await page.locator("#source-editor").waitFor({ state: "visible", timeout: 30_000 });
+    assert.equal(parseLyricContainer(await page.locator("#source-editor").inputValue()).source, "Late Render\n前[欠損Font:font=missing-font]後末尾X", "Writer input after a late Font render must stay at the caret");
+
+    stage = "mode switch keeps Source edit as its own Undo step";
+    await clickHeaderButton(page, "#source-mode-switch");
+    await clickHeaderButton(page, "#mode-switch");
+    await page.waitForFunction(() => document.body.dataset.mode === "writer", null, { timeout: 30_000 });
+    await clickHeaderButton(page, "#undo-button");
+    await clickHeaderButton(page, "#source-mode-switch");
+    await page.locator("#source-editor").waitFor({ state: "visible", timeout: 30_000 });
+    assert.equal(parseLyricContainer(await page.locator("#source-editor").inputValue()).source, "Late Render\n前[欠損Font:font=missing-font]後末尾", "Undo must revert only the Writer input, not the preceding Source edit");
+
+    assert.deepEqual(pageErrors, []);
+    return { status: "PASS", targetUrl };
+  } catch (error) {
+    throw new Error(`${error instanceof Error ? error.message : String(error)} stage=${stage}`.replace(/[\r\n]+/g, " "));
+  } finally {
+    await releaseFonts();
+    await context.close();
+    await browser.close();
+  }
+}
+
 async function runWriterWysiwygGate(targetUrl) {
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({ locale: "ja-JP", colorScheme: "light" });
@@ -1282,6 +1347,7 @@ try {
     ["writerSource", runWriterSourceGate],
     ["writerDocument", runWriterDocumentGate],
     ["writerLoadRace", runWriterLoadRaceGate],
+    ["writerLateRender", runWriterLateRenderGate],
     ["writerWysiwyg", runWriterWysiwygGate],
     ["writerRuby", runWriterRubyGate],
     ["writerBoundary", runWriterBoundaryGate],
