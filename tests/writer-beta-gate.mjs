@@ -839,6 +839,7 @@ async function runWriterRubyGate(targetUrl) {
   const pageErrors = [];
   page.on("console", message => { if (message.type() === "error" && !expectedAssetFailure(message.location().url) && !/Failed to load resource:/i.test(message.text())) consoleErrors.push(`${message.text()} (${message.location().url})`); });
   page.on("pageerror", error => pageErrors.push(String(error)));
+  await page.route(/invalid\.example/, route => route.abort());
   let stage = "initial";
     const fixture = "Ruby Gate\n前｜読確認《よみかくにん》後\n前｜ペウコ《ピョコ》後\n如何《どう》";
   try {
@@ -856,6 +857,14 @@ async function runWriterRubyGate(targetUrl) {
       await page.locator("#lyrics").waitFor({ state: "visible", timeout: 30_000 });
       await clickHeaderButton(page, "#mode-switch");
       await page.locator("#lyrics").waitFor({ state: "visible", timeout: 30_000 });
+      // Font loading re-renders the projection asynchronously; a simulated flattened Ruby DOM must not race it.
+      await page.locator("#lyrics").evaluate(root => new Promise(resolve => {
+        let timer; const deadline = setTimeout(done, 10_000);
+        const observer = new MutationObserver(() => { clearTimeout(timer); timer = setTimeout(done, 500); });
+        function done() { observer.disconnect(); clearTimeout(timer); clearTimeout(deadline); resolve(); }
+        observer.observe(root, { childList: true, subtree: true, characterData: true, attributes: true });
+        timer = setTimeout(done, 500);
+      }));
     };
     const readSource = async () => {
       if (await page.evaluate(() => document.body.dataset.mode) !== "source") await clickHeaderButton(page, "#source-mode-switch");
