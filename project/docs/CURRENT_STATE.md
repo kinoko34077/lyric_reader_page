@@ -2,9 +2,17 @@
 
 Base version: `0.3.8`
 
-Last verified: 2026-09-27 — Roadmap #4 Phase 0 audit and late-render Source/caret integrity repair
+Last verified: 2026-09-27 — accepted main `c1508cc2d3a8d36e19a0cdf51fd604cb4f5fdbfb`; Roadmap #4 Phase 0 audit and late-render Source/caret integrity repair
+
+## Current acceptance baseline
+
+- Accepted main: `c1508cc2d3a8d36e19a0cdf51fd604cb4f5fdbfb` (#5 application repair and #6 gate-race repair merged)
+- main Deploy run `36296810578`: SUCCESS
+- Automated Reader / Shared / Writer / Mobile / Presentation gates: GREEN at the accepted main
+- Real iPhone Safari IME / Selection / Native Clipboard / real-Font checks: REAL-DEVICE ONLY / UNVERIFIED
 
 ## Implemented
+
 
 - Repository-local KiNoTch Base v0.3.8 and Project Overlay
 - `web-app` Surface declaration
@@ -30,7 +38,7 @@ Last verified: 2026-09-27 — Roadmap #4 Phase 0 audit and late-render Source/ca
 - The Base verify command provides the repository entry point but does not replace Domain-specific gates.
 - Pointer/touch auto-reveal behavior and the 900 ms reader chrome auto-hide timing remain unchanged by the keyboard-focus repair.
 
-## Phase 0 audit (Roadmap #4, base `f1cf3f5`)
+## Historical Phase 0 audit (Roadmap #4, base `f1cf3f5`)
 
 - Reader Unit / Shared / Writer Unit / Reader Mobile / Writer Presentation: PASS
 - Writer Beta Gate (`writer`, `writerSource`, `writerWysiwyg`, `writerRuby`) and Writer Mobile Chromium Pixel 5: FAIL — reproducible, timing-dependent; root causes above, repaired
@@ -38,11 +46,12 @@ Last verified: 2026-09-27 — Roadmap #4 Phase 0 audit and late-render Source/ca
 
 ## Next work
 
-1. Preserve existing Reader/Writer/browser behavior as Project overrides.
-2. Treat new reproducible Reader/Writer usability defects as repository-local maintenance Issues rather than broad UI rewrites.
-3. Consider further Default adoption only where it removes a real duplicate without changing the reader/writer Domain.
+1. Run the documented real iPhone Safari horizontal/vertical Writer smoke and record evidence in `docs/RELEASE-SMOKE.md`.
+2. Preserve existing Reader/Writer/browser behavior as Project overrides.
+3. Treat new reproducible Reader/Writer usability defects as repository-local maintenance Issues rather than broad UI rewrites.
+4. Consider further Default adoption only where it removes a real duplicate without changing the reader/writer Domain.
 
-## Verification
+## Historical Verification Evidence
 
 - `knt doctor`
 - `knt base-check`
@@ -50,3 +59,4 @@ Last verified: 2026-09-27 — Roadmap #4 Phase 0 audit and late-render Source/ca
 - `knt verify`
 - `npm test`
 - Reader focus visibility Chromium gate: RED `36253510185`; first CSS-fix GREEN `36253728115`
+- Current accepted main Deploy run: `36296810578` (SUCCESS)
