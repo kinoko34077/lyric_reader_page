@@ -183,3 +183,40 @@ test("manifest Variant rejects conflicting supported source forms before fetchin
     globalThis.location = originalLocation;
   }
 });
+
+
+test("manifest Variant keeps every supported Source alias and rejects empty remote references", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalLocation = globalThis.location;
+  const manifestUrl = "https://reader.example.test/source-aliases.json";
+  let variant = null;
+  try {
+    globalThis.location = { href: "https://reader.example.test/" };
+    globalThis.fetch = async resource => {
+      const url = String(resource);
+      if (url === manifestUrl) {
+        const body = JSON.stringify({ content: { variants: [variant] } });
+        return new Response(body, { status: 200, headers: { "content-length": String(body.length) } });
+      }
+      const name = new URL(url).pathname.split("/").pop();
+      return new Response(`題\n${name}`, { status: 200 });
+    };
+    const cases = [
+      [{ id: "raw-text", text: "題\nraw-text" }, "題\nraw-text"],
+      [{ id: "source-text", source: { text: "題\nsource-text" } }, "題\nsource-text"],
+      [{ id: "src", src: "./src.txt" }, "題\nsrc.txt"],
+      [{ id: "url", url: "./url.txt" }, "題\nurl.txt"],
+      [{ id: "source-string", source: "./source.txt" }, "題\nsource.txt"]
+    ];
+    for (const [definition, expected] of cases) {
+      variant = definition;
+      const loaded = await loadInput(`#m=${encodeURIComponent(manifestUrl)}`);
+      assert.equal(loaded.variants[0].source.text, expected);
+    }
+    variant = { id: "empty-remote", src: "   " };
+    await assert.rejects(loadInput(`#m=${encodeURIComponent(manifestUrl)}`), /本文Sourceがありません/);
+  } finally {
+    globalThis.fetch = originalFetch;
+    globalThis.location = originalLocation;
+  }
+});
