@@ -146,7 +146,16 @@ test("manifest Variant without a source fails before self-fetching the manifest 
       const body = JSON.stringify({ content: { variants: [{ id: "missing", label: "Missing" }] } });
       return new Response(body, { status: 200, headers: { "content-length": String(body.length) } });
     };
-    await assert.rejects(loadInput(`#m=${encodeURIComponent(manifestUrl)}`), /Variant.*Source|本文Source/);
+    const currentDocument = { marker: "keep-current" };
+    let committedDocument = currentDocument;
+    let failure = null;
+    try {
+      committedDocument = await loadInput(`#m=${encodeURIComponent(manifestUrl)}`);
+    } catch (error) {
+      failure = error;
+    }
+    assert.match(failure?.message || "", /Variant.*Source|本文Source/);
+    assert.equal(committedDocument, currentDocument, "failed manifest load must not replace Current Document");
     assert.equal(manifestFetches, 1, "the manifest must not be fetched again as Variant Source");
   } finally {
     globalThis.fetch = originalFetch;
