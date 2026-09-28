@@ -131,3 +131,46 @@ test("manifest loading keeps generic Variant metadata and rejects duplicate IDs"
     globalThis.location = originalLocation;
   }
 });
+
+
+test("manifest Variant without a source fails before self-fetching the manifest as Source", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalLocation = globalThis.location;
+  const manifestUrl = "https://reader.example.test/missing-source.json";
+  let manifestFetches = 0;
+  try {
+    globalThis.location = { href: "https://reader.example.test/" };
+    globalThis.fetch = async resource => {
+      if (String(resource) !== manifestUrl) return new Response("", { status: 404 });
+      manifestFetches += 1;
+      const body = JSON.stringify({ content: { variants: [{ id: "missing", label: "Missing" }] } });
+      return new Response(body, { status: 200, headers: { "content-length": String(body.length) } });
+    };
+    await assert.rejects(loadInput(`#m=${encodeURIComponent(manifestUrl)}`), /Variant.*Source|本文Source/);
+    assert.equal(manifestFetches, 1, "the manifest must not be fetched again as Variant Source");
+  } finally {
+    globalThis.fetch = originalFetch;
+    globalThis.location = originalLocation;
+  }
+});
+
+test("manifest Variant rejects conflicting supported source forms before fetching either source", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalLocation = globalThis.location;
+  const manifestUrl = "https://reader.example.test/conflicting-source.json";
+  const fetched = [];
+  try {
+    globalThis.location = { href: "https://reader.example.test/" };
+    globalThis.fetch = async resource => {
+      fetched.push(String(resource));
+      if (String(resource) !== manifestUrl) return new Response("unexpected", { status: 200 });
+      const body = JSON.stringify({ content: { variants: [{ id: "conflict", text: "inline", src: "./remote.txt" }] } });
+      return new Response(body, { status: 200, headers: { "content-length": String(body.length) } });
+    };
+    await assert.rejects(loadInput(`#m=${encodeURIComponent(manifestUrl)}`), /Variant.*Source.*競合|Source指定が競合/);
+    assert.deepEqual(fetched, [manifestUrl]);
+  } finally {
+    globalThis.fetch = originalFetch;
+    globalThis.location = originalLocation;
+  }
+});
