@@ -23,14 +23,14 @@
 - DOM marker、Source range、Caret／Selection bookmarkは導出情報であり、Title、Body、Ruby、DOM textの重複正本を作らない。
 - 通常Writer入力では保存済みScroll位置への復元、編集Surface全体の不要な交換、FocusのTitle／Body間bridgeを行わない。文書Open・Mode切替・明示JumpのみProgrammatic scrollを許可する。
 - Viewer CopyはPortable Text、Writer Copyは対応するAuthor Source、Source Mode CopyはTextareaのRaw Textとする。Clipboard失敗時にNative Copyを妨げない。
-- Source Mode Canonical Container uses a human-readable multi-line JSON Header plus the unchanged Author Source. Source wrapping is a user view preference (on/off) and must not mutate Source newlines.
-- Ruby Base/Reading caret positions are owned by Author Source offsets. Projection boundaries must not shift the next insertion point; consecutive input must preserve input order.
+- Source ModeのCanonical Containerは、人間が読める複数行JSON Headerと変更されていないAuthor Sourceで構成する。Sourceの右端折返しは表示設定としてOn/Offでき、Source自体の改行を変更しない。
+- Ruby Base／Reading内のCaret位置はAuthor Source offsetを正本とする。Projection境界へCaretを移して次の挿入位置をずらさず、連続入力の順序を保持する。
 - 〳〵／〴〵はSource上2文字・表示上2文字分のadvanceを持つ。Ruby Readingの文字サイズは本文Baseの相対値として扱う。
 
 ## 2. 文書・Title・Metadata
 
 - 標準TitleはAuthor Source第1行。BOM、CRLF、空行、1行のみを定義された境界規則で扱う。
-- An empty first Author Source line projects as an empty Title. The application must not invent an `Untitled` / `??` fallback Title.
+- Author Source第1行が空ならTitleも空のままとし、`無題`等の代替Titleを自動生成しない。
 - 明示的Title範囲では複数行Titleを保持できるIRを用意する。ただし表面Markupは未確定。
 - Artist、Credit、Note等のMetadataはSource内記述を正式対応対象とする。具体Syntaxが確定するまで、同期用`sourceMetadata`/JSON側表現を使う。
 - Source MetadataとJSON Metadataの競合はSource優先。UI・Draft・Reader Documentもこの優先順位を維持する。
@@ -110,7 +110,7 @@ v0.xの既定表面は次の形式とする。
 - 外部HTML pasteはplain textへ限定し、IME中のUndo横取りを避け、caretを可能な範囲で維持する。Clipboard拒否時は選択コピーFallbackを示す。
 - 任意Script、Event Handler、HTML、CSS injection、危険protocol、inline SVG実行を許可しない。Prototype-sensitive Registry keyを拒否する。
 - Header/Footerは自動収納し、設定Panelは独立スクロール領域とする。縦横切替時もTitle・Metadata・本文の向きを同期し、本文のSourceを変更しない。
-- Reader typography preferences (font size / line height / letter spacing / paragraph spacing) apply to work content, not Header/Footer/settings/buttons. Explicit px font sizes must not be capped by iOS text autosizing.
+- Readerの組版設定（文字サイズ・行間・字間・段落間隔）は作品表示へ適用し、Header／Footer／設定Panel／操作要素へ波及させない。明示したpx文字サイズをiOSのText Autosizingで上書きしない。
 
 ## 11. 現行Runtime制限
 
