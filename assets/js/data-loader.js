@@ -108,8 +108,20 @@ async function loadManifestVariants(manifest, base) {
       const id = String(raw.id || `variant-${String.fromCharCode(65 + index)}`);
       if (!id || seen.has(id)) throw new Error(`ManifestのVariant IDが重複しています: ${id}`);
       seen.add(id);
-      const inline = typeof raw.text === "string" ? raw.text : raw.source && typeof raw.source === "object" && typeof raw.source.text === "string" ? raw.source.text : null;
-      const source = inline !== null ? { text: validateSourceText(inline), url: "manifest:" } : await fetchText(raw.src || raw.url || (typeof raw.source === "string" ? raw.source : ""), base);
+      const sourceForms = [];
+      if (typeof raw.text === "string") sourceForms.push({ kind: "inline", value: raw.text });
+      if (raw.source && typeof raw.source === "object" && typeof raw.source.text === "string") sourceForms.push({ kind: "inline", value: raw.source.text });
+      for (const value of [raw.src, raw.url, typeof raw.source === "string" ? raw.source : null]) {
+        if (typeof value !== "string") continue;
+        if (!value.trim()) throw new Error(`ManifestのVariantに本文Sourceがありません: ${id}`);
+        sourceForms.push({ kind: "remote", value });
+      }
+      if (sourceForms.length === 0) throw new Error(`ManifestのVariantに本文Sourceがありません: ${id}`);
+      if (sourceForms.length > 1) throw new Error(`ManifestのVariant Source指定が競合しています: ${id}`);
+      const selectedSource = sourceForms[0];
+      const source = selectedSource.kind === "inline"
+        ? { text: validateSourceText(selectedSource.value), url: "manifest:" }
+        : await fetchText(selectedSource.value, base);
       variants.push({ id, label: String(raw.label || raw.name || id), role: raw.role == null ? "" : String(raw.role), source, links: Array.isArray(raw.links) ? raw.links : [], presentation: raw.presentation && typeof raw.presentation === "object" ? raw.presentation : {}, overrides: raw.overrides && typeof raw.overrides === "object" ? raw.overrides : {} });
     }
     return variants;

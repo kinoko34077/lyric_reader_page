@@ -131,3 +131,92 @@ test("manifest loading keeps generic Variant metadata and rejects duplicate IDs"
     globalThis.location = originalLocation;
   }
 });
+
+
+test("manifest Variant without a source fails before self-fetching the manifest as Source", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalLocation = globalThis.location;
+  const manifestUrl = "https://reader.example.test/missing-source.json";
+  let manifestFetches = 0;
+  try {
+    globalThis.location = { href: "https://reader.example.test/" };
+    globalThis.fetch = async resource => {
+      if (String(resource) !== manifestUrl) return new Response("", { status: 404 });
+      manifestFetches += 1;
+      const body = JSON.stringify({ content: { variants: [{ id: "missing", label: "Missing" }] } });
+      return new Response(body, { status: 200, headers: { "content-length": String(body.length) } });
+    };
+    const currentDocument = { marker: "keep-current" };
+    let committedDocument = currentDocument;
+    let failure = null;
+    try {
+      committedDocument = await loadInput(`#m=${encodeURIComponent(manifestUrl)}`);
+    } catch (error) {
+      failure = error;
+    }
+    assert.match(failure?.message || "", /Variant.*Source|本文Source/);
+    assert.equal(committedDocument, currentDocument, "failed manifest load must not replace Current Document");
+    assert.equal(manifestFetches, 1, "the manifest must not be fetched again as Variant Source");
+  } finally {
+    globalThis.fetch = originalFetch;
+    globalThis.location = originalLocation;
+  }
+});
+
+test("manifest Variant rejects conflicting supported source forms before fetching either source", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalLocation = globalThis.location;
+  const manifestUrl = "https://reader.example.test/conflicting-source.json";
+  const fetched = [];
+  try {
+    globalThis.location = { href: "https://reader.example.test/" };
+    globalThis.fetch = async resource => {
+      fetched.push(String(resource));
+      if (String(resource) !== manifestUrl) return new Response("unexpected", { status: 200 });
+      const body = JSON.stringify({ content: { variants: [{ id: "conflict", text: "inline", src: "./remote.txt" }] } });
+      return new Response(body, { status: 200, headers: { "content-length": String(body.length) } });
+    };
+    await assert.rejects(loadInput(`#m=${encodeURIComponent(manifestUrl)}`), /Variant.*Source.*競合|Source指定が競合/);
+    assert.deepEqual(fetched, [manifestUrl]);
+  } finally {
+    globalThis.fetch = originalFetch;
+    globalThis.location = originalLocation;
+  }
+});
+
+
+test("manifest Variant keeps every supported Source alias and rejects empty remote references", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalLocation = globalThis.location;
+  const manifestUrl = "https://reader.example.test/source-aliases.json";
+  let variant = null;
+  try {
+    globalThis.location = { href: "https://reader.example.test/" };
+    globalThis.fetch = async resource => {
+      const url = String(resource);
+      if (url === manifestUrl) {
+        const body = JSON.stringify({ content: { variants: [variant] } });
+        return new Response(body, { status: 200, headers: { "content-length": String(body.length) } });
+      }
+      const name = new URL(url).pathname.split("/").pop();
+      return new Response(`題\n${name}`, { status: 200 });
+    };
+    const cases = [
+      [{ id: "raw-text", text: "題\nraw-text" }, "題\nraw-text"],
+      [{ id: "source-text", source: { text: "題\nsource-text" } }, "題\nsource-text"],
+      [{ id: "src", src: "./src.txt" }, "題\nsrc.txt"],
+      [{ id: "url", url: "./url.txt" }, "題\nurl.txt"],
+      [{ id: "source-string", source: "./source.txt" }, "題\nsource.txt"]
+    ];
+    for (const [definition, expected] of cases) {
+      variant = definition;
+      const loaded = await loadInput(`#m=${encodeURIComponent(manifestUrl)}`);
+      assert.equal(loaded.variants[0].source.text, expected);
+    }
+    variant = { id: "empty-remote", src: "   " };
+    await assert.rejects(loadInput(`#m=${encodeURIComponent(manifestUrl)}`), /本文Sourceがありません/);
+  } finally {
+    globalThis.fetch = originalFetch;
+    globalThis.location = originalLocation;
+  }
+});
