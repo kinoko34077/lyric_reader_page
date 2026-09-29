@@ -52,6 +52,13 @@ async function clickHeaderButton(page, selector) {
   await page.evaluate(target => { document.body.classList.remove("chrome-hidden"); document.querySelector(target)?.click(); }, selector);
 }
 
+async function setSourceEditorValue(page, value) {
+  const editor = page.locator("#source-editor");
+  await editor.waitFor({ state: "visible", timeout: 30_000 });
+  await editor.evaluate((node, next) => { node.value = next; node.dispatchEvent(new Event("input", { bubbles: true })); }, value);
+  await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source && document.querySelector("#source-editor")?.getAttribute("aria-invalid") !== "true", value, { timeout: 30_000 });
+}
+
 async function selectTextInRoot(locator, text) {
   return locator.evaluate((rootElement, value) => {
     const walker = document.createTreeWalker(rootElement, NodeFilter.SHOW_TEXT);
@@ -162,7 +169,7 @@ async function runGate(targetUrl) {
     if (nishikiPreset.disabled) {
       stage = "document Nishiki fallback";
       const nishikiSource = withThemeFont(originalSource, { name: "nishiki-teki" });
-      await page.locator("#source-editor").fill(nishikiSource);
+      await setSourceEditorValue(page, nishikiSource);
       await page.waitForFunction(() => document.querySelector("#source-editor")?.value.includes("nishiki-teki"), null, { timeout: 30_000 });
       await toWriter(page);
       await ensureSettingsOpen(page);
@@ -170,11 +177,11 @@ async function runGate(targetUrl) {
       await page.waitForFunction(() => document.querySelector("#font-family")?.value === "serif" && /Nishiki-tekiは実Font/.test(document.querySelector("#source-status")?.textContent || ""), null, { timeout: 30_000 });
       assert.equal(await page.locator("#font-family").inputValue(), "serif", "Document Nishiki-teki without a verified resource must fallback to the standard Font");
       await toSource(page);
-      await page.locator("#source-editor").fill(originalSource);
+      await setSourceEditorValue(page, originalSource);
       await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source, originalSource, { timeout: 30_000 });
     }
     const seedSource = `${originalSource}\nPresentation Gate Seed`;
-    await page.locator("#source-editor").fill(seedSource);
+    await setSourceEditorValue(page, seedSource);
     await page.waitForFunction(() => /Presentation Gate Seed/.test(document.querySelector("#source-editor")?.value || ""), null, { timeout: 30_000 });
     await toWriter(page);
     assert.ok(await page.locator("#lyrics").textContent().then(text => text?.includes("Presentation Gate Seed")), "seed must render in Writer");
@@ -195,7 +202,7 @@ async function runGate(targetUrl) {
     stage = "document Registry Font fallback";
     await toSource(page);
     const registryFontSource = withThemeFont(await page.locator("#source-editor").inputValue(), { type: "registry", name: "nishiki" });
-    await page.locator("#source-editor").fill(registryFontSource);
+    await setSourceEditorValue(page, registryFontSource);
     await page.waitForFunction(() => document.querySelector("#source-editor")?.value.includes('"type":"registry"'), null, { timeout: 30_000 });
     await toWriter(page);
     await ensureSettingsOpen(page);
