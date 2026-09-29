@@ -59,7 +59,7 @@ export function documentPayload(data, title, activeVariant = null) {
   return {
     version: DOCUMENT_MODEL_VERSION,
     activeVariantId,
-    title: String(title || "無題"),
+    title: String(title ?? ""),
     variants: clone(normalized.variants),
     links: clone(normalized.links),
     variantOverrides: clone(normalized.variantOverrides),
@@ -105,7 +105,7 @@ export function normalizeDraft(value) {
   if (typeof value.raw !== "string") return null;
   const migrated = migrateLegacyContent({ historical: { text: value.raw, url: "draft:" } });
   const document = {
-    version: DOCUMENT_MODEL_VERSION, activeVariantId: migrated.activeVariantId, title: String(value.title || "無題"), ...migrated,
+    version: DOCUMENT_MODEL_VERSION, activeVariantId: migrated.activeVariantId, title: String(value.title ?? ""), ...migrated,
     titleSource: "first-line", manifest: { registry: clone(value.registry || {}) }
   };
   return {

@@ -51,7 +51,7 @@ export function readerDocumentToContainer(document, activeVariantId = "") {
 
 export function serializeLyricContainer(document, activeVariantId = "") {
   const container = readerDocumentToContainer(document, activeVariantId);
-  return `LYRIC-READER/1\n${JSON.stringify(container.header)}\n\n${container.source}`;
+  return `LYRIC-READER/1\n${JSON.stringify(container.header, null, 2)}\n\n${container.source}`;
 }
 
 export function parseLyricContainer(value) {
@@ -59,15 +59,14 @@ export function parseLyricContainer(value) {
   const text = value.replace(/^\uFEFF/, "");
   const { version, lineEnd } = parseMagic(text);
   const headerStart = lineEnd + 1;
-  const headerEnd = text.indexOf("\n", headerStart);
-  if (headerEnd < 0) throw new Error("ContainerのHeaderがありません。");
-  const headerLine = text.slice(headerStart, headerEnd).replace(/\r$/, "");
-  let bodyStart = headerEnd + 1;
-  if (text.startsWith("\r\n", bodyStart)) bodyStart += 2;
-  else if (text[bodyStart] === "\n") bodyStart += 1;
-  else throw new Error("ContainerのHeaderと本文のdelimiterがありません。");
+  const framed = text.slice(headerStart);
+  const separator = /\r?\n\r?\n/.exec(framed);
+  if (!separator) throw new Error("Container header/body delimiter is missing.");
+  const headerEnd = headerStart + separator.index;
+  const headerText = text.slice(headerStart, headerEnd);
+  const bodyStart = headerEnd + separator[0].length;
   let header;
-  try { header = JSON.parse(headerLine); } catch { throw new Error("ContainerのJSON Header形式が不正です。"); }
+  try { header = JSON.parse(headerText); } catch { throw new Error("Container JSON Header is invalid."); }
   if (!record(header) || !record(header.document)) throw new Error("ContainerのReader Documentが不正です。");
   const document = header.document;
   const variants = variantsOf(document);

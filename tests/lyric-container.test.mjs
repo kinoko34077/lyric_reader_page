@@ -19,6 +19,7 @@ test("canonical Container preserves the exact active Author Source", () => {
   const source = "題\n[如何《どう》:c=2]\n--- LYRIC-READER/1 ---";
   const document = readerDocumentFixture(source);
   const encoded = serializeLyricContainer(document, "original");
+  assert.match(encoded, /^LYRIC-READER\/1\n\{\n  "container": "lyric-reader",/);
   const parsed = parseLyricContainer(encoded);
   assert.equal(isLyricContainerText(encoded), true);
   assert.equal(parsed.source, source);

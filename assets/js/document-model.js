@@ -61,7 +61,7 @@ export function replaceVariantSource(data, variantIdToUpdate, text) {
   return { ...data, variants };
 }
 
-export function resolveTitle({ source = "", explicitTitle = null, fallback = "無題" } = {}) {
+export function resolveTitle({ source = "", explicitTitle = null, fallback = "" } = {}) {
   if (explicitTitle && typeof explicitTitle.text === "string" && explicitTitle.text.trim()) return explicitTitle.text.trim();
   const raw = String(source).replace(/^\uFEFF/, "");
   const line = raw.split(/\r?\n/, 1)[0].trim();

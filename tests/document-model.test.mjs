@@ -24,6 +24,7 @@ test("legacy historical/modern data is only an input migration to generic varian
 
 test("Source title and metadata take precedence over derived JSON metadata", () => {
   assert.equal(resolveTitle({ source: "題名\n本文" }), "題名");
+  assert.equal(resolveTitle({ source: "\n本文" }), "");
   assert.equal(resolveTitle({ source: "\n本文", fallback: "無題" }), "無題");
   assert.equal(resolveTitle({ source: "一行目\n本文", explicitTitle: { text: "複数\n行タイトル" } }), "複数\n行タイトル");
   assert.deepEqual(resolveMetadata({ title: "Source title", artist: "Source artist" }, { title: "JSON title", artist: "JSON artist", note: "JSON note" }), { title: "Source title", artist: "Source artist", note: "JSON note" });

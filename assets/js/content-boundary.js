@@ -1,4 +1,4 @@
-export function firstLineInfo(value, fallback = "無題") {
+export function firstLineInfo(value, fallback = "") {
   const text = String(value ?? "");
   const bom = text.startsWith("\uFEFF") ? 1 : 0;
   const raw = text.slice(bom);

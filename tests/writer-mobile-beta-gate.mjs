@@ -152,6 +152,16 @@ async function checkScenario(scenario, targetUrl) {
     await page.waitForFunction(() => document.querySelectorAll("#lyrics ruby").length > 0, null, { timeout: 30_000 });
     assert.equal(await page.locator("body").getAttribute("data-dirty"), "false", `${scenario.id}: mobile view controls must not dirty the Document`);
 
+    stage = "iOS typography isolation and Source wrapping";
+    const uiLineHeightBefore = await page.locator("#settings-panel").evaluate(node => getComputedStyle(node).lineHeight);
+    await page.locator("#size-select").selectOption("32");
+    await page.waitForFunction(() => parseFloat(getComputedStyle(document.querySelector("#lyrics .source-text") || document.querySelector("#lyrics")).fontSize) === 32, null, { timeout: 30_000 });
+    assert.equal(await page.locator("#lyrics .source-text").first().evaluate(node => parseFloat(getComputedStyle(node).fontSize)), 32, `${scenario.id}: 32px must reach body text on mobile`);
+    await page.locator("#line-height-range").evaluate(input => { input.value = "2.4"; input.dispatchEvent(new Event("input", { bubbles: true })); });
+    const typographyIsolation = await page.evaluate(() => ({ ui: getComputedStyle(document.querySelector("#settings-panel")).lineHeight, body: getComputedStyle(document.querySelector("#lyrics")).lineHeight }));
+    assert.equal(typographyIsolation.ui, uiLineHeightBefore, `${scenario.id}: Reader line-height must not alter settings UI line-height`);
+    assert.ok(parseFloat(typographyIsolation.body) > 60, `${scenario.id}: Reader line-height must still affect body typography at 32px`);
+
     stage = "vertical Writer layout";
     await page.locator("#vertical-toggle").check();
     await page.waitForFunction(() => getComputedStyle(document.querySelector("#song-title")).writingMode === "vertical-rl" && getComputedStyle(document.querySelector("#lyrics")).writingMode === "vertical-rl", null, { timeout: 30_000 });
@@ -181,6 +191,21 @@ async function checkScenario(scenario, targetUrl) {
     await clickHeaderButton(page, "#source-mode-switch");
     await page.locator("#source-editor").waitFor({ state: "visible", timeout: 30_000 });
     const originalSource = await page.locator("#source-editor").inputValue();
+    assert.ok(originalSource.split(/\r?\n/).length > 6, `${scenario.id}: Canonical Source Header must be formatted across multiple lines`);
+    assert.equal(await page.locator("#source-wrap-toggle").isChecked(), true, `${scenario.id}: Source wrapping defaults on`);
+    assert.equal(await page.locator("#source-editor").evaluate(node => getComputedStyle(node).whiteSpace), "pre-wrap", `${scenario.id}: Source editor wraps when enabled`);
+    await page.locator("#source-wrap-toggle").uncheck();
+    assert.equal(await page.locator("#source-editor").evaluate(node => getComputedStyle(node).whiteSpace), "pre", `${scenario.id}: Source wrapping can be disabled`);
+    await page.locator("#source-wrap-toggle").check();
+    const blankTitleFixture = containerWithActiveSource(originalSource, "\n\u672c\u6587");
+    await page.locator("#source-editor").fill(blankTitleFixture);
+    await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source && document.querySelector("#source-editor")?.getAttribute("aria-invalid") !== "true", blankTitleFixture, { timeout: 30_000 });
+    await clickHeaderButton(page, "#source-mode-switch");
+    await clickHeaderButton(page, "#mode-switch");
+    assert.equal(await page.locator("#song-title").textContent(), "", `${scenario.id}: blank first Source line must project as an empty Title`);
+    await clickHeaderButton(page, "#source-mode-switch");
+    await page.locator("#source-editor").fill(originalSource);
+    await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source && document.querySelector("#source-editor")?.getAttribute("aria-invalid") !== "true", originalSource, { timeout: 30_000 });
 
     stage = "IME composition on mobile Writer";
     const dispatchCompositionWithoutFinalInput = async (locator, data) => locator.evaluate((root, value) => {
@@ -293,6 +318,20 @@ async function checkScenario(scenario, targetUrl) {
     await clickHeaderButton(page, "#source-mode-switch");
     await clickHeaderButton(page, "#mode-switch");
     await page.locator("#lyrics .source-ruby").first().waitFor({ state: "visible", timeout: 30_000 });
+    const rubyBase = page.locator("#lyrics .source-ruby").first().locator(".ruby-base-part");
+    await rubyBase.evaluate(node => { node.closest("#writer-surface")?.focus({ preventScroll: true }); const range = document.createRange(); range.selectNodeContents(node); range.collapse(false); const selection = getSelection(); selection.removeAllRanges(); selection.addRange(range); });
+    await page.keyboard.insertText("A"); await page.keyboard.insertText("B"); await page.waitForTimeout(50);
+    let rubySequentialSource = await readMobileSource();
+    assert.match(rubySequentialSource, /\u524d\uff5c\u8aad\u78ba\u8a8dAB\u300a\u3088\u307f\u304b\u304f\u306b\u3093\u300b\u5f8c/, `${scenario.id}: consecutive Ruby-base input must preserve input order`);
+    await clickHeaderButton(page, "#source-mode-switch"); await clickHeaderButton(page, "#mode-switch");
+    const rubyReading = page.locator("#lyrics .source-ruby").first().locator("rt");
+    await rubyReading.evaluate(node => { node.closest("#writer-surface")?.focus({ preventScroll: true }); const range = document.createRange(); range.selectNodeContents(node); range.collapse(false); const selection = getSelection(); selection.removeAllRanges(); selection.addRange(range); });
+    await page.keyboard.insertText("A"); await page.keyboard.insertText("B"); await page.waitForTimeout(50);
+    rubySequentialSource = await readMobileSource();
+    assert.match(rubySequentialSource, /\u524d\uff5c\u8aad\u78ba\u8a8dAB\u300a\u3088\u307f\u304b\u304f\u306b\u3093AB\u300b\u5f8c/, `${scenario.id}: consecutive Ruby-reading input must preserve input order`);
+    await page.locator("#source-editor").fill(rubyFixture);
+    await page.waitForFunction(value => document.querySelector("#source-editor")?.value === value && document.querySelector("#source-editor")?.getAttribute("aria-invalid") !== "true", rubyFixture, { timeout: 30_000 });
+    await clickHeaderButton(page, "#source-mode-switch"); await clickHeaderButton(page, "#mode-switch");
     await page.locator("#lyrics .source-ruby").first().evaluate(node => { const ruby = node.querySelector("ruby"); if (ruby) ruby.replaceWith(document.createTextNode(node.textContent || "")); });
     await page.locator("#lyrics").evaluate(root => { const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT); while (walker.nextNode()) { const node = walker.currentNode; const index = (node.nodeValue || "").indexOf("後"); if (index < 0) continue; const range = document.createRange(); range.setStart(node, index); range.collapse(true); const selection = window.getSelection(); selection?.removeAllRanges(); selection?.addRange(range); root.focus(); document.dispatchEvent(new Event("selectionchange")); return; } });
     await page.keyboard.insertText("A");
