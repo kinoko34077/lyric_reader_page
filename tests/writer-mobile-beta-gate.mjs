@@ -45,6 +45,13 @@ async function clickHeaderButton(page, selector) {
   await page.evaluate(target => { document.body.classList.remove("chrome-hidden"); document.querySelector(target)?.click(); }, selector);
 }
 
+async function setSourceEditorValue(page, value) {
+  const editor = page.locator("#source-editor");
+  await editor.waitFor({ state: "visible", timeout: 30_000 });
+  await editor.evaluate((node, next) => { node.value = next; node.dispatchEvent(new Event("input", { bubbles: true })); }, value);
+  await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source && document.querySelector("#source-editor")?.getAttribute("aria-invalid") !== "true", value, { timeout: 30_000 });
+}
+
 function containerWithActiveSource(containerText, source) {
   const parsed = parseLyricContainer(containerText);
   const document = containerToReaderDocument(parsed);
@@ -198,14 +205,12 @@ async function checkScenario(scenario, targetUrl) {
     assert.equal(await page.locator("#source-editor").evaluate(node => getComputedStyle(node).whiteSpace), "pre", `${scenario.id}: Source wrapping can be disabled`);
     await page.locator("#source-wrap-toggle").check();
     const blankTitleFixture = containerWithActiveSource(originalSource, "\n\u672c\u6587");
-    await page.locator("#source-editor").fill(blankTitleFixture);
-    await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source && document.querySelector("#source-editor")?.getAttribute("aria-invalid") !== "true", blankTitleFixture, { timeout: 30_000 });
+    await setSourceEditorValue(page, blankTitleFixture);
     await clickHeaderButton(page, "#source-mode-switch");
     await clickHeaderButton(page, "#mode-switch");
     assert.equal(await page.locator("#song-title").textContent(), "", `${scenario.id}: blank first Source line must project as an empty Title`);
     await clickHeaderButton(page, "#source-mode-switch");
-    await page.locator("#source-editor").fill(originalSource);
-    await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source && document.querySelector("#source-editor")?.getAttribute("aria-invalid") !== "true", originalSource, { timeout: 30_000 });
+    await setSourceEditorValue(page, originalSource);
 
     stage = "IME composition on mobile Writer";
     const dispatchCompositionWithoutFinalInput = async (locator, data) => locator.evaluate((root, value) => {
@@ -230,8 +235,7 @@ async function checkScenario(scenario, targetUrl) {
       return parseLyricContainer(await page.locator("#source-editor").inputValue()).source;
     };
     const compositionFixture = containerWithActiveSource(originalSource, "Mobile IME\n本文");
-    await page.locator("#source-editor").fill(compositionFixture);
-    await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source && document.querySelector("#source-editor")?.getAttribute("aria-invalid") !== "true", compositionFixture, { timeout: 30_000 });
+    await setSourceEditorValue(page, compositionFixture);
     await clickHeaderButton(page, "#source-mode-switch");
     await clickHeaderButton(page, "#mode-switch");
     await placeCaretAtRootBoundary(page.locator("#song-title"), true);
@@ -242,8 +246,7 @@ async function checkScenario(scenario, targetUrl) {
     await clickHeaderButton(page, "#mode-switch");
     await clickHeaderButton(page, "#source-mode-switch");
     await page.locator("#source-editor").waitFor({ state: "visible", timeout: 30_000 });
-    await page.locator("#source-editor").fill(compositionFixture);
-    await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source && document.querySelector("#source-editor")?.getAttribute("aria-invalid") !== "true", compositionFixture, { timeout: 30_000 });
+    await setSourceEditorValue(page, compositionFixture);
     await clickHeaderButton(page, "#source-mode-switch");
     await clickHeaderButton(page, "#mode-switch");
     await placeCaretAtRootBoundary(page.locator("#lyrics"), true);
@@ -253,8 +256,7 @@ async function checkScenario(scenario, targetUrl) {
 
     stage = "IME at the end after Ruby and Presentation";
     const complexCompositionFixture = containerWithActiveSource(originalSource, "Mobile Complex\n前｜読確認《よみかくにん》後[末尾:c=2]");
-    await page.locator("#source-editor").fill(complexCompositionFixture);
-    await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source && document.querySelector("#source-editor")?.getAttribute("aria-invalid") !== "true", complexCompositionFixture, { timeout: 30_000 });
+    await setSourceEditorValue(page, complexCompositionFixture);
     await clickHeaderButton(page, "#source-mode-switch");
     await clickHeaderButton(page, "#mode-switch");
     await placeCaretAtRootBoundary(page.locator("#lyrics"), true);
@@ -263,8 +265,7 @@ async function checkScenario(scenario, targetUrl) {
     assert.equal(await readMobileSource(), "Mobile Complex\n前｜読確認《よみかくにん》後[末尾:c=2]かな", `${scenario.id}: WebKit body composition at the Source end must append after Ruby and Presentation`);
 
     stage = "IME Source transaction on mobile Writer";
-    await page.locator("#source-editor").fill(compositionFixture);
-    await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source && document.querySelector("#source-editor")?.getAttribute("aria-invalid") !== "true", compositionFixture, { timeout: 30_000 });
+    await setSourceEditorValue(page, compositionFixture);
     await clickHeaderButton(page, "#source-mode-switch");
     await clickHeaderButton(page, "#mode-switch");
     await placeCaretAtRootBoundary(page.locator("#song-title"), true);
@@ -272,8 +273,7 @@ async function checkScenario(scenario, targetUrl) {
     await page.waitForFunction(() => /Mobile IME確定/.test(document.querySelector("#source-editor")?.value || ""), null, { timeout: 30_000 });
     assert.equal((await readMobileSource()).split(/\r?\n/, 1)[0], "Mobile IME確定", `${scenario.id}: mobile title composition must use the Source transaction without DOM text`);
 
-    await page.locator("#source-editor").fill(compositionFixture);
-    await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source && document.querySelector("#source-editor")?.getAttribute("aria-invalid") !== "true", compositionFixture, { timeout: 30_000 });
+    await setSourceEditorValue(page, compositionFixture);
     await clickHeaderButton(page, "#source-mode-switch");
     await clickHeaderButton(page, "#mode-switch");
     await placeCaretAtRootBoundary(page.locator("#lyrics"), true);
@@ -283,8 +283,7 @@ async function checkScenario(scenario, targetUrl) {
 
     stage = "Title/body boundary on mobile Writer";
     const boundaryFixture = containerWithActiveSource(originalSource, "Mobile Boundary\n本文");
-    await page.locator("#source-editor").fill(boundaryFixture);
-    await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source && document.querySelector("#source-editor")?.getAttribute("aria-invalid") !== "true", boundaryFixture, { timeout: 30_000 });
+    await setSourceEditorValue(page, boundaryFixture);
     await clickHeaderButton(page, "#source-mode-switch");
     await clickHeaderButton(page, "#mode-switch");
     await placeCaretAtRootBoundary(page.locator("#song-title"), true);
@@ -296,8 +295,7 @@ async function checkScenario(scenario, targetUrl) {
     await clickHeaderButton(page, "#source-mode-switch");
     await clickHeaderButton(page, "#mode-switch");
     await clickHeaderButton(page, "#source-mode-switch");
-    await page.locator("#source-editor").fill(boundaryFixture);
-    await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source && document.querySelector("#source-editor")?.getAttribute("aria-invalid") !== "true", boundaryFixture, { timeout: 30_000 });
+    await setSourceEditorValue(page, boundaryFixture);
     await clickHeaderButton(page, "#source-mode-switch");
     await clickHeaderButton(page, "#mode-switch");
     await placeCaretAtRootBoundary(page.locator("#lyrics"), false);
@@ -313,8 +311,7 @@ async function checkScenario(scenario, targetUrl) {
     await clickHeaderButton(page, "#source-mode-switch");
     await page.locator("#source-editor").waitFor({ state: "visible", timeout: 30_000 });
     const rubyFixture = containerWithActiveSource(originalSource, "Ruby Mobile Gate\n前｜読確認《よみかくにん》後\n前｜ペウコ《ピョコ》後");
-    await page.locator("#source-editor").fill(rubyFixture);
-    await page.waitForFunction(source => document.querySelector("#source-editor")?.value === source && document.querySelector("#source-editor")?.getAttribute("aria-invalid") !== "true", rubyFixture, { timeout: 30_000 });
+    await setSourceEditorValue(page, rubyFixture);
     await clickHeaderButton(page, "#source-mode-switch");
     await clickHeaderButton(page, "#mode-switch");
     await page.locator("#lyrics .source-ruby").first().waitFor({ state: "visible", timeout: 30_000 });
@@ -329,8 +326,7 @@ async function checkScenario(scenario, targetUrl) {
     await page.keyboard.insertText("A"); await page.keyboard.insertText("B"); await page.waitForTimeout(50);
     rubySequentialSource = await readMobileSource();
     assert.match(rubySequentialSource, /\u524d\uff5c\u8aad\u78ba\u8a8dAB\u300a\u3088\u307f\u304b\u304f\u306b\u3093AB\u300b\u5f8c/, `${scenario.id}: consecutive Ruby-reading input must preserve input order`);
-    await page.locator("#source-editor").fill(rubyFixture);
-    await page.waitForFunction(value => document.querySelector("#source-editor")?.value === value && document.querySelector("#source-editor")?.getAttribute("aria-invalid") !== "true", rubyFixture, { timeout: 30_000 });
+    await setSourceEditorValue(page, rubyFixture);
     await clickHeaderButton(page, "#source-mode-switch"); await clickHeaderButton(page, "#mode-switch");
     await page.locator("#lyrics .source-ruby").first().evaluate(node => { const ruby = node.querySelector("ruby"); if (ruby) ruby.replaceWith(document.createTextNode(node.textContent || "")); });
     await page.locator("#lyrics").evaluate(root => { const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT); while (walker.nextNode()) { const node = walker.currentNode; const index = (node.nodeValue || "").indexOf("後"); if (index < 0) continue; const range = document.createRange(); range.setStart(node, index); range.collapse(true); const selection = window.getSelection(); selection?.removeAllRanges(); selection?.addRange(range); root.focus(); document.dispatchEvent(new Event("selectionchange")); return; } });
@@ -341,8 +337,7 @@ async function checkScenario(scenario, targetUrl) {
     let source = await page.locator("#source-editor").inputValue();
     assert.match(source, /前｜読確認《よみかくにん》A後/, `${scenario.id}: flattened Ruby neighbor edit must preserve Ruby Source`);
 
-    await page.locator("#source-editor").fill(rubyFixture);
-    await page.waitForFunction(value => document.querySelector("#source-editor")?.value === value && document.querySelector("#source-editor")?.getAttribute("aria-invalid") !== "true", rubyFixture, { timeout: 30_000 });
+    await setSourceEditorValue(page, rubyFixture);
     await clickHeaderButton(page, "#source-mode-switch");
     await clickHeaderButton(page, "#mode-switch");
     await page.locator("#lyrics .source-ruby").first().waitFor({ state: "visible", timeout: 30_000 });
@@ -355,8 +350,7 @@ async function checkScenario(scenario, targetUrl) {
     source = await page.locator("#source-editor").inputValue();
     assert.match(source, /前｜読確認《よみかくにん》\r?\n後/, `${scenario.id}: line break next to a flattened Ruby must preserve Ruby Source`);
 
-    await page.locator("#source-editor").fill(rubyFixture);
-    await page.waitForFunction(value => document.querySelector("#source-editor")?.value === value && document.querySelector("#source-editor")?.getAttribute("aria-invalid") !== "true", rubyFixture, { timeout: 30_000 });
+    await setSourceEditorValue(page, rubyFixture);
     await clickHeaderButton(page, "#source-mode-switch");
     await clickHeaderButton(page, "#mode-switch");
     assert.equal(await selectTextInRoot(page.locator("#lyrics .source-ruby").first(), "読確認よみかくにん"), true, `${scenario.id}: mobile Ruby selection must find the complete Ruby`);
@@ -370,8 +364,7 @@ async function checkScenario(scenario, targetUrl) {
     assert.equal(parseLyricContainer(source).source, "Ruby Mobile Gate\n前｜読確認《よみかくにん》後\n前｜読確認《よみかくにん》｜ペウコ《ピョコ》後", `${scenario.id}: mobile Portable Ruby paste must restore the complete Ruby Source at the selected caret`);
 
     stage = "Portable Ruby paste at a normal text caret";
-    await page.locator("#source-editor").fill(rubyFixture);
-    await page.waitForFunction(value => document.querySelector("#source-editor")?.value === value && document.querySelector("#source-editor")?.getAttribute("aria-invalid") !== "true", rubyFixture, { timeout: 30_000 });
+    await setSourceEditorValue(page, rubyFixture);
     await clickHeaderButton(page, "#source-mode-switch");
     await clickHeaderButton(page, "#mode-switch");
     assert.equal(await placeCaretInRoot(page.locator("#lyrics"), "前", 1), true, `${scenario.id}: mobile normal-text caret must be placeable before Ruby`);
