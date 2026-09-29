@@ -2,7 +2,7 @@ name: Browser audit
 
 # Machine evidence for Reader / Writer behavior that used to be handed to a human:
 # CDP IME, Selection, native Clipboard, typography, 360px geometry, accessibility tree,
-# plus the Writer Beta / Writer Mobile gates, which otherwise only run after merge.
+# plus the Writer Beta / Writer Presentation / Writer Mobile gates, which otherwise only run after merge.
 on:
   pull_request:
   push:
@@ -36,6 +36,9 @@ jobs:
       - name: Writer Beta Gate
         if: always()
         run: npm run test:writer
+      - name: Writer Presentation Gate
+        if: always()
+        run: npm run test:writer-presentation
       - name: Writer Mobile Gate
         if: always()
         run: npm run test:writer-mobile
