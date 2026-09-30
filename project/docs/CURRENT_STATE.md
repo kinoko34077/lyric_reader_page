@@ -2,63 +2,92 @@
 
 Base version: `0.3.8`
 
-Last verified: 2026-09-27 — Real-browser audit replaces human browser verification
+Last verified: 2026-09-30 — post-PR #18 accepted-main / Pages / browser-gate reconciliation
 
 ## Current acceptance baseline
 
-- Accepted main: `c1508cc2d3a8d36e19a0cdf51fd604cb4f5fdbfb` (#5 application repair and #6 gate-race repair merged)
-- main Deploy run `36296810578`: SUCCESS
-- Automated Reader / Shared / Writer / Mobile / Presentation gates: GREEN at the accepted main
-- IME / Selection / Native Clipboard / Font / typography / geometry: AUDITED by `npm run audit:browser`; iOS soft keyboard, touch selection handles, Safari-specific WebKit differences and screen-reader speech remain non-blocking BOUNDARY items (`docs/RELEASE-SMOKE.md`)
+- Accepted main: `7d8d50589f881014700375c52eede5ea5eed2354`.
+- Product repair owner: Issue #12 / merged PR #13; accepted product-repair main before the corrective CI fix: `2839119b899b8d369b320feabd56251fe7c0062e`.
+- Corrective Writer Presentation fixture repair: Issue #17 / merged PR #18; #17 is completed after post-merge evidence became terminal GREEN.
+- Main Verify #60 (`36575678209`): SUCCESS.
+- Deploy to GitHub Pages #179 (`36575678236`): SUCCESS.
+- Browser Audit #16 (`36575678473`): SUCCESS.
+- Dynamic Pages build #178 (`36575677440`): SUCCESS.
+- Published technical regression gates are GREEN at the accepted main.
+- Remaining acceptance boundary is **real iPhone Safari** evidence owned by Issue #12 / progress ledger #15. Playwright/WebKit or Chromium machine evidence is not a substitute for that physical-device gate.
 
-## Implemented
+## Accepted implemented behavior
 
-- Repository-local KiNoTch Base v0.3.8 and Project Overlay
-- `web-app` Surface declaration
-- Structured `npm ci` setup and `npm test` verification commands
-- Existing Reader, Writer, shared document, mobile, and browser test paths retained
-- Existing Domain files remain at their original root paths; no bulk move was performed
-- Reader auto-hide keeps its normal `chrome-hidden` reading state, while Header/Footer containing keyboard focus are returned to the viewport with `:focus-within`
-- Dedicated Chromium regression covers hidden chrome -> keyboard focus -> focused control remains visible without disabling the auto-hide state
-- Late renders after asynchronous Font loading no longer discard uncommitted Source Editor input or its parse-error state
-- Late renders in Writer patch the projection in place and keep the collapsed caret on its Source offset instead of dropping it to the body start
-- Switching mode commits a pending debounced History snapshot, so a Source edit and a following Writer edit remain separate Undo steps
-- `writerLateRender` Writer Browser sub-gate holds document Font requests to reproduce the three cases deterministically
-- `npm run audit:browser` audits IME (CDP), Selection, native Clipboard, typography, vertical repeat marks, Nishiki availability, accessibility tree, and 360px / desktop geometry with JSON evidence; `.github/workflows/browser-audit.yml` runs it with the Writer Beta / Writer Mobile gates on every Pull Request
-- Audit-found product defects repaired: Viewer late render dropped the user's Selection; Viewer selection Copy produced flattened DOM text instead of Portable Text; Chromium IME restarted after Ruby lost or misplaced the committed text; Nishiki-teki was selectable without a real Font because `FontFaceSet.check()` returns true for unknown families; re-rendering a Writer/Viewer projection rewrote identical text nodes and dropped text-offset Selections
-- Generic Manifest Variant loading requires exactly one existing supported Source form; source-less/empty remote references and conflicting supported forms fail closed before a Variant Source fetch, while valid inline/remote and legacy manifest paths remain unchanged.
+### Source / document integrity
+
+- Author Source remains the editing authority; Reader/Writer projections do not become a second source of truth.
+- Source Mode has a user-selectable right-edge wrap behavior.
+- Canonical `.lyric.txt` JSON Header serializes in readable multi-line form while legacy compact Header input remains readable.
+- Empty Author Source first line remains an empty Title projection; no synthetic `無題` title is inserted.
+- Generic Manifest Variant loading still requires exactly one existing supported Source form; source-less/empty remote references and conflicting supported forms fail closed before a Variant Source fetch.
+
+### Writer editing / history
+
+- Late asynchronous Font renders no longer discard uncommitted Source Editor input or parse-error state.
+- Writer late renders patch the projection while preserving the collapsed caret on the corresponding Source offset.
+- Mode switches commit pending debounced History snapshots so consecutive Source/Writer edits remain separate Undo steps.
+- Ruby Base / Reading editing restores the correct raw Source caret location and preserves input order.
+- Dynamic `｜3ペウコ《ピョコ》` input/editing is covered by regression tests.
+- Ruby/Paste/IME behavior remains Source-backed; no DOM-as-second-authority path was introduced.
+
+### Typography / Reader UI
+
+- Reader body font-size settings through 32px are exercised by the accepted regression path.
+- Reader work typography line-height is separated from Header/Footer/settings UI chrome line-height.
+- iOS text autosizing behavior is stabilized for the accepted machine-tested path.
+- Nishiki-teki availability remains based on verified resource behavior rather than treating fallback as successful Font application.
+
+### Browser / presentation gates
+
+- `npm run audit:browser` covers IME, Selection, native Clipboard, typography, vertical repeat marks, Nishiki availability, accessibility tree, and desktop/360px geometry with JSON evidence.
+- `.github/workflows/browser-audit.yml` includes Writer Beta, Writer Presentation and Writer Mobile gates.
+- The PR #18 corrective path replaced only large Source fixture injection in Writer Presentation with one assignment + bubbling `input`; product assertions and timeout values were not weakened.
+- Reader focus visibility remains protected while preserving normal reader chrome auto-hide behavior.
+
+## Current active boundary
+
+Owner Issue #12 remains open because the real-device acceptance specified by the repository has not yet been recorded. Progress/recovery authority is Issue #15.
+
+First unfinished acceptance unit after the accepted main machine gates:
+
+1. CP06 — real iPhone Safari Source / typography / title smoke;
+2. CP07 / CP08 — remaining Ruby/caret/Selection/clipboard real-device checks as defined by #15 / `docs/RELEASE-SMOKE.md`;
+3. reconcile Release Smoke / roadmap / owner Issue #12 after the real-device evidence is complete.
+
+A real-device failure must be split into the smallest reproducible repository-local defect rather than hidden by emulation evidence or a broad rewrite.
 
 ## Default state
 
-- `web-app`: `OVERRIDE` — existing browser application is authoritative
-- `ci-test`: `OVERRIDE` — existing repository workflow and quality gates are authoritative
+- `web-app`: `OVERRIDE` — existing browser application is authoritative.
+- `ci-test`: `OVERRIDE` — existing repository workflow and quality gates are authoritative.
 
 ## Known constraints
 
 - GitHub Pages deployment and release policy remain Project-owned.
-- Reader, Writer, mobile, and browser presentation gates remain Project-owned.
+- Reader, Writer, mobile, presentation and browser gates remain Project-owned.
 - The Base verify command provides the repository entry point but does not replace Domain-specific gates.
-- Pointer/touch auto-reveal behavior and the 900 ms reader chrome auto-hide timing remain unchanged by the keyboard-focus repair.
+- Real iPhone Safari soft keyboard, touch selection handles, native clipboard behavior and Safari-specific runtime behavior remain real-device boundaries until evidence is recorded.
+- A successful machine/WebKit gate must not be represented as physical-device acceptance.
 
-## Historical Phase 0 audit (Roadmap #4, base `f1cf3f5`)
+## Current next work
 
-- Reader Unit / Shared / Writer Unit / Reader Mobile / Writer Presentation: PASS
-- Writer Beta Gate (`writer`, `writerSource`, `writerWysiwyg`, `writerRuby`) and Writer Mobile Chromium Pixel 5: FAIL — reproducible, timing-dependent; root causes above, repaired
-- WebKit iPhone emulation: AUTOMATED ONLY (CI); real iPhone Safari items remain REAL-DEVICE ONLY per `docs/RELEASE-SMOKE.md` (at that audit; now superseded by `npm run audit:browser` except the listed BOUNDARY items)
+1. Resume from Issue #15 CP06; do not replay accepted PR #13/#18 implementation or machine verification.
+2. Run the documented real iPhone Safari horizontal/vertical smoke and record evidence in `docs/RELEASE-SMOKE.md`.
+3. Keep Issue #12 open until its real-device acceptance and final reconciliation are actually complete.
+4. Treat any new reproducible Reader/Writer defect as a bounded repository-local Issue.
 
-## Next work
+## Accepted evidence / references
 
-1. Run the documented real iPhone Safari horizontal/vertical Writer smoke and record evidence in `docs/RELEASE-SMOKE.md`.
-2. Preserve existing Reader/Writer/browser behavior as Project overrides.
-3. Treat new reproducible Reader/Writer usability defects as repository-local maintenance Issues rather than broad UI rewrites.
-4. Consider further Default adoption only where it removes a real duplicate without changing the reader/writer Domain.
-
-## Historical Verification Evidence
-
-- `knt doctor`
-- `knt base-check`
-- `knt setup`
-- `knt verify`
-- `npm test`
-- Reader focus visibility Chromium gate: RED `36253510185`; first CSS-fix GREEN `36253728115`
-- Current accepted main Deploy run: `36296810578` (SUCCESS)
+- Issue #12 — current iOS regression acceptance owner.
+- Issue #15 — interruption/recovery progress ledger; CP05 is complete and CP06 is first unfinished.
+- merged PR #13 — product repair.
+- completed Issue #17 / merged PR #18 — Writer Presentation CI fixture repair.
+- `docs/LYRIC_READER_REQUIREMENTS.md` — accepted requirements.
+- `docs/QUALITY-GATES.md` — automated gate contract.
+- `docs/RELEASE-SMOKE.md` — real-device/external acceptance evidence.
+- Roadmap Issue #4 — development order and phase boundary.
