@@ -2,18 +2,18 @@
 
 Base version: `0.3.8`
 
-Last verified: 2026-09-30 — post-PR #18 accepted-main / Pages / browser-gate reconciliation
+Last verified: 2026-10-02 — accepted main `2054e1ca1bd44ae1f89d916c747cba57607f3c57` (merged PR #19) received fleet DEEP re-audit; exact-main Verify / Reader focus / Deploy / Browser Audit / Pages checks remain terminal GREEN. This does not satisfy the separate real-iPhone Safari gate.
 
 ## Current acceptance baseline
 
-- Accepted main: `7d8d50589f881014700375c52eede5ea5eed2354`.
+- Accepted main: `2054e1ca1bd44ae1f89d916c747cba57607f3c57` (merged PR #19 documentation reconciliation).
 - Product repair owner: Issue #12 / merged PR #13; accepted product-repair main before the corrective CI fix: `2839119b899b8d369b320feabd56251fe7c0062e`.
 - Corrective Writer Presentation fixture repair: Issue #17 / merged PR #18; #17 is completed after post-merge evidence became terminal GREEN.
 - Main Verify #60 (`36575678209`): SUCCESS.
 - Deploy to GitHub Pages #179 (`36575678236`): SUCCESS.
 - Browser Audit #16 (`36575678473`): SUCCESS.
 - Dynamic Pages build #178 (`36575677440`): SUCCESS.
-- Published technical regression gates are GREEN at the accepted main.
+- Published technical regression gates are GREEN at the accepted main; fleet DEEP audit re-observed exact-main checks `36658100612`, `36658100589`, `36658100546`, `36658100698`, and `36658099643` as SUCCESS.
 - Remaining acceptance boundary is **real iPhone Safari** evidence owned by Issue #12 / progress ledger #15. Playwright/WebKit or Chromium machine evidence is not a substitute for that physical-device gate.
 
 ## Accepted implemented behavior
@@ -87,6 +87,7 @@ A real-device failure must be split into the smallest reproducible repository-lo
 - Issue #15 — interruption/recovery progress ledger; CP05 is complete and CP06 is first unfinished.
 - merged PR #13 — product repair.
 - completed Issue #17 / merged PR #18 — Writer Presentation CI fixture repair.
+- merged PR #19 — accepted-main / real-device-boundary Current State reconciliation; merge `2054e1ca1bd44ae1f89d916c747cba57607f3c57`.
 - `docs/LYRIC_READER_REQUIREMENTS.md` — accepted requirements.
 - `docs/QUALITY-GATES.md` — automated gate contract.
 - `docs/RELEASE-SMOKE.md` — real-device/external acceptance evidence.
