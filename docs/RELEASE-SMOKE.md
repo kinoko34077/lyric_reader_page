@@ -65,13 +65,14 @@ This historical section preserves the earlier Source-backed migration and dynami
 
 ## stable保護
 
-現時点の観測では、ローカルGitだけからstableのGitHub保護状態は判定できません。未認証API確認ではbranch protectionの取得が401、rulesets一覧は空で返ったため、`stable`保護は未確認として扱います。
+2026-10-07の認証済みGitHub API readbackで、`stable`保護を確認済み。
 
-GitHub管理環境で、`stable`について次を設定・確認する。
-
-- direct push禁止
-- force push禁止
+- `stable` head: `925cfc7bd8c97ff0f612066dc30fc20ff38a605d`
+- active ruleset: `stable-protection`（id `24646729`）
+- target: `refs/heads/stable`
+- Pull Request経由更新を要求
+- non-fast-forward（force push相当）禁止
 - branch deletion禁止
-- 更新は明示的なrelease操作またはPull Request経由
+- bypass actorなし
 
-設定後はGitHub Branch Ruleset画面または認証済みAPIで確認し、この表へ観測結果を追記する。ローカルworkflowのPASSやtag固定だけでは、branch protection PASSとは判定しない。
+この判定はGitHub側rulesetの認証済みreadbackに基づく。ローカルworkflowやtag固定だけをbranch protectionの証拠とはしない。
